@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" role="img" aria-label="RITA">
+  <g fill="none" stroke="#d98a2b" stroke-width="10" stroke-linecap="round">
+    <circle cx="70" cy="70" r="25"/>
+    <path d="M70 24a46 46 0 1 0 45 55"/>
+    <path d="M70 8a62 62 0 1 0 61 70"/>
+    <path d="M70 8c31 0 56 18 68 43"/>
+    <path d="M112 23l26 28"/>
+  </g>
+  <g fill="#d98a2b" font-family="Inter, Arial, Helvetica, sans-serif" font-weight="600" font-size="78" letter-spacing="10">
+    <text x="175" y="96">RITA</text>
+  </g>
+</svg>

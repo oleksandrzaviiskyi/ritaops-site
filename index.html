@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RITA — Modern Hospitality</title>
+<meta name="description" content="RITA is a living operating system at the heart of modern hospitality." />
+<style>
+:root{
+  --bg1:#fffdf7;
+  --bg2:#fff4df;
+  --bg3:#ffdca6;
+  --ink:#111111;
+  --muted:#5f594f;
+  --orange:#d98a2b;
+  --line:rgba(40,30,18,.045);
+  --field:rgba(255,253,247,.68);
+  --field-line:rgba(17,17,17,.18);
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  overflow-x:hidden;
+  background:
+    radial-gradient(circle at 50% 32%,rgba(255,255,255,.90),transparent 26%),
+    radial-gradient(circle at 48% 54%,rgba(255,145,22,.24),transparent 34%),
+    radial-gradient(circle at 12% 88%,rgba(217,138,43,.12),transparent 30%),
+    linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 48%,var(--bg3) 100%);
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,var(--line) 1px,transparent 1px),
+    linear-gradient(180deg,var(--line) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:radial-gradient(circle at 50% 42%,black,transparent 78%);
+}
+main{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:.72fr 1.28fr;
+  align-items:center;
+  gap:28px;
+  padding:48px 6vw 62px;
+}
+.content{
+  max-width:620px;
+  z-index:3;
+}
+.logo{
+  width:min(360px,62vw);
+  height:auto;
+  display:block;
+  margin:0 0 78px;
+}
+h1{
+  margin:0;
+  max-width:720px;
+  font-size:clamp(42px,5.5vw,84px);
+  line-height:1.02;
+  letter-spacing:-.055em;
+  font-weight:520;
+}
+p{
+  margin:32px 0 0;
+  max-width:620px;
+  font-size:clamp(18px,1.85vw,25px);
+  line-height:1.5;
+  color:var(--muted);
+  font-weight:390;
+}
+.form{
+  margin:46px 0 0;
+  display:flex;
+  gap:10px;
+  width:min(520px,100%);
+}
+input{
+  width:100%;
+  border:1px solid var(--field-line);
+  border-radius:999px;
+  padding:15px 18px;
+  font:inherit;
+  font-size:14px;
+  background:var(--field);
+  color:var(--ink);
+  outline:none;
+  backdrop-filter:blur(14px);
+}
+input::placeholder{color:rgba(17,17,17,.46)}
+button{
+  border:1px solid var(--ink);
+  border-radius:999px;
+  padding:15px 20px;
+  font:inherit;
+  font-size:14px;
+  white-space:nowrap;
+  background:var(--ink);
+  color:#fffaf0;
+  cursor:pointer;
+}
+.stage{
+  position:relative;
+  min-height:560px;
+  height:min(78vh,780px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.orange-wrap{
+  position:relative;
+  width:min(760px,68vw);
+  animation:floating 7s ease-in-out infinite;
+}
+.orange-wrap::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:52%;
+  width:72%;
+  height:62%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(255,135,20,.20);
+  filter:blur(54px);
+  z-index:0;
+}
+.orange{
+  position:relative;
+  z-index:1;
+  width:100%;
+  display:block;
+  border-radius:34px;
+  filter:
+    drop-shadow(0 34px 80px rgba(148,82,12,.20))
+    drop-shadow(0 0 48px rgba(255,132,22,.20));
+}
+@keyframes floating{
+  0%,100%{transform:translateY(0) rotate(-.6deg)}
+  50%{transform:translateY(-18px) rotate(.7deg)}
+}
+footer{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:24px;
+  text-align:center;
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(17,17,17,.46);
+}
+@media(max-width:900px){
+  main{
+    display:flex;
+    flex-direction:column;
+    min-height:auto;
+    padding:44px 22px 120px;
+    text-align:center;
+  }
+  .content{margin:0 auto}
+  .logo{margin:0 auto 48px}
+  .form{margin-left:auto;margin-right:auto;flex-direction:column}
+  button{width:100%}
+  .stage{min-height:auto;height:auto;width:100%}
+  .orange-wrap{width:min(620px,96vw)}
+  footer{bottom:18px}
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="content">
+    <img class="logo" src="rita-logo.svg" alt="RITA" />
+    <h1>A living operating system at the heart of modern hospitality.</h1>
+    <p>An operational framework that connects guests, teams, spaces, and time.</p>
+
+    <form class="form" name="rita-interest" method="POST" data-netlify="true">
+      <input type="hidden" name="form-name" value="rita-interest" />
+      <input type="email" name="email" placeholder="Email address" />
+      <button type="submit">Stay informed</button>
+    </form>
+  </section>
+
+  <section class="stage" aria-hidden="true">
+    <div class="orange-wrap">
+      <img class="orange" src="floating-orange.png" alt="Floating square orange" />
+    </div>
+  </section>
+</main>
+
+<footer>RITA · RitaOps.com</footer>
+</body>
+</html>
