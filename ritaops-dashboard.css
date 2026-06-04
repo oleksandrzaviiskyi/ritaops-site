@@ -415,3 +415,73 @@ body.ops {
     grid-template-columns: 1fr;
   }
 }
+
+/* Печать секции из ops-group (без pop-up) */
+@media screen {
+  #print-area {
+    display: none;
+  }
+}
+
+@media print {
+  body > *:not(#print-area) {
+    display: none !important;
+  }
+  #print-area {
+    display: block !important;
+  }
+}
+
+#print-area .print-sheet {
+  font-family: system-ui, sans-serif;
+  color: #1c2b2f;
+  padding: 0;
+}
+
+#print-area .print-title {
+  font-size: 1rem;
+  margin: 0 0 1.25rem;
+  font-weight: 600;
+  border-bottom: 2px solid #1a4d5c;
+  padding-bottom: 0.5rem;
+}
+
+#print-area h2 {
+  font-size: 0.95rem;
+  margin: 1.25rem 0 0.5rem;
+  color: #1a4d5c;
+}
+
+#print-area table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+#print-area th,
+#print-area td {
+  border: 1px solid #ccc;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+#print-area th {
+  background: #f0f0f0;
+}
+
+#print-area table.kv th {
+  width: 28%;
+  background: #f8f8f8;
+}
+
+#print-area .empty {
+  color: #666;
+  font-style: italic;
+}
+
+#print-area .text-block {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
