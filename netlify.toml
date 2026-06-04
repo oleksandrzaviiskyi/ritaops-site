@@ -1,0 +1,12 @@
+[build]
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/portal/*"
+  to = "/portal.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/portal"
+  to = "/.netlify/functions/portal"
+  status = 200
