@@ -168,6 +168,93 @@ body.ops {
   text-decoration: underline;
 }
 
+.ops-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ops-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 43, 47, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.ops-modal-backdrop[hidden] {
+  display: none;
+}
+
+.ops-modal {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.ops-modal h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  color: var(--ocean);
+}
+
+.ops-modal label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0.75rem 0 0.35rem;
+}
+
+.ops-modal input,
+.ops-modal select {
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.ops-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.ops-modal-success {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.ops-modal-link-row {
+  margin-bottom: 1rem;
+}
+
+.ops-modal-link-row p {
+  font-size: 0.8rem;
+  word-break: break-all;
+  margin: 0.35rem 0;
+  color: var(--ink);
+}
+
+.ops-modal-link-row .ops-btn {
+  width: auto;
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+}
+
 .ops-content {
   padding: 1.5rem;
 }

@@ -45,3 +45,8 @@
   from = "/api/guest"
   to = "/.netlify/functions/guest"
   status = 200
+
+[[redirects]]
+  from = "/api/create-group"
+  to = "/.netlify/functions/create-group"
+  status = 200

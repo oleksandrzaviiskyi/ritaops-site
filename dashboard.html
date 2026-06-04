@@ -33,7 +33,10 @@
       <main class="ops-main">
         <header class="ops-topbar">
           <span class="title">Групповые заезды</span>
-          <span id="userLabel" style="font-size: 0.85rem; color: var(--muted)">RitaOps · Staff</span>
+          <div class="ops-topbar-right">
+            <button type="button" class="ops-toolbar-btn" id="btnNewGroup">＋ New Group</button>
+            <span id="userLabel" style="font-size: 0.85rem; color: var(--muted)">RitaOps · Staff</span>
+          </div>
         </header>
 
         <div class="ops-content">
@@ -45,6 +48,69 @@
       </main>
     </div>
 
+    <div class="ops-modal-backdrop" id="modalBackdrop" hidden>
+      <div class="ops-modal" role="dialog" aria-labelledby="modalTitle">
+        <div id="modalFormView">
+          <h2 id="modalTitle">New Group</h2>
+          <form id="newGroupForm">
+            <label for="ngName">Group name *</label>
+            <input id="ngName" name="groupName" required />
+
+            <label for="ngCheckIn">Check-in date</label>
+            <input id="ngCheckIn" name="checkIn" type="date" />
+
+            <label for="ngCheckOut">Check-out date</label>
+            <input id="ngCheckOut" name="checkOut" type="date" />
+
+            <label for="ngGuests">Approximate number of guests</label>
+            <input id="ngGuests" name="totalGuests" type="number" min="1" />
+
+            <label for="ngEventType">Event type</label>
+            <select id="ngEventType" name="eventType">
+              <option value="">— select —</option>
+              <option value="yoga_retreat">Yoga Retreat</option>
+              <option value="wellness_retreat">Wellness Retreat</option>
+              <option value="wedding">Wedding</option>
+              <option value="family_reunion">Family Reunion</option>
+              <option value="corporate_retreat">Corporate Retreat</option>
+              <option value="surf_camp">Surf Camp</option>
+              <option value="private_vacation">Private Vacation</option>
+            </select>
+
+            <label for="ngOrganizerName">Organizer name</label>
+            <input id="ngOrganizerName" name="organizerName" />
+
+            <label for="ngOrganizerEmail">Organizer email</label>
+            <input id="ngOrganizerEmail" name="organizerEmail" type="email" />
+
+            <p id="modalError" style="color: var(--warn); font-size: 0.88rem; margin: 0.75rem 0 0" hidden></p>
+
+            <div class="ops-modal-actions">
+              <button type="submit" class="ops-btn" id="btnCreateGroup">Create Group</button>
+              <button type="button" class="ops-btn ops-btn-print" id="btnCancelModal">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="modalSuccessView" hidden>
+          <p class="ops-modal-success">✅ Group created!</p>
+          <div class="ops-modal-link-row">
+            <strong>Organizer link</strong>
+            <p id="successOrganizerLink"></p>
+            <button type="button" class="ops-btn" id="copySuccessOrganizer">Copy</button>
+          </div>
+          <div class="ops-modal-link-row">
+            <strong>Guest link</strong>
+            <p id="successGuestLink"></p>
+            <button type="button" class="ops-btn" id="copySuccessGuest">Copy</button>
+          </div>
+          <div class="ops-modal-actions">
+            <button type="button" class="ops-btn" id="btnCloseSuccess">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       const STATUS = {
         new: 'Новая',
@@ -53,6 +119,15 @@
         flights_done: 'Рейсы',
         ready: 'Готова'
       }
+
+      const modalBackdrop = document.getElementById('modalBackdrop')
+      const modalFormView = document.getElementById('modalFormView')
+      const modalSuccessView = document.getElementById('modalSuccessView')
+      const newGroupForm = document.getElementById('newGroupForm')
+      const modalError = document.getElementById('modalError')
+
+      let successOrganizerLink = ''
+      let successGuestLink = ''
 
       function staffKey() {
         const fromUrl = new URLSearchParams(location.search).get('key')
@@ -84,6 +159,23 @@
         return n > 0 ? n : null
       }
 
+      function openModal() {
+        modalError.hidden = true
+        modalFormView.hidden = false
+        modalSuccessView.hidden = true
+        newGroupForm.reset()
+        modalBackdrop.hidden = false
+      }
+
+      function closeModal() {
+        modalBackdrop.hidden = true
+      }
+
+      function showModalError(msg) {
+        modalError.textContent = msg
+        modalError.hidden = false
+      }
+
       async function load() {
         const key = staffKey()
         const qs = key ? `?key=${encodeURIComponent(key)}` : ''
@@ -98,7 +190,7 @@
         const grid = document.getElementById('groups')
         if (portals.length === 0) {
           grid.innerHTML =
-            '<p style="grid-column:1/-1;color:var(--muted)">Нет групп. Создайте портал в Sanity Studio или через <code>portal:create</code>.</p>'
+            '<p style="grid-column:1/-1;color:var(--muted)">Нет групп. Нажмите <strong>＋ New Group</strong> чтобы создать первую.</p>'
           return
         }
 
@@ -121,6 +213,70 @@
           })
           .join('')
       }
+
+      document.getElementById('btnNewGroup').addEventListener('click', openModal)
+      document.getElementById('btnCancelModal').addEventListener('click', closeModal)
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) closeModal()
+      })
+
+      document.getElementById('btnCloseSuccess').addEventListener('click', () => {
+        closeModal()
+        load().catch((e) => {
+          document.getElementById('intro').textContent = 'Ошибка: ' + e.message
+        })
+      })
+
+      document.getElementById('copySuccessOrganizer').addEventListener('click', () => {
+        navigator.clipboard?.writeText(successOrganizerLink)
+        alert('Organizer link copied')
+      })
+
+      document.getElementById('copySuccessGuest').addEventListener('click', () => {
+        navigator.clipboard?.writeText(successGuestLink)
+        alert('Guest link copied')
+      })
+
+      newGroupForm.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        modalError.hidden = true
+        const btn = document.getElementById('btnCreateGroup')
+        btn.disabled = true
+
+        const payload = {
+          staffKey: staffKey(),
+          groupName: newGroupForm.groupName.value.trim(),
+          checkIn: newGroupForm.checkIn.value || null,
+          checkOut: newGroupForm.checkOut.value || null,
+          totalGuests: newGroupForm.totalGuests.value
+            ? Number(newGroupForm.totalGuests.value)
+            : null,
+          eventType: newGroupForm.eventType.value || null,
+          organizerName: newGroupForm.organizerName.value.trim() || null,
+          organizerEmail: newGroupForm.organizerEmail.value.trim() || null
+        }
+
+        try {
+          const res = await fetch('/api/create-group', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          })
+          const json = await res.json()
+          if (!res.ok) throw new Error(json.error || res.statusText)
+
+          successOrganizerLink = json.organizerLink
+          successGuestLink = json.guestLink
+          document.getElementById('successOrganizerLink').textContent = successOrganizerLink
+          document.getElementById('successGuestLink').textContent = successGuestLink
+          modalFormView.hidden = true
+          modalSuccessView.hidden = false
+        } catch (err) {
+          showModalError(err.message)
+        } finally {
+          btn.disabled = false
+        }
+      })
 
       load().catch((e) => {
         document.getElementById('intro').textContent = 'Ошибка: ' + e.message
