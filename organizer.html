@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Las Canas — портал группы</title>
+    <title>Las Canas — Group Portal</title>
     <link rel="stylesheet" href="/portal.css" />
   </head>
   <body>
     <header>
       <div class="wrap">
         <h1 id="pageTitle">Las Canas Beach Retreat</h1>
-        <p id="pageSubtitle">Портал организатора группы</p>
+        <p id="pageSubtitle">Group Organizer Portal</p>
         <div class="status-bar">
-          <span id="progressLabel">Прогресс: 0%</span>
+          <span id="progressLabel">Progress: 0%</span>
           <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
         </div>
       </div>
@@ -22,83 +22,83 @@
 
     <form id="portalForm" class="wrap" hidden>
       <section class="card">
-        <h2>Основная информация</h2>
-        <label>Название группы</label>
+        <h2>Basic Information</h2>
+        <label>Group Name</label>
         <input name="groupName" required />
         <div class="grid2">
           <div>
-            <label>Дата заезда</label>
+            <label>Check-in Date</label>
             <input name="checkIn" type="date" />
           </div>
           <div>
-            <label>Дата выезда</label>
+            <label>Check-out Date</label>
             <input name="checkOut" type="date" />
           </div>
         </div>
         <div class="grid2">
           <div>
-            <label>Всего гостей</label>
+            <label>Total Guests</label>
             <input name="totalGuests" type="number" min="1" />
           </div>
           <div>
-            <label>Взрослых</label>
+            <label>Adults</label>
             <input name="adults" type="number" min="0" />
           </div>
         </div>
-        <label>Детей</label>
+        <label>Children</label>
         <input name="children" type="number" min="0" value="0" />
-        <label>Тип мероприятия</label>
+        <label>Event Type</label>
         <select name="eventType">
-          <option value="">— выберите —</option>
-          <option value="yoga_retreat">Йога-ретрит</option>
-          <option value="wellness_retreat">Wellness-ретрит</option>
-          <option value="wedding">Свадьба</option>
-          <option value="family_reunion">Семейная встреча</option>
-          <option value="corporate_retreat">Корпоративный ретрит</option>
-          <option value="surf_camp">Сёрф-кэмп</option>
-          <option value="private_vacation">Частный отдых</option>
+          <option value="">— select —</option>
+          <option value="yoga_retreat">Yoga Retreat</option>
+          <option value="wellness_retreat">Wellness Retreat</option>
+          <option value="wedding">Wedding</option>
+          <option value="family_reunion">Family Reunion</option>
+          <option value="corporate_retreat">Corporate Retreat</option>
+          <option value="surf_camp">Surf Camp</option>
+          <option value="private_vacation">Private Vacation</option>
         </select>
-        <label>Email организатора</label>
+        <label>Organizer Email</label>
         <input name="organizerEmail" type="email" />
       </section>
 
       <section class="card">
-        <h2>Рейсы и трансфер</h2>
+        <h2>Flights & Transfer</h2>
         <label>
           <input name="transferNeeded" type="checkbox" checked />
-          Нужен трансфер от аэропорта
+          Airport transfer needed
         </label>
         <div id="flightsList"></div>
-        <button type="button" class="btn btn-secondary" id="addFlight">+ Добавить рейс</button>
+        <button type="button" class="btn btn-secondary" id="addFlight">+ Add Flight</button>
       </section>
 
       <section class="card">
-        <h2>Питание</h2>
+        <h2>Meals</h2>
         <p style="color: var(--muted); font-size: 0.9rem; margin-top: 0">
-          Укажите пожелания по меню по дням. Диеты и аллергии — отдельным списком.
+          Please share your meal preferences by day. Dietary restrictions go in a separate list below.
         </p>
         <div id="dietaryList"></div>
-        <button type="button" class="btn btn-secondary" id="addDietary">+ Диетическое ограничение</button>
+        <button type="button" class="btn btn-secondary" id="addDietary">+ Add Dietary Restriction</button>
         <hr style="border: none; border-top: 1px solid var(--border); margin: 1.25rem 0" />
         <div id="menuList"></div>
-        <button type="button" class="btn btn-secondary" id="addMenuDay">+ День меню</button>
+        <button type="button" class="btn btn-secondary" id="addMenuDay">+ Add Menu Day</button>
       </section>
 
       <section class="card">
-        <h2>Активности</h2>
+        <h2>Activities</h2>
         <div id="activitiesList"></div>
-        <button type="button" class="btn btn-secondary" id="addActivity">+ Активность</button>
+        <button type="button" class="btn btn-secondary" id="addActivity">+ Add Activity</button>
       </section>
 
       <section class="card">
-        <h2>Специальные пожелания</h2>
-        <textarea name="specialRequests" rows="4" placeholder="Всё, что важно для комфорта группы…"></textarea>
+        <h2>Special Requests</h2>
+        <textarea name="specialRequests" rows="4" placeholder="Anything important for your group's comfort…"></textarea>
       </section>
 
-      <button type="submit" class="btn">Сохранить</button>
+      <button type="submit" class="btn">Save</button>
     </form>
 
-    <div class="toast" id="toast">Сохранено</div>
+    <div class="toast" id="toast">Saved</div>
 
     <script>
       const params = new URLSearchParams(location.search)
@@ -117,7 +117,7 @@
       }
 
       function setProgress(pct) {
-        document.getElementById('progressLabel').textContent = `Прогресс: ${pct}%`
+        document.getElementById('progressLabel').textContent = `Progress: ${pct}%`
         document.getElementById('progressFill').style.width = `${pct}%`
       }
 
@@ -128,19 +128,19 @@
       function flightTemplate(f = {}, key = uid()) {
         return `
           <div class="repeat-block" data-key="${key}" data-kind="flight">
-            <button type="button" class="remove">Удалить</button>
-            <label>Направление</label>
+            <button type="button" class="remove">Remove</button>
+            <label>Direction</label>
             <select data-field="direction">
-              <option value="arrival" ${f.direction === 'arrival' ? 'selected' : ''}>Прилёт</option>
-              <option value="departure" ${f.direction === 'departure' ? 'selected' : ''}>Отлёт</option>
+              <option value="arrival" ${f.direction === 'arrival' ? 'selected' : ''}>Arrival</option>
+              <option value="departure" ${f.direction === 'departure' ? 'selected' : ''}>Departure</option>
             </select>
             <div class="grid2">
-              <div><label>Номер рейса</label><input data-field="flightNumber" value="${f.flightNumber || ''}" /></div>
-              <div><label>Дата</label><input data-field="date" type="date" value="${f.date || ''}" /></div>
+              <div><label>Flight Number</label><input data-field="flightNumber" value="${f.flightNumber || ''}" /></div>
+              <div><label>Date</label><input data-field="date" type="date" value="${f.date || ''}" /></div>
             </div>
             <div class="grid2">
-              <div><label>Время</label><input data-field="time" value="${f.time || ''}" /></div>
-              <div><label>Аэропорт</label>
+              <div><label>Time</label><input data-field="time" value="${f.time || ''}" /></div>
+              <div><label>Airport</label>
                 <select data-field="airport">
                   <option value="">—</option>
                   <option value="POP" ${f.airport === 'POP' ? 'selected' : ''}>POP</option>
@@ -149,60 +149,60 @@
                 </select>
               </div>
             </div>
-            <label>Пассажиров</label><input data-field="passengers" type="number" min="0" value="${f.passengers ?? ''}" />
-            <label>Заметки</label><input data-field="notes" value="${f.notes || ''}" />
+            <label>Passengers</label><input data-field="passengers" type="number" min="0" value="${f.passengers ?? ''}" />
+            <label>Notes</label><input data-field="notes" value="${f.notes || ''}" />
           </div>`
       }
 
       function dietaryTemplate(d = {}, key = uid()) {
         return `
           <div class="repeat-block" data-key="${key}" data-kind="dietary">
-            <button type="button" class="remove">Удалить</button>
-            <label>Имя гостя</label><input data-field="guestName" value="${d.guestName || ''}" />
-            <label>Ограничение</label>
+            <button type="button" class="remove">Remove</button>
+            <label>Guest Name</label><input data-field="guestName" value="${d.guestName || ''}" />
+            <label>Restriction</label>
             <select data-field="restriction">
-              <option value="vegetarian" ${d.restriction === 'vegetarian' ? 'selected' : ''}>Вегетарианец</option>
-              <option value="vegan" ${d.restriction === 'vegan' ? 'selected' : ''}>Веган</option>
-              <option value="gluten_free" ${d.restriction === 'gluten_free' ? 'selected' : ''}>Без глютена</option>
-              <option value="lactose_free" ${d.restriction === 'lactose_free' ? 'selected' : ''}>Без лактозы</option>
-              <option value="allergy" ${d.restriction === 'allergy' ? 'selected' : ''}>Аллергия</option>
-              <option value="halal" ${d.restriction === 'halal' ? 'selected' : ''}>Халяль</option>
-              <option value="other" ${d.restriction === 'other' ? 'selected' : ''}>Другое</option>
+              <option value="vegetarian" ${d.restriction === 'vegetarian' ? 'selected' : ''}>Vegetarian</option>
+              <option value="vegan" ${d.restriction === 'vegan' ? 'selected' : ''}>Vegan</option>
+              <option value="gluten_free" ${d.restriction === 'gluten_free' ? 'selected' : ''}>Gluten-free</option>
+              <option value="lactose_free" ${d.restriction === 'lactose_free' ? 'selected' : ''}>Lactose-free</option>
+              <option value="allergy" ${d.restriction === 'allergy' ? 'selected' : ''}>Allergy</option>
+              <option value="halal" ${d.restriction === 'halal' ? 'selected' : ''}>Halal</option>
+              <option value="other" ${d.restriction === 'other' ? 'selected' : ''}>Other</option>
             </select>
-            <label>Подробности</label><input data-field="details" value="${d.details || ''}" />
+            <label>Details</label><input data-field="details" value="${d.details || ''}" />
           </div>`
       }
 
       function menuTemplate(m = {}, key = uid()) {
         return `
           <div class="repeat-block" data-key="${key}" data-kind="menu">
-            <button type="button" class="remove">Удалить</button>
-            <label>Дата</label><input data-field="date" type="date" value="${m.date || ''}" />
-            <label>Завтрак</label><textarea data-field="breakfast">${m.breakfast || ''}</textarea>
-            <label>Обед</label><textarea data-field="lunch">${m.lunch || ''}</textarea>
-            <label>Ужин</label><textarea data-field="dinner">${m.dinner || ''}</textarea>
-            <label>Заметки</label><input data-field="notes" value="${m.notes || ''}" />
+            <button type="button" class="remove">Remove</button>
+            <label>Date</label><input data-field="date" type="date" value="${m.date || ''}" />
+            <label>Breakfast</label><textarea data-field="breakfast">${m.breakfast || ''}</textarea>
+            <label>Lunch</label><textarea data-field="lunch">${m.lunch || ''}</textarea>
+            <label>Dinner</label><textarea data-field="dinner">${m.dinner || ''}</textarea>
+            <label>Notes</label><input data-field="notes" value="${m.notes || ''}" />
           </div>`
       }
 
       function activityTemplate(a = {}, key = uid()) {
         return `
           <div class="repeat-block" data-key="${key}" data-kind="activity">
-            <button type="button" class="remove">Удалить</button>
-            <label>Активность</label>
+            <button type="button" class="remove">Remove</button>
+            <label>Activity</label>
             <select data-field="activity">
               <option value="gri_gri" ${a.activity === 'gri_gri' ? 'selected' : ''}>Laguna Gri Gri</option>
               <option value="playa_grande" ${a.activity === 'playa_grande' ? 'selected' : ''}>Playa Grande</option>
-              <option value="kite_surfing" ${a.activity === 'kite_surfing' ? 'selected' : ''}>Кайт-сёрфинг</option>
-              <option value="horse_riding" ${a.activity === 'horse_riding' ? 'selected' : ''}>Верховая езда</option>
-              <option value="cultural_tour" ${a.activity === 'cultural_tour' ? 'selected' : ''}>Культурная экскурсия</option>
-              <option value="yoga" ${a.activity === 'yoga' ? 'selected' : ''}>Йога</option>
-              <option value="massage" ${a.activity === 'massage' ? 'selected' : ''}>Массаж</option>
-              <option value="other" ${a.activity === 'other' ? 'selected' : ''}>Другое</option>
+              <option value="kite_surfing" ${a.activity === 'kite_surfing' ? 'selected' : ''}>Kite Surfing</option>
+              <option value="horse_riding" ${a.activity === 'horse_riding' ? 'selected' : ''}>Horse Riding</option>
+              <option value="cultural_tour" ${a.activity === 'cultural_tour' ? 'selected' : ''}>Cultural Tour</option>
+              <option value="yoga" ${a.activity === 'yoga' ? 'selected' : ''}>Yoga</option>
+              <option value="massage" ${a.activity === 'massage' ? 'selected' : ''}>Massage</option>
+              <option value="other" ${a.activity === 'other' ? 'selected' : ''}>Other</option>
             </select>
-            <label>Дата</label><input data-field="date" type="date" value="${a.date || ''}" />
-            <label>Участников</label><input data-field="guests" type="number" min="0" value="${a.guests ?? ''}" />
-            <label>Заметки</label><input data-field="notes" value="${a.notes || ''}" />
+            <label>Date</label><input data-field="date" type="date" value="${a.date || ''}" />
+            <label>Participants</label><input data-field="guests" type="number" min="0" value="${a.guests ?? ''}" />
+            <label>Notes</label><input data-field="notes" value="${a.notes || ''}" />
           </div>`
       }
 
@@ -239,9 +239,7 @@
         const fl = document.getElementById('flightsList')
         fl.innerHTML = (p.flights || []).map((f) => flightTemplate(f, f._key || uid())).join('') || ''
         const di = document.getElementById('dietaryList')
-        di.innerHTML = (p.dietaryRestrictions || [])
-          .map((d) => dietaryTemplate(d, d._key || uid()))
-          .join('')
+        di.innerHTML = (p.dietaryRestrictions || []).map((d) => dietaryTemplate(d, d._key || uid())).join('')
         const mn = document.getElementById('menuList')
         mn.innerHTML = (p.menuPlan || []).map((m) => menuTemplate(m, m._key || uid())).join('') || ''
         const ac = document.getElementById('activitiesList')
@@ -269,15 +267,13 @@
 
       async function load() {
         if (!slug || !token) {
-          showError(
-            'Неверная ссылка. Нужны параметры ?slug=…&token=… (организатор получает полную ссылку от Las Canas).'
-          )
+          showError('Invalid link. Parameters ?slug=…&token=… are required. Please use the full link provided by Las Canas.')
           return
         }
         const res = await fetch(`/api/portal?slug=${encodeURIComponent(slug)}&token=${encodeURIComponent(token)}`)
         const json = await res.json()
         if (!res.ok) {
-          showError(json.error || 'Не удалось загрузить портал')
+          showError(json.error || 'Failed to load portal')
           return
         }
         errorBox.hidden = true
@@ -310,7 +306,7 @@
         })
         const json = await res.json()
         if (!res.ok) {
-          alert(json.error || 'Ошибка сохранения')
+          alert(json.error || 'Save error')
           return
         }
         setProgress(json.progressPercent)
