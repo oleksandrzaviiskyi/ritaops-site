@@ -3,99 +3,127 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LCBR — Группы (дашборд)</title>
-    <link rel="stylesheet" href="/portal.css" />
+    <title>RitaOps — Группы</title>
+    <link rel="stylesheet" href="/ritaops-dashboard.css" />
   </head>
-  <body>
-    <header>
-      <div class="wrap wide">
-        <h1>Групповые порталы</h1>
-        <p>Las Canas Beach Retreat — прогресс заполнения организаторами</p>
-      </div>
-    </header>
+  <body class="ops">
+    <div class="ops-layout">
+      <aside class="ops-sidebar">
+        <div class="ops-brand">
+          <div class="ops-brand-icon">☀</div>
+          <div>
+            <h1>RitaOps</h1>
+            <p>Операционная система</p>
+          </div>
+        </div>
+        <nav>
+          <ul class="ops-nav">
+            <li><a href="/dashboard" class="active">📊 Группы</a></li>
+            <li><a href="/" title="Скоро">🏨 Объекты</a></li>
+            <li><a href="#" title="Скоро">📋 Задачи</a></li>
+            <li><a href="#" title="Скоро">💬 Сообщения</a></li>
+          </ul>
+        </nav>
+        <div class="ops-help">
+          <strong>Las Canas</strong> — первый объект RitaOps.<br />
+          Каждая группа = карточка с рейсами, меню и активностями для подразделений.
+        </div>
+      </aside>
 
-    <div class="wrap wide">
-      <div class="card">
-        <p id="meta" style="margin: 0; color: var(--muted)">Загрузка…</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Группа</th>
-              <th>Заезд</th>
-              <th>Гости</th>
-              <th>Статус</th>
-              <th class="progress-cell">Прогресс</th>
-              <th>Ссылка</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-      <p style="font-size: 0.85rem; color: var(--muted)">
-        Встраивается на lascanas.puertoplatatech.com в раздел «Группы». Для продакшена задайте
-        <code>PORTAL_PUBLIC_BASE_URL</code> (например https://lascanas.com).
-      </p>
+      <main class="ops-main">
+        <header class="ops-topbar">
+          <span class="title">Групповые заезды</span>
+          <span id="userLabel" style="font-size: 0.85rem; color: var(--muted)">RitaOps · Staff</span>
+        </header>
+
+        <div class="ops-content">
+          <p id="intro" style="color: var(--muted); margin: 0 0 1.25rem">
+            Загрузка групп из Sanity…
+          </p>
+          <div id="groups" class="ops-groups-grid"></div>
+        </div>
+      </main>
     </div>
 
     <script>
-      const STATUS_LABELS = {
-        new: 'Новый',
-        in_progress: 'В процессе',
-        menu_done: 'Меню внесено',
-        flights_done: 'Рейсы внесены',
-        ready: 'Готов к заезду'
+      const STATUS = {
+        new: 'Новая',
+        in_progress: 'В работе',
+        menu_done: 'Меню',
+        flights_done: 'Рейсы',
+        ready: 'Готова'
       }
 
-      const base =
-        window.PORTAL_PUBLIC_BASE_URL ||
-        (location.origin.includes('localhost') ? location.origin : 'https://lascanas.com')
-
-      function portalLink(slug, token) {
-        if (!slug || !token) return '—'
-        const url = `${base}/portal/${encodeURIComponent(slug)}?token=${encodeURIComponent(token)}`
-        return `<a class="link-btn" href="${url}" target="_blank" rel="noopener">Открыть</a>`
+      function staffKey() {
+        const fromUrl = new URLSearchParams(location.search).get('key')
+        if (fromUrl) {
+          sessionStorage.setItem('ritaops_staff_key', fromUrl)
+          return fromUrl
+        }
+        return sessionStorage.getItem('ritaops_staff_key') || ''
       }
 
-      function copyLink(slug, token) {
-        const url = `${base}/portal/${slug}?token=${token}`
-        navigator.clipboard?.writeText(url)
-        alert('Ссылка скопирована:\n' + url)
+      function escapeHtml(s) {
+        return String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+      }
+
+      function formatDates(checkIn, checkOut) {
+        if (!checkIn) return 'Даты не указаны'
+        if (!checkOut) return checkIn
+        return `${checkIn} — ${checkOut}`
+      }
+
+      function nightsBetween(a, b) {
+        if (!a || !b) return null
+        const d1 = new Date(a)
+        const d2 = new Date(b)
+        const n = Math.round((d2 - d1) / 86400000)
+        return n > 0 ? n : null
       }
 
       async function load() {
-        const key = new URLSearchParams(location.search).get('key')
+        const key = staffKey()
         const qs = key ? `?key=${encodeURIComponent(key)}` : ''
         const res = await fetch(`/api/portals${qs}`)
-        const {portals} = await res.json()
-        document.getElementById('meta').textContent = `Всего порталов: ${portals.length}`
-        const tbody = document.getElementById('rows')
-        tbody.innerHTML = portals
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || res.statusText)
+
+        const portals = (json.portals || []).filter((p) => p.slug && p.groupName)
+        document.getElementById('intro').textContent =
+          `Всего групп: ${portals.length} · объект: ${json.property || 'Las Canas Beach Retreat'}`
+
+        const grid = document.getElementById('groups')
+        if (portals.length === 0) {
+          grid.innerHTML =
+            '<p style="grid-column:1/-1;color:var(--muted)">Нет групп. Создайте портал в Sanity Studio или через <code>portal:create</code>.</p>'
+          return
+        }
+
+        grid.innerHTML = portals
           .map((p) => {
             const pct = p.progressPercent ?? 0
-            return `<tr>
-              <td><strong>${p.groupName || p.slug || '—'}</strong></td>
-              <td>${p.checkIn || '—'}</td>
-              <td>${p.totalGuests ?? '—'}</td>
-              <td><span class="badge">${STATUS_LABELS[p.status] || p.status || '—'}</span></td>
-              <td class="progress-cell">
-                ${pct}%
-                <div class="progress-mini"><span style="width:${pct}%"></span></div>
-              </td>
-              <td>
-                ${portalLink(p.slug, p.portalAccessToken)}
-                <button type="button" class="btn btn-secondary" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem" data-slug="${p.slug}" data-token="${p.portalAccessToken}">Копировать</button>
-              </td>
-            </tr>`
+            const isNew = p.status === 'new' || pct < 15
+            const nights = nightsBetween(p.checkIn, p.checkOut)
+            const keyQs = key ? `&key=${encodeURIComponent(key)}` : ''
+            return `
+          <a class="ops-group-card${isNew ? ' new-group' : ''}" href="/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}">
+            ${isNew ? '<span class="ops-badge">Новая группа</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
+            <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
+            <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} ночей` : ''}</p>
+            <p style="margin:0 0 0.75rem;font-size:0.88rem">${p.totalGuests ?? '—'} гостей${p.adults != null ? ` (${p.adults} взр.${p.children ? `, ${p.children} дет.` : ''})` : ''}</p>
+            <div class="ops-progress-bar"><span style="width:${pct}%"></span></div>
+            <p style="margin:0.5rem 0 0;font-size:0.85rem;font-weight:600;color:var(--accent)">${pct}% заполнено</p>
+            ${p.reminderCount ? `<p style="margin:0.35rem 0 0;font-size:0.78rem;color:var(--warn)">${p.reminderCount} напоминаний</p>` : ''}
+          </a>`
           })
           .join('')
-
-        tbody.querySelectorAll('button[data-slug]').forEach((btn) => {
-          btn.onclick = () => copyLink(btn.dataset.slug, btn.dataset.token)
-        })
       }
 
       load().catch((e) => {
-        document.getElementById('meta').textContent = 'Ошибка загрузки: ' + e.message
+        document.getElementById('intro').textContent = 'Ошибка: ' + e.message
       })
     </script>
   </body>

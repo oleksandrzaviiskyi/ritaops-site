@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RitaOps — Группа</title>
+    <link rel="stylesheet" href="/ritaops-dashboard.css" />
+  </head>
+  <body class="ops">
+    <div class="ops-layout">
+      <aside class="ops-sidebar">
+        <div class="ops-brand">
+          <div class="ops-brand-icon">☀</div>
+          <div>
+            <h1>RitaOps</h1>
+            <p id="propertyName">Las Canas Beach Retreat</p>
+          </div>
+        </div>
+        <nav>
+          <ul class="ops-nav" id="sideNav">
+            <li><a href="/dashboard" id="navBack">← Все группы</a></li>
+            <li><a href="#overview" class="active">📊 Обзор</a></li>
+            <li><a href="#flights">✈️ Рейсы и трансфер</a></li>
+            <li><a href="#dining">🍽 Питание</a></li>
+            <li><a href="#activities">🌴 Активности</a></li>
+            <li><a href="#notes">📝 Пожелания</a></li>
+          </ul>
+        </nav>
+        <div class="ops-help" id="organizerLinkBox" hidden>
+          <strong>Ссылка организатору</strong>
+          <p style="font-size:0.75rem;word-break:break-all;margin:0.5rem 0" id="organizerUrl"></p>
+          <button type="button" class="ops-btn" id="copyOrganizer">Копировать</button>
+        </div>
+      </aside>
+
+      <main class="ops-main">
+        <header class="ops-topbar">
+          <span class="title">Карточка группы</span>
+          <a href="/dashboard" id="topBack" style="font-size:0.85rem;color:var(--ocean)">← Группы</a>
+        </header>
+
+        <div class="ops-content" id="content">
+          <p style="color:var(--muted)">Загрузка…</p>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const SECTIONS = [
+        {
+          id: 'flights',
+          icon: '✈️',
+          color: '#4a90c4',
+          title: 'Рейсы и трансфер',
+          desc: 'Прилёты, отлёты и трансфер от аэропорта.',
+          key: 'travel',
+          href: '#flights'
+        },
+        {
+          id: 'dining',
+          icon: '🍽',
+          color: '#3d8f5a',
+          title: 'Питание',
+          desc: 'Меню по дням и диетические ограничения.',
+          key: 'food',
+          href: '#dining'
+        },
+        {
+          id: 'activities',
+          icon: '🌴',
+          color: '#d98a2b',
+          title: 'Активности',
+          desc: 'Экскурсии и программа группы.',
+          key: 'program',
+          href: '#activities'
+        },
+        {
+          id: 'core',
+          icon: '📋',
+          color: '#7b68a6',
+          title: 'Основные данные',
+          desc: 'Даты, гости, тип мероприятия.',
+          key: 'core',
+          href: '#overview'
+        },
+        {
+          id: 'notes',
+          icon: '💬',
+          color: '#c45c3e',
+          title: 'Пожелания',
+          desc: 'Специальные запросы группы.',
+          key: 'notes',
+          href: '#notes'
+        }
+      ]
+
+      function staffKey() {
+        const fromUrl = new URLSearchParams(location.search).get('key')
+        if (fromUrl) {
+          sessionStorage.setItem('ritaops_staff_key', fromUrl)
+          return fromUrl
+        }
+        return sessionStorage.getItem('ritaops_staff_key') || ''
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+      }
+
+      function nightsBetween(a, b) {
+        if (!a || !b) return null
+        const n = Math.round((new Date(b) - new Date(a)) / 86400000)
+        return n > 0 ? n : null
+      }
+
+      function ringStyle(pct) {
+        const p = Math.min(100, Math.max(0, pct))
+        return `background: conic-gradient(var(--accent) ${p * 3.6}deg, var(--border) 0)`
+      }
+
+      function render(p) {
+        const slug = new URLSearchParams(location.search).get('slug')
+        const key = staffKey()
+        const backHref = key ? `/dashboard?key=${encodeURIComponent(key)}` : '/dashboard'
+        document.getElementById('navBack').href = backHref
+        document.getElementById('topBack').href = backHref
+
+        const pct = p.progressPercent ?? 0
+        const sec = p.progressSections || {}
+        const nights = nightsBetween(p.checkIn, p.checkOut)
+        const updated = p.lastPortalSaveAt
+          ? new Date(p.lastPortalSaveAt).toLocaleDateString('ru-RU')
+          : '—'
+
+        if (p.organizerPortalUrl) {
+          document.getElementById('organizerLinkBox').hidden = false
+          document.getElementById('organizerUrl').textContent = p.organizerPortalUrl
+          document.getElementById('copyOrganizer').onclick = () => {
+            navigator.clipboard?.writeText(p.organizerPortalUrl)
+            alert('Ссылка скопирована')
+          }
+        }
+
+        const cards = SECTIONS.map((s) => {
+          const sp = sec[s.key] ?? 0
+          return `
+          <article class="ops-section-card" id="${s.id}">
+            <div class="icon" style="background:${s.color}22;color:${s.color}">${s.icon}</div>
+            <h4>${escapeHtml(s.title)}</h4>
+            <p>${escapeHtml(s.desc)}</p>
+            <div class="ops-ring" style="${ringStyle(sp)}">${sp}%</div>
+            <a class="ops-btn" href="${p.organizerPortalUrl || '#'}" ${p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+          </article>`
+        }).join('')
+
+        const reminders = (p.reminders || [])
+          .map((r) => `<li>${escapeHtml(r.text)}</li>`)
+          .join('')
+
+        document.getElementById('content').innerHTML = `
+          <section class="ops-hero" id="overview">
+            <div class="ops-hero-bg"></div>
+            <div class="ops-hero-inner">
+              <div>
+                <div class="ops-hero-kicker">RITAOPS · ${escapeHtml(p.property || 'Las Canas')}</div>
+                <h2>${escapeHtml(p.groupName)}</h2>
+                <div class="ops-hero-meta">
+                  <span>📅 ${escapeHtml(p.checkIn || '?')} — ${escapeHtml(p.checkOut || '?')}${nights ? ` (${nights} ночей)` : ''}</span>
+                  <span>👥 ${p.totalGuests ?? '—'} гостей · ${p.adults ?? '—'} взр.${p.children ? ` · ${p.children} дет.` : ''}</span>
+                </div>
+              </div>
+              <div class="ops-progress-card">
+                <h3>Прогресс группы</h3>
+                <p class="ops-progress-pct">${pct}%</p>
+                <div class="ops-progress-bar"><span style="width:${pct}%"></span></div>
+                <p style="margin:0;font-size:0.78rem;color:var(--muted)">Обновлено: ${updated}</p>
+              </div>
+            </div>
+          </section>
+
+          <p style="margin:1rem 0;color:var(--muted)">Подразделения видят статус по блокам. Организатор заполняет данные в своём портале.</p>
+
+          <div class="ops-grid-cards">${cards}</div>
+
+          <div class="ops-bottom">
+            <div class="ops-panel">
+              <h3>Сводка группы</h3>
+              <div class="ops-stats">
+                <div><strong>${p.totalGuests ?? '—'}</strong><span>Гостей</span></div>
+                <div><strong>${p.adults ?? '—'}</strong><span>Взрослых</span></div>
+                <div><strong>${p.children ?? 0}</strong><span>Детей</span></div>
+                <div><strong>${nights ?? '—'}</strong><span>Ночей</span></div>
+              </div>
+            </div>
+            <div class="ops-panel">
+              <h3>Напоминания RitaOps</h3>
+              <ul class="ops-reminders">${reminders || '<li>Нет срочных пунктов</li>'}</ul>
+            </div>
+          </div>`
+      }
+
+      async function load() {
+        const slug = new URLSearchParams(location.search).get('slug')
+        if (!slug) {
+          document.getElementById('content').innerHTML =
+            '<p>Укажите slug в URL: /ops/group?slug=…</p>'
+          return
+        }
+        const key = staffKey()
+        const qs = new URLSearchParams({slug})
+        if (key) qs.set('key', key)
+        const res = await fetch(`/api/ops-portal?${qs}`)
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || res.statusText)
+        render(json.portal)
+      }
+
+      load().catch((e) => {
+        document.getElementById('content').innerHTML = `<p style="color:var(--warn)">${escapeHtml(e.message)}</p>`
+      })
+    </script>
+  </body>
+</html>

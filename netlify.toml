@@ -7,6 +7,16 @@
   status = 200
 
 [[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/ops/group"
+  to = "/ops-group.html"
+  status = 200
+
+[[redirects]]
   from = "/api/portal"
   to = "/.netlify/functions/portal"
   status = 200
@@ -14,4 +24,9 @@
 [[redirects]]
   from = "/api/portals"
   to = "/.netlify/functions/portals"
+  status = 200
+
+[[redirects]]
+  from = "/api/ops-portal"
+  to = "/.netlify/functions/ops-portal"
   status = 200

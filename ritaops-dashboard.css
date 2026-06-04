@@ -1,0 +1,401 @@
+/* RitaOps — операционный дашборд */
+:root {
+  --bg: #f4f0e8;
+  --sidebar: #faf8f4;
+  --card: #ffffff;
+  --ink: #1c2b2f;
+  --muted: #5a6b70;
+  --border: #e5ddd0;
+  --ocean: #1a4d5c;
+  --ocean-dark: #153f4c;
+  --accent: #3d8f5a;
+  --accent-soft: #e8f5ec;
+  --warn: #c45c3e;
+  --radius: 14px;
+  --shadow: 0 4px 24px rgba(26, 77, 92, 0.08);
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.ops {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.ops-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.ops-sidebar {
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ops-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.35rem;
+}
+
+.ops-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f0c96e, #e8a84a);
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+}
+
+.ops-brand h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: var(--ocean);
+}
+
+.ops-brand p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.ops-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.ops-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.88rem;
+  margin-bottom: 0.15rem;
+}
+
+.ops-nav a:hover,
+.ops-nav a.active {
+  background: #ebe4d8;
+  color: var(--ocean);
+}
+
+.ops-help {
+  margin-top: auto;
+  padding: 1rem;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.ops-main {
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.ops-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.5rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.ops-topbar .title {
+  font-weight: 600;
+  color: var(--ocean);
+}
+
+.ops-content {
+  padding: 1.5rem;
+}
+
+.ops-hero {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 200px;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(120deg, #2d6f82 0%, #1a4d5c 50%, #3d8f5a 100%);
+  box-shadow: var(--shadow);
+}
+
+.ops-hero-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200') center/cover;
+}
+
+.ops-hero-inner {
+  position: relative;
+  padding: 2rem 1.75rem;
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: end;
+}
+
+.ops-hero-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+  margin-bottom: 0.35rem;
+}
+
+.ops-hero h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+}
+
+.ops-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.ops-progress-card {
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  min-width: 220px;
+  box-shadow: var(--shadow);
+}
+
+.ops-progress-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.ops-progress-pct {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+}
+
+.ops-progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  margin: 0.65rem 0 0.5rem;
+  overflow: hidden;
+}
+
+.ops-progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.ops-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ops-section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.15rem;
+  box-shadow: var(--shadow);
+}
+
+.ops-section-card .icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.ops-section-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.ops-section-card p {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.ops-ring {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 4px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.ops-btn {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--ocean);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ops-btn:hover {
+  background: var(--ocean-dark);
+}
+
+.ops-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.ops-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.ops-panel h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: var(--ocean);
+}
+
+.ops-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.ops-stats strong {
+  display: block;
+  font-size: 1.5rem;
+  color: var(--ocean);
+}
+
+.ops-stats span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ops-reminders {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ops-reminders li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.ops-reminders li::before {
+  content: '○ ';
+  color: var(--accent);
+}
+
+/* Список групп (главный дашборд) */
+.ops-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.ops-group-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.ops-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(26, 77, 92, 0.12);
+}
+
+.ops-group-card.new-group {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.ops-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.ops-badge.warn {
+  background: #fde8e4;
+  color: var(--warn);
+}
+
+@media (max-width: 900px) {
+  .ops-layout {
+    grid-template-columns: 1fr;
+  }
+  .ops-sidebar {
+    display: none;
+  }
+  .ops-hero-inner {
+    grid-template-columns: 1fr;
+  }
+  .ops-bottom {
+    grid-template-columns: 1fr;
+  }
+}
