@@ -55,6 +55,14 @@ exports.handler = async (event) => {
       return {statusCode: 404, headers, body: JSON.stringify({error: 'Группа не найдена'})}
     }
 
+    const guests = await client.fetch(
+      `*[_type == "guestSubmission" && groupPortal._ref == $id] | order(submittedAt asc){
+        guestName, adults, children, flights, dietaryRestrictions, activities,
+        massageRequested, submittedAt
+      }`,
+      {id: doc._id}
+    )
+
     const enriched = enrichPortal(doc)
     const {portalAccessToken, ...safe} = enriched
     const host = event.headers.host || 'ritaops.com'
@@ -85,7 +93,8 @@ exports.handler = async (event) => {
           organizerPortalUrl,
           guestFormUrl,
           groupSlug: slug
-        }
+        },
+        guests: guests || []
       })
     }
   } catch (err) {

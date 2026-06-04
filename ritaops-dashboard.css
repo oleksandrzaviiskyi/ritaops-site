@@ -450,6 +450,52 @@ body.ops {
   color: var(--ocean);
 }
 
+.ops-guest-section {
+  margin-top: 1.5rem;
+}
+
+.ops-guest-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: var(--ocean);
+}
+
+.ops-data-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.ops-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ops-data-table th,
+.ops-data-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.ops-data-table th {
+  background: var(--bg);
+  color: var(--ocean);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ops-data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ops-data-table .muted {
+  color: var(--muted);
+}
+
 .ops-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

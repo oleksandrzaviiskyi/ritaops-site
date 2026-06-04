@@ -184,6 +184,101 @@
         return `background: conic-gradient(var(--accent) ${p * 3.6}deg, var(--border) 0)`
       }
 
+      function formatGuestDietary(items) {
+        const list = Array.isArray(items) ? items : []
+        if (!list.length) return '—'
+        return list
+          .map((d) => {
+            const label = RESTRICTION_LABELS[d.restriction] || d.restriction || '—'
+            const detail = d.details ? ` (${d.details})` : ''
+            return `${d.guestName ? d.guestName + ': ' : ''}${label}${detail}`
+          })
+          .join('; ')
+      }
+
+      function formatGuestActivities(items) {
+        const list = Array.isArray(items) ? items : []
+        if (!list.length) return '—'
+        return list
+          .map((a) => {
+            const label = ACTIVITY_LABELS[a.activity] || a.activity || '—'
+            const date = a.date ? ` · ${a.date}` : ''
+            const n = a.guests != null ? ` (${a.guests})` : ''
+            return `${label}${date}${n}`
+          })
+          .join('; ')
+      }
+
+      function formatGuestMassage(g) {
+        if (g.massageRequested) return 'Yes'
+        const acts = Array.isArray(g.activities) ? g.activities : []
+        if (acts.some((a) => a.activity === 'massage')) return 'Yes'
+        return '—'
+      }
+
+      function formatSubmittedAt(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        if (Number.isNaN(d.getTime())) return '—'
+        return d.toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+
+      function renderGuestSubmissions(guests) {
+        const list = Array.isArray(guests) ? guests : []
+        const count = list.length
+        if (!count) {
+          return `
+          <section class="ops-guest-section" id="guest-submissions">
+            <h3>Guest Submissions (${count})</h3>
+            <p class="muted" style="margin:0;color:var(--muted)">No guest forms submitted yet.</p>
+          </section>`
+        }
+
+        const rows = list
+          .map((g) => {
+            const flights = Array.isArray(g.flights) ? g.flights.length : 0
+            return `<tr>
+              <td>${escapeHtml(g.guestName || '—')}</td>
+              <td>${g.adults != null ? escapeHtml(g.adults) : '—'}</td>
+              <td>${g.children != null ? escapeHtml(g.children) : '—'}</td>
+              <td>${flights}</td>
+              <td>${escapeHtml(formatGuestDietary(g.dietaryRestrictions))}</td>
+              <td>${escapeHtml(formatGuestActivities(g.activities))}</td>
+              <td>${escapeHtml(formatGuestMassage(g))}</td>
+              <td>${escapeHtml(formatSubmittedAt(g.submittedAt))}</td>
+            </tr>`
+          })
+          .join('')
+
+        return `
+          <section class="ops-guest-section" id="guest-submissions">
+            <h3>Guest Submissions (${count})</h3>
+            <div class="ops-data-table-wrap">
+              <table class="ops-data-table">
+                <thead>
+                  <tr>
+                    <th>Guest name</th>
+                    <th>Adults</th>
+                    <th>Children</th>
+                    <th>Flights count</th>
+                    <th>Dietary restrictions</th>
+                    <th>Activities</th>
+                    <th>Massage</th>
+                    <th>Submitted at</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </section>`
+      }
+
       function printTable(headers, rows) {
         if (!rows.length) {
           return '<p class="empty">No data</p>'
@@ -434,8 +529,9 @@
         XLSX.writeFile(wb, `ritaops-${slug || 'group'}-report.xlsx`)
       }
 
-      function render(p) {
+      function render(p, guests) {
         window.portalData = p
+        window.guestSubmissions = guests || []
         const slug = new URLSearchParams(location.search).get('slug')
         const key = staffKey()
         const backHref = key ? `/dashboard?key=${encodeURIComponent(key)}` : '/dashboard'
@@ -534,7 +630,9 @@
               <h3>Напоминания RitaOps</h3>
               <ul class="ops-reminders">${reminders || '<li>Нет срочных пунктов</li>'}</ul>
             </div>
-          </div>`
+          </div>
+
+          ${renderGuestSubmissions(guests)}`
 
       }
 
@@ -562,7 +660,7 @@
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || res.statusText)
         window.portalData = json.portal
-        render(json.portal)
+        render(json.portal, json.guests)
       }
 
       load().catch((e) => {
