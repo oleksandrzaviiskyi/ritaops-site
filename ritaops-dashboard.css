@@ -450,6 +450,23 @@ body.ops {
   color: var(--ocean);
 }
 
+.ops-merged-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.ops-merged-block h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--ocean);
+}
+
+.ops-merged-block h4 {
+  font-weight: 600;
+}
+
 .ops-guest-section {
   margin-top: 1.5rem;
 }

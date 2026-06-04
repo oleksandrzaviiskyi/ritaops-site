@@ -63,6 +63,82 @@
         return window.portalData || null
       }
 
+      function getGuestSubmissions() {
+        return window.guestSubmissions || []
+      }
+
+      const SOURCE_ORGANIZER = 'Organizer'
+
+      function mergeFlights(portal, guestSubmissions) {
+        const rows = []
+        ;(Array.isArray(portal?.flights) ? portal.flights : []).forEach((f) => {
+          rows.push({guest: SOURCE_ORGANIZER, ...f})
+        })
+        ;(Array.isArray(guestSubmissions) ? guestSubmissions : []).forEach((g) => {
+          const guest = g.guestName || 'Guest'
+          ;(Array.isArray(g.flights) ? g.flights : []).forEach((f) => {
+            rows.push({guest, ...f})
+          })
+        })
+        return rows
+      }
+
+      function mergeDietary(portal, guestSubmissions) {
+        const rows = []
+        ;(Array.isArray(portal?.dietaryRestrictions) ? portal.dietaryRestrictions : []).forEach((d) => {
+          rows.push({guest: SOURCE_ORGANIZER, ...d})
+        })
+        ;(Array.isArray(guestSubmissions) ? guestSubmissions : []).forEach((g) => {
+          const source = g.guestName || 'Guest'
+          ;(Array.isArray(g.dietaryRestrictions) ? g.dietaryRestrictions : []).forEach((d) => {
+            rows.push({guest: source, ...d})
+          })
+        })
+        return rows
+      }
+
+      function mergeActivities(portal, guestSubmissions) {
+        const rows = []
+        ;(Array.isArray(portal?.activities) ? portal.activities : []).forEach((a) => {
+          rows.push({guest: SOURCE_ORGANIZER, ...a})
+        })
+        ;(Array.isArray(guestSubmissions) ? guestSubmissions : []).forEach((g) => {
+          const guest = g.guestName || 'Guest'
+          ;(Array.isArray(g.activities) ? g.activities : []).forEach((a) => {
+            rows.push({guest, ...a})
+          })
+        })
+        return rows
+      }
+
+      const PROGRESS_WEIGHTS = {core: 30, travel: 25, food: 25, program: 10, notes: 10}
+
+      function progressWithGuests(portal, guestSubmissions) {
+        const base = portal.progressSections || {}
+        const sections = {...base}
+        const subs = Array.isArray(guestSubmissions) ? guestSubmissions : []
+        if (subs.length) sections.travel = 100
+
+        const percent = Math.min(
+          100,
+          Math.round(
+            (sections.core * PROGRESS_WEIGHTS.core +
+              sections.travel * PROGRESS_WEIGHTS.travel +
+              sections.food * PROGRESS_WEIGHTS.food +
+              sections.program * PROGRESS_WEIGHTS.program +
+              sections.notes * PROGRESS_WEIGHTS.notes) /
+              100
+          )
+        )
+        return {sections, percent}
+      }
+
+      function flightDirectionLabel(direction) {
+        if (direction === 'arrival') return 'Arrival'
+        if (direction === 'departure') return 'Departure'
+        return '—'
+      }
+
       const PRINT_SECTION_TITLES = {
         flights: 'Flights & Transport',
         dining: 'Nutrition',
@@ -229,6 +305,87 @@
         })
       }
 
+      function renderMergedTable(headers, rows) {
+        if (!rows.length) {
+          return '<p style="margin:0;color:var(--muted);font-size:0.88rem">Нет данных</p>'
+        }
+        const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')
+        const body = rows
+          .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`)
+          .join('')
+        return `<div class="ops-data-table-wrap"><table class="ops-data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+      }
+
+      function renderMergedSectionBlocks(portal, guestSubmissions) {
+        const subs = guestSubmissions || []
+        const flights = mergeFlights(portal, subs)
+        const flightRows = flights.map((f) => [
+          f.guest,
+          flightDirectionLabel(f.direction),
+          f.flightNumber || '—',
+          f.date || '—',
+          f.time || '—',
+          f.airport || '—',
+          f.passengers != null ? String(f.passengers) : '—'
+        ])
+        const transferNote =
+          portal.transferNeeded === true
+            ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Трансфер:</strong> требуется</p>'
+            : portal.transferNeeded === false
+              ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Трансфер:</strong> не требуется</p>'
+              : ''
+
+        const dietary = mergeDietary(portal, subs)
+        const dietRows = dietary.map((d) => [
+          d.guest,
+          d.guestName || '—',
+          RESTRICTION_LABELS[d.restriction] || d.restriction || '—',
+          d.details || '—'
+        ])
+        const menu = Array.isArray(portal.menuPlan) ? portal.menuPlan : []
+        const menuRows = menu.map((m) => [
+          m.date || '—',
+          (m.breakfast || '—').replace(/\n/g, ' '),
+          (m.lunch || '—').replace(/\n/g, ' '),
+          (m.dinner || '—').replace(/\n/g, ' ')
+        ])
+
+        const acts = mergeActivities(portal, subs)
+        const actRows = acts.map((a) => [
+          a.guest,
+          ACTIVITY_LABELS[a.activity] || a.activity || '—',
+          a.date || '—',
+          a.guests != null ? String(a.guests) : '—',
+          a.notes || '—'
+        ])
+
+        return `
+          <div class="ops-merged-sections">
+            <section class="ops-panel ops-merged-block" id="flights">
+              <h3>✈️ Рейсы и трансфер</h3>
+              ${renderMergedTable(
+                ['Guest', 'Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
+                flightRows
+              )}
+              ${transferNote}
+            </section>
+            <section class="ops-panel ops-merged-block" id="dining">
+              <h3>🍽 Питание</h3>
+              <h4 style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Диетические ограничения</h4>
+              ${renderMergedTable(['Guest', 'Name', 'Restriction', 'Details'], dietRows)}
+              <h4 style="margin:1.25rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Меню по дням (организатор)</h4>
+              ${renderMergedTable(['Date', 'Breakfast', 'Lunch', 'Dinner'], menuRows)}
+            </section>
+            <section class="ops-panel ops-merged-block" id="activities">
+              <h3>🌴 Активности</h3>
+              ${renderMergedTable(
+                ['Guest', 'Activity', 'Date', 'Participants', 'Notes'],
+                actRows
+              )}
+            </section>
+          </div>`
+      }
+
       function renderGuestSubmissions(guests) {
         const list = Array.isArray(guests) ? guests : []
         const count = list.length
@@ -290,11 +447,14 @@
         return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
       }
 
-      function buildPrintBody(sectionId, p) {
+      function buildPrintBody(sectionId, p, guestSubmissions) {
+        const subs = guestSubmissions ?? getGuestSubmissions()
+
         if (sectionId === 'flights') {
-          const flights = Array.isArray(p.flights) ? p.flights : []
+          const flights = mergeFlights(p, subs)
           const rows = flights.map((f) => [
-            f.direction === 'arrival' ? 'Arrival' : f.direction === 'departure' ? 'Departure' : '—',
+            f.guest || '—',
+            flightDirectionLabel(f.direction),
             f.flightNumber || '—',
             f.date || '—',
             f.time || '—',
@@ -309,15 +469,16 @@
                 : ''
           return (
             printTable(
-              ['Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
+              ['Guest', 'Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
               rows
             ) + transfer
           )
         }
 
         if (sectionId === 'dining') {
-          const dietary = Array.isArray(p.dietaryRestrictions) ? p.dietaryRestrictions : []
+          const dietary = mergeDietary(p, subs)
           const dietRows = dietary.map((d) => [
+            d.guest || '—',
             d.guestName || '—',
             RESTRICTION_LABELS[d.restriction] || d.restriction || '—',
             d.details || '—'
@@ -331,21 +492,22 @@
           ])
           return (
             '<h2>Dietary restrictions</h2>' +
-            printTable(['Guest Name', 'Restriction', 'Details'], dietRows) +
+            printTable(['Guest', 'Name', 'Restriction', 'Details'], dietRows) +
             '<h2>Menu by day</h2>' +
             printTable(['Date', 'Breakfast', 'Lunch', 'Dinner'], menuRows)
           )
         }
 
         if (sectionId === 'activities') {
-          const acts = Array.isArray(p.activities) ? p.activities : []
+          const acts = mergeActivities(p, subs)
           const rows = acts.map((a) => [
+            a.guest || '—',
             ACTIVITY_LABELS[a.activity] || a.activity || '—',
             a.date || '—',
             a.guests != null ? String(a.guests) : '—',
             a.notes || '—'
           ])
-          return printTable(['Activity', 'Date', 'Participants', 'Notes'], rows)
+          return printTable(['Guest', 'Activity', 'Date', 'Participants', 'Notes'], rows)
         }
 
         if (sectionId === 'core') {
@@ -401,7 +563,8 @@
         const groupName = p.groupName || p.slug || 'Group'
         const sectionTitle = PRINT_SECTION_TITLES[sectionId] || sectionId
         const header = `RitaOps · ${property} · ${groupName} · ${sectionTitle}`
-        const body = buildPrintBody(sectionId, p)
+        const subs = getGuestSubmissions()
+        const body = buildPrintBody(sectionId, p, subs)
 
         runPrint(`<div class="print-sheet"><h1 class="print-title">${escapeHtml(header)}</h1>${body}</div>`)
       }
@@ -410,13 +573,14 @@
         const p = requirePortalData()
         if (!p) return
 
+        const subs = getGuestSubmissions()
         const property = p.property || 'Las Canas Beach Retreat'
         const groupName = p.groupName || p.slug || 'Group'
         const mainTitle = `RitaOps · ${property} · ${groupName} · Full Report`
 
         const sectionsHtml = PRINT_ALL_ORDER.map((id) => {
           const title = PRINT_SECTION_TITLES[id]
-          const body = buildPrintBody(id, p)
+          const body = buildPrintBody(id, p, subs)
           return `<section class="print-section-block"><h2 class="print-section-heading">${escapeHtml(title)}</h2>${body}</section>`
         }).join('')
 
@@ -457,13 +621,15 @@
           'Overview'
         )
 
-        const flights = Array.isArray(p.flights) ? p.flights : []
+        const subs = getGuestSubmissions()
+        const flights = mergeFlights(p, subs)
         XLSX.utils.book_append_sheet(
           wb,
           XLSX.utils.aoa_to_sheet([
-            ['Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
+            ['Guest', 'Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
             ...flights.map((f) => [
-              f.direction === 'arrival' ? 'Arrival' : f.direction === 'departure' ? 'Departure' : '',
+              f.guest || '',
+              flightDirectionLabel(f.direction),
               f.flightNumber || '',
               f.date || '',
               f.time || '',
@@ -476,12 +642,13 @@
           'Flights'
         )
 
-        const dietary = Array.isArray(p.dietaryRestrictions) ? p.dietaryRestrictions : []
+        const dietary = mergeDietary(p, subs)
         const menu = Array.isArray(p.menuPlan) ? p.menuPlan : []
         const nutritionRows = [
           ['Dietary restrictions'],
-          ['Guest Name', 'Restriction', 'Details'],
+          ['Guest', 'Name', 'Restriction', 'Details'],
           ...dietary.map((d) => [
+            d.guest || '',
             d.guestName || '',
             RESTRICTION_LABELS[d.restriction] || d.restriction || '',
             d.details || ''
@@ -498,12 +665,13 @@
         ]
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(nutritionRows), 'Nutrition')
 
-        const acts = Array.isArray(p.activities) ? p.activities : []
+        const acts = mergeActivities(p, subs)
         XLSX.utils.book_append_sheet(
           wb,
           XLSX.utils.aoa_to_sheet([
-            ['Activity', 'Date', 'Participants', 'Notes'],
+            ['Guest', 'Activity', 'Date', 'Participants', 'Notes'],
             ...acts.map((a) => [
+              a.guest || '',
               ACTIVITY_LABELS[a.activity] || a.activity || '',
               a.date || '',
               a.guests != null ? a.guests : '',
@@ -538,8 +706,8 @@
         document.getElementById('navBack').href = backHref
         document.getElementById('topBack').href = backHref
 
-        const pct = p.progressPercent ?? 0
-        const sec = p.progressSections || {}
+        const guestList = guests || []
+        const {sections: sec, percent: pct} = progressWithGuests(p, guestList)
         const nights = nightsBetween(p.checkIn, p.checkOut)
         const updated = p.lastPortalSaveAt
           ? new Date(p.lastPortalSaveAt).toLocaleDateString('ru-RU')
@@ -615,6 +783,8 @@
           <p style="margin:1rem 0;color:var(--muted)">Подразделения видят статус по блокам. Организатор заполняет данные в своём портале.</p>
 
           <div class="ops-grid-cards">${cards}</div>
+
+          ${renderMergedSectionBlocks(p, guestList)}
 
           <div class="ops-bottom">
             <div class="ops-panel">
