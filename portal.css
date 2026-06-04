@@ -192,6 +192,16 @@ textarea {
   font-size: 0.85rem;
 }
 
+.activity-hint-massage {
+  font-size: 0.88rem;
+  color: var(--ocean);
+  margin: -0.35rem 0 0.85rem;
+  padding: 0.5rem 0.65rem;
+  background: #e8f4f8;
+  border-radius: 8px;
+  border: 1px solid #c5dde6;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

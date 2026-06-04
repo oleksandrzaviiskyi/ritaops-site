@@ -185,6 +185,15 @@
           </div>`
       }
 
+      function syncMassageHints(root) {
+        const scope = root || document
+        scope.querySelectorAll('.repeat-block[data-kind="activity"]').forEach((block) => {
+          const select = block.querySelector('[data-field="activity"]')
+          const hint = block.querySelector('.activity-hint-massage')
+          if (select && hint) hint.hidden = select.value !== 'massage'
+        })
+      }
+
       function activityTemplate(a = {}, key = uid()) {
         return `
           <div class="repeat-block" data-key="${key}" data-kind="activity">
@@ -200,6 +209,7 @@
               <option value="massage" ${a.activity === 'massage' ? 'selected' : ''}>Massage</option>
               <option value="other" ${a.activity === 'other' ? 'selected' : ''}>Other</option>
             </select>
+            <p class="activity-hint activity-hint-massage" ${a.activity === 'massage' ? '' : 'hidden'}>💆 Massage · 60 min · $60 USD per person</p>
             <label>Date</label><input data-field="date" type="date" value="${a.date || ''}" />
             <label>Participants</label><input data-field="guests" type="number" min="0" value="${a.guests ?? ''}" />
             <label>Notes</label><input data-field="notes" value="${a.notes || ''}" />
@@ -244,6 +254,7 @@
         mn.innerHTML = (p.menuPlan || []).map((m) => menuTemplate(m, m._key || uid())).join('') || ''
         const ac = document.getElementById('activitiesList')
         ac.innerHTML = (p.activities || []).map((a) => activityTemplate(a, a._key || uid())).join('') || ''
+        syncMassageHints(ac)
       }
 
       document.getElementById('addFlight').onclick = () => {
@@ -256,8 +267,16 @@
         document.getElementById('menuList').insertAdjacentHTML('beforeend', menuTemplate())
       }
       document.getElementById('addActivity').onclick = () => {
-        document.getElementById('activitiesList').insertAdjacentHTML('beforeend', activityTemplate())
+        const list = document.getElementById('activitiesList')
+        list.insertAdjacentHTML('beforeend', activityTemplate())
+        syncMassageHints(list)
       }
+
+      document.getElementById('activitiesList').addEventListener('change', (e) => {
+        if (!e.target.matches('[data-field="activity"]')) return
+        const hint = e.target.closest('.repeat-block')?.querySelector('.activity-hint-massage')
+        if (hint) hint.hidden = e.target.value !== 'massage'
+      })
 
       document.body.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove')) {
