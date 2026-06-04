@@ -360,8 +360,8 @@
         ])
 
         return `
-          <div class="ops-merged-sections">
-            <section class="ops-panel ops-merged-block" id="flights">
+          <div class="ops-merged-sections" id="merged-sections" hidden>
+            <section class="ops-panel ops-merged-block" id="flights" hidden>
               <h3>✈️ Рейсы и трансфер</h3>
               ${renderMergedTable(
                 ['Guest', 'Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
@@ -369,14 +369,14 @@
               )}
               ${transferNote}
             </section>
-            <section class="ops-panel ops-merged-block" id="dining">
+            <section class="ops-panel ops-merged-block" id="dining" hidden>
               <h3>🍽 Питание</h3>
               <h4 style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Диетические ограничения</h4>
               ${renderMergedTable(['Guest', 'Name', 'Restriction', 'Details'], dietRows)}
               <h4 style="margin:1.25rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Меню по дням (организатор)</h4>
               ${renderMergedTable(['Date', 'Breakfast', 'Lunch', 'Dinner'], menuRows)}
             </section>
-            <section class="ops-panel ops-merged-block" id="activities">
+            <section class="ops-panel ops-merged-block" id="activities" hidden>
               <h3>🌴 Активности</h3>
               ${renderMergedTable(
                 ['Guest', 'Activity', 'Date', 'Participants', 'Notes'],
@@ -548,16 +548,60 @@
         return p
       }
 
-      function runPrint(html) {
+      const MERGED_PANEL_IDS = ['flights', 'dining', 'activities']
+
+      function hideMergedPanels() {
+        MERGED_PANEL_IDS.forEach((id) => {
+          const el = document.getElementById(id)
+          if (el) el.hidden = true
+        })
+        const wrap = document.getElementById('merged-sections')
+        if (wrap) wrap.hidden = true
+      }
+
+      function showMergedPanel(sectionId) {
+        if (!MERGED_PANEL_IDS.includes(sectionId)) return
+        hideMergedPanels()
+        const el = document.getElementById(sectionId)
+        const wrap = document.getElementById('merged-sections')
+        if (wrap) wrap.hidden = false
+        if (el) {
+          el.hidden = false
+          el.scrollIntoView({behavior: 'smooth', block: 'start'})
+        }
+      }
+
+      function toggleMergedPanel(sectionId) {
+        if (!MERGED_PANEL_IDS.includes(sectionId)) return
+        const el = document.getElementById(sectionId)
+        if (!el) return
+        if (!el.hidden) {
+          hideMergedPanels()
+          return
+        }
+        showMergedPanel(sectionId)
+      }
+
+      function runPrint(html, onAfterPrint) {
         const area = document.getElementById('print-area')
         area.innerHTML = html
-        window.addEventListener('afterprint', () => { area.innerHTML = '' }, {once: true})
+        window.addEventListener(
+          'afterprint',
+          () => {
+            area.innerHTML = ''
+            onAfterPrint?.()
+          },
+          {once: true}
+        )
         window.print()
       }
 
       function printSection(sectionId) {
         const p = requirePortalData()
         if (!p) return
+
+        const showOnScreen = MERGED_PANEL_IDS.includes(sectionId)
+        if (showOnScreen) showMergedPanel(sectionId)
 
         const property = p.property || 'Las Canas Beach Retreat'
         const groupName = p.groupName || p.slug || 'Group'
@@ -566,7 +610,10 @@
         const subs = getGuestSubmissions()
         const body = buildPrintBody(sectionId, p, subs)
 
-        runPrint(`<div class="print-sheet"><h1 class="print-title">${escapeHtml(header)}</h1>${body}</div>`)
+        runPrint(
+          `<div class="print-sheet"><h1 class="print-title">${escapeHtml(header)}</h1>${body}</div>`,
+          showOnScreen ? hideMergedPanels : undefined
+        )
       }
 
       function printAll() {
@@ -742,14 +789,19 @@
 
         const cards = SECTIONS.map((s) => {
           const sp = sec[s.key] ?? 0
+          const hasMerged = MERGED_PANEL_IDS.includes(s.id)
+          const viewBtn = hasMerged
+            ? `<button type="button" class="ops-btn" data-view="${s.id}">View</button>`
+            : ''
           return `
-          <article class="ops-section-card" id="${s.id}">
+          <article class="ops-section-card" id="card-${s.id}">
             <div class="icon" style="background:${s.color}22;color:${s.color}">${s.icon}</div>
             <h4>${escapeHtml(s.title)}</h4>
             <p>${escapeHtml(s.desc)}</p>
             <div class="ops-ring" style="${ringStyle(sp)}">${sp}%</div>
             <div class="ops-card-actions">
               <a class="ops-btn" href="${joinUrl || p.organizerPortalUrl || '#'}" ${joinUrl || p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+              ${viewBtn}
               <button type="button" class="ops-btn ops-btn-print" data-print="${s.printId}">🖨 Print</button>
             </div>
           </article>`
@@ -809,11 +861,27 @@
       document.getElementById('btnPrintAll').addEventListener('click', printAll)
       document.getElementById('btnExportExcel').addEventListener('click', exportExcel)
 
+      document.getElementById('sideNav')?.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href^="#"]')
+        if (!link) return
+        const id = link.getAttribute('href').slice(1)
+        if (MERGED_PANEL_IDS.includes(id)) {
+          e.preventDefault()
+          showMergedPanel(id)
+        }
+      })
+
       document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-print]')
-        if (!btn) return
+        const viewBtn = e.target.closest('[data-view]')
+        if (viewBtn) {
+          e.preventDefault()
+          toggleMergedPanel(viewBtn.getAttribute('data-view'))
+          return
+        }
+        const printBtn = e.target.closest('[data-print]')
+        if (!printBtn) return
         e.preventDefault()
-        printSection(btn.getAttribute('data-print'))
+        printSection(printBtn.getAttribute('data-print'))
       })
 
       async function load() {
