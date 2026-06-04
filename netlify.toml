@@ -3,7 +3,7 @@
 
 [[redirects]]
   from = "/portal/*"
-  to = "/portal.html"
+  to = "/organizer.html"
   status = 200
 
 [[redirects]]
