@@ -82,8 +82,20 @@ exports.handler = async (event) => {
       if (!slug) {
         return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'groupSlug required'})}
       }
-      if (!body.guestName || !String(body.guestName).trim()) {
-        return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'guestName required'})}
+      const firstName = String(body.firstName || '').trim()
+      const lastName = String(body.lastName || '').trim()
+      const email = String(body.email || '').trim()
+      const phone = String(body.phone || '').trim()
+      const guestName =
+        [firstName, lastName].filter(Boolean).join(' ') ||
+        String(body.guestName || '').trim()
+
+      if (!firstName || !lastName || !email || !phone) {
+        return {
+          statusCode: 400,
+          headers: cors,
+          body: JSON.stringify({error: 'firstName, lastName, email, and phone are required'})
+        }
       }
 
       const portal = await client.fetch(GROUP_QUERY, {groupSlug: slug})
@@ -95,7 +107,11 @@ exports.handler = async (event) => {
         _type: 'guestSubmission',
         groupPortal: {_type: 'reference', _ref: portal._id},
         submittedAt: new Date().toISOString(),
-        guestName: String(body.guestName).trim(),
+        firstName,
+        lastName,
+        email,
+        phone,
+        guestName,
         adults: body.adults != null ? Number(body.adults) : undefined,
         children: body.children != null ? Number(body.children) : 0,
         flights: withKeys(body.flights),

@@ -3,40 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Guest form — Las Canas</title>
+    <title>Edit submission — Las Canas</title>
     <link rel="stylesheet" href="/portal.css" />
   </head>
   <body>
     <header>
       <div class="wrap">
-        <h1 id="pageTitle">Las Canas Beach Retreat</h1>
-        <p id="pageSubtitle">Guest information form</p>
+        <h1 id="pageTitle">Edit your submission</h1>
+        <p id="pageSubtitle">Las Canas Beach Retreat</p>
         <p id="groupDates" style="margin: 0.35rem 0 0; opacity: 0.9; font-size: 0.9rem"></p>
       </div>
     </header>
 
     <div id="errorBox" class="error-box wrap" hidden></div>
     <div id="thanksBox" class="card wrap" hidden>
-      <h2 style="margin: 0 0 0.5rem; color: var(--ocean)">Thank you!</h2>
-      <p style="margin: 0">We'll be in touch soon.</p>
+      <h2 style="margin: 0 0 0.5rem; color: var(--ocean)">Saved!</h2>
+      <p style="margin: 0">Your submission has been updated.</p>
     </div>
-
-    <section class="card wrap" id="editLinkCard" hidden>
-      <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--muted)">
-        Already submitted your form?
-      </p>
-      <button type="button" class="btn btn-secondary" id="btnShowEditRequest">
-        Already submitted? Request edit link
-      </button>
-      <div id="editRequestPanel" hidden style="margin-top: 1rem">
-        <label for="editRequestEmail">Email used on your submission</label>
-        <input id="editRequestEmail" type="email" required autocomplete="email" />
-        <button type="button" class="btn" id="btnSendEditLink" style="margin-top: 0.75rem">
-          Send edit link
-        </button>
-        <p id="editRequestMsg" style="margin: 0.75rem 0 0; font-size: 0.88rem" hidden></p>
-      </div>
-    </section>
 
     <form id="guestForm" class="wrap" hidden>
       <section class="card">
@@ -100,18 +83,17 @@
         <textarea name="specialRequests" rows="4" placeholder="Anything we should know…"></textarea>
       </section>
 
-      <button type="submit" class="btn">Submit</button>
+      <button type="submit" class="btn">Save changes</button>
     </form>
 
     <script src="/guest-form.js"></script>
     <script>
-      const pathMatch = location.pathname.match(/\/guest\/([^/]+)/)
-      const groupSlug = pathMatch && decodeURIComponent(pathMatch[1])
+      const pathMatch = location.pathname.match(/\/edit\/([^/]+)/)
+      const editToken = pathMatch && decodeURIComponent(pathMatch[1])
 
       const errorBox = document.getElementById('errorBox')
       const thanksBox = document.getElementById('thanksBox')
       const form = document.getElementById('guestForm')
-      const editLinkCard = document.getElementById('editLinkCard')
 
       GuestForm.bindRepeatUi()
 
@@ -120,60 +102,31 @@
         errorBox.textContent = msg
         form.hidden = true
         thanksBox.hidden = true
-        editLinkCard.hidden = true
       }
 
-      document.getElementById('btnShowEditRequest').onclick = () => {
-        document.getElementById('editRequestPanel').hidden = false
-      }
-
-      document.getElementById('btnSendEditLink').onclick = async () => {
-        const email = document.getElementById('editRequestEmail').value.trim()
-        const msgEl = document.getElementById('editRequestMsg')
-        if (!email) {
-          alert('Please enter your email')
+      async function loadSubmission() {
+        if (!editToken) {
+          showError('Invalid edit link.')
           return
         }
-        msgEl.hidden = false
-        msgEl.textContent = 'Sending…'
-        try {
-          const res = await fetch('/api/request-edit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({groupSlug, email})
-          })
-          const json = await res.json()
-          if (!res.ok) throw new Error(json.error || 'Request failed')
-          msgEl.textContent = json.message || 'Check your email for an edit link.'
-          msgEl.style.color = 'var(--ocean)'
-        } catch (err) {
-          msgEl.textContent = err.message
-          msgEl.style.color = 'var(--warn, #c45c3e)'
-        }
-      }
-
-      async function loadGroup() {
-        if (!groupSlug) {
-          showError('Invalid link. Use the guest link from your organizer.')
-          return
-        }
-        const res = await fetch(`/api/guest?groupSlug=${encodeURIComponent(groupSlug)}`)
+        const res = await fetch(`/api/edit-guest?token=${encodeURIComponent(editToken)}`)
         const json = await res.json()
         if (!res.ok) {
-          showError(json.error || 'Could not load group')
+          showError(json.error || 'Could not load your submission')
           return
         }
-        const g = json.group
+        const g = json.group || {}
+        const s = json.submission
         document.getElementById('pageTitle').textContent =
-          `Welcome to ${g.groupName || 'your group'} · Las Canas Beach Retreat`
+          `Edit · ${g.groupName || 'your group'}`
         const dates =
           g.checkIn || g.checkOut
             ? `${g.checkIn || '?'} — ${g.checkOut || '?'}`
             : ''
         document.getElementById('groupDates').textContent = dates ? `Stay dates: ${dates}` : ''
+        GuestForm.fillContactFields(form, s)
         errorBox.hidden = true
         form.hidden = false
-        editLinkCard.hidden = false
       }
 
       form.addEventListener('submit', async (e) => {
@@ -183,24 +136,23 @@
           alert('Please fill in first name, last name, email, and phone.')
           return
         }
-        const data = GuestForm.buildSubmissionPayload(form, {groupSlug})
-        const res = await fetch('/api/guest', {
+        const data = GuestForm.buildSubmissionPayload(form, {token: editToken})
+        const res = await fetch('/api/edit-guest', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(data)
         })
         const json = await res.json()
         if (!res.ok) {
-          alert(json.error || 'Submit failed')
+          alert(json.error || 'Save failed')
           return
         }
         form.hidden = true
-        editLinkCard.hidden = true
         thanksBox.hidden = false
         window.scrollTo(0, 0)
       })
 
-      loadGroup()
+      loadSubmission()
     </script>
   </body>
 </html>

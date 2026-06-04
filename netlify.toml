@@ -42,6 +42,11 @@
   status = 200
 
 [[redirects]]
+  from = "/edit/*"
+  to = "/edit-guest.html"
+  status = 200
+
+[[redirects]]
   from = "/api/guest"
   to = "/.netlify/functions/guest"
   status = 200
@@ -54,4 +59,14 @@
 [[redirects]]
   from = "/api/save-transfers"
   to = "/.netlify/functions/save-transfers"
+  status = 200
+
+[[redirects]]
+  from = "/api/request-edit"
+  to = "/.netlify/functions/request-edit"
+  status = 200
+
+[[redirects]]
+  from = "/api/edit-guest"
+  to = "/.netlify/functions/edit-guest"
   status = 200

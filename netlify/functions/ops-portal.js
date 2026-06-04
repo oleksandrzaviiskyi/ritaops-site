@@ -57,7 +57,8 @@ exports.handler = async (event) => {
 
     const guests = await client.fetch(
       `*[_type == "guestSubmission" && groupPortal._ref == $id] | order(submittedAt asc){
-        guestName, adults, children, flights, dietaryRestrictions, activities,
+        guestName, firstName, lastName, email, phone,
+        adults, children, flights, dietaryRestrictions, activities,
         massageRequested, submittedAt
       }`,
       {id: doc._id}
