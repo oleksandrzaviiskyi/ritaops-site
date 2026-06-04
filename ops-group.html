@@ -139,6 +139,221 @@
         return '—'
       }
 
+      /** WhatsApp Chiche — digits only, international (DO: 1 + 809…) */
+      const CHICHE_WHATSAPP_PHONE = '18095551234'
+
+      function parseTimeMinutes(timeStr) {
+        if (!timeStr) return 0
+        const s = String(timeStr).trim()
+        const m24 = s.match(/^(\d{1,2}):(\d{2})/)
+        if (m24) return parseInt(m24[1], 10) * 60 + parseInt(m24[2], 10)
+        const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i)
+        if (m12) {
+          let h = parseInt(m12[1], 10)
+          const pm = m12[3].toLowerCase() === 'pm'
+          if (pm && h < 12) h += 12
+          if (!pm && h === 12) h = 0
+          return h * 60 + parseInt(m12[2], 10)
+        }
+        return 0
+      }
+
+      function flightTimestamp(f) {
+        if (!f.date) return Number.MAX_SAFE_INTEGER
+        const base = new Date(`${f.date}T00:00:00`).getTime()
+        if (Number.isNaN(base)) return Number.MAX_SAFE_INTEGER
+        return base + parseTimeMinutes(f.time) * 60000
+      }
+
+      function flightPassengers(f) {
+        const n = Number(f.passengers)
+        return Number.isFinite(n) && n > 0 ? n : 1
+      }
+
+      function transferPricing(passengers) {
+        const n = Math.max(1, Math.min(9, passengers))
+        if (n <= 5) return {total: 75, chiche: 65, lascanas: 10}
+        return {total: 95, chiche: 80, lascanas: 15}
+      }
+
+      function groupArrivalsByWindow(arrivals) {
+        const sorted = [...arrivals].sort((a, b) => flightTimestamp(a) - flightTimestamp(b))
+        const groups = []
+        let current = []
+
+        sorted.forEach((f) => {
+          if (current.length === 0) {
+            current.push(f)
+            return
+          }
+          const last = current[current.length - 1]
+          const diffMin = (flightTimestamp(f) - flightTimestamp(last)) / 60000
+          if (diffMin <= 20) current.push(f)
+          else {
+            groups.push(current)
+            current = [f]
+          }
+        })
+        if (current.length) groups.push(current)
+        return groups
+      }
+
+      function expandGroupsToTransfers(groups) {
+        const transfers = []
+        groups.forEach((group) => {
+          const totalPax = group.reduce((sum, f) => sum + flightPassengers(f), 0)
+          if (totalPax <= 9) {
+            transfers.push({flights: group, passengers: totalPax})
+          } else {
+            const bus1 = Math.ceil(totalPax / 2)
+            transfers.push({flights: group, passengers: bus1, splitBus: 1})
+            transfers.push({flights: group, passengers: totalPax - bus1, splitBus: 2})
+          }
+        })
+        return transfers
+      }
+
+      function summarizeTransferGroup(flights, passengers, splitBus) {
+        const numbers = flights
+          .map((f) => f.flightNumber)
+          .filter(Boolean)
+        const flightNumbers = [...new Set(numbers)].join(', ') || '—'
+        const times = flights.map((f) => f.time).filter(Boolean)
+        const time =
+          times.length === 0
+            ? '—'
+            : times.length === 1
+              ? times[0]
+              : times.join(', ')
+        const dates = flights.map((f) => f.date).filter(Boolean)
+        const date = dates[0] || '—'
+        const airports = flights.map((f) => f.airport).filter(Boolean)
+        const airport = airports[0] || 'POP'
+        const pricing = transferPricing(passengers)
+        const flightsLabel =
+          splitBus && flightNumbers !== '—'
+            ? `${flightNumbers} (bus ${splitBus})`
+            : flightNumbers
+
+        return {
+          flights,
+          flightNumbers: flightsLabel,
+          date,
+          time,
+          airport,
+          passengers,
+          driver: 'Chiche',
+          ...pricing
+        }
+      }
+
+      function buildTransferPlannerRows(portal, guestSubmissions) {
+        const arrivals = mergeFlights(portal, guestSubmissions).filter(
+          (f) => f.direction === 'arrival'
+        )
+        const groups = groupArrivalsByWindow(arrivals)
+        const expanded = expandGroupsToTransfers(groups)
+        return expanded.map((t) =>
+          summarizeTransferGroup(t.flights, t.passengers, t.splitBus)
+        )
+      }
+
+      function buildChicheWhatsAppText(transfer, groupName) {
+        const airport = transfer.airport || 'POP'
+        return [
+          'Hola Chiche! 🚐',
+          `Group: ${groupName || 'Group'}`,
+          `Date: ${transfer.date}`,
+          `Flights: ${transfer.flightNumbers}`,
+          `Time: ${transfer.time}`,
+          `Passengers: ${transfer.passengers}`,
+          `Airport: ${airport}`,
+          '→ Las Canas Beach Retreat'
+        ].join('\n')
+      }
+
+      function whatsappChicheUrl(text) {
+        const phone = CHICHE_WHATSAPP_PHONE.replace(/\D/g, '')
+        return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+      }
+
+      function renderTransferPlanner(portal, guestSubmissions) {
+        const rows = buildTransferPlannerRows(portal, guestSubmissions)
+        window.transferPlannerRows = rows
+
+        if (!rows.length) {
+          return `
+            <div class="ops-transfer-planner" id="transfer-planner">
+              <h4>🚐 Transfer Planner</h4>
+              <p style="margin:0;color:var(--muted);font-size:0.88rem">Нет рейсов прилёта для планирования трансферов.</p>
+            </div>`
+        }
+
+        const body = rows
+          .map((t, i) => {
+            const flightsCell = escapeHtml(t.flightNumbers)
+            return `<tr data-transfer-row="${i}">
+              <td>${i + 1}</td>
+              <td>${flightsCell}</td>
+              <td>${escapeHtml(t.date)}</td>
+              <td>${escapeHtml(t.time)}</td>
+              <td>${t.passengers}</td>
+              <td><input type="text" class="transfer-driver-input" data-transfer-idx="${i}" value="${escapeHtml(t.driver)}" /></td>
+              <td>$${t.total}</td>
+              <td>$${t.chiche}</td>
+              <td>$${t.lascanas}</td>
+              <td><button type="button" class="ops-btn ops-btn-whatsapp" data-whatsapp-transfer="${i}">WhatsApp Chiche</button></td>
+            </tr>`
+          })
+          .join('')
+
+        const sumTotal = rows.reduce((s, t) => s + t.total, 0)
+        const sumChiche = rows.reduce((s, t) => s + t.chiche, 0)
+        const sumLascanas = rows.reduce((s, t) => s + t.lascanas, 0)
+
+        return `
+          <div class="ops-transfer-planner" id="transfer-planner">
+            <h4>🚐 Transfer Planner</h4>
+            <p style="margin:0 0 0.75rem;font-size:0.82rem;color:var(--muted)">
+              Прилёты ≤20 мин объединяются · &gt;9 пассажиров → 2 автобуса · 1–5: $75 · 6–9: $95
+            </p>
+            <div class="ops-data-table-wrap">
+              <table class="ops-data-table ops-transfer-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Flights</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Passengers</th>
+                    <th>Driver</th>
+                    <th>Total</th>
+                    <th>Chiche</th>
+                    <th>Las Canas</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>${body}</tbody>
+                <tfoot>
+                  <tr class="ops-transfer-totals">
+                    <td colspan="4"><strong>Total transfers: ${rows.length}</strong></td>
+                    <td colspan="2"></td>
+                    <td><strong>$${sumTotal}</strong></td>
+                    <td><strong>$${sumChiche}</strong></td>
+                    <td><strong>$${sumLascanas}</strong></td>
+                    <td></td>
+                  </tr>
+                  <tr class="ops-transfer-totals-sub">
+                    <td colspan="10" style="font-size:0.82rem;color:var(--muted)">
+                      Total revenue $${sumTotal} · Chiche $${sumChiche} · Las Canas profit $${sumLascanas}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>`
+      }
+
       const PRINT_SECTION_TITLES = {
         flights: 'Flights & Transport',
         dining: 'Nutrition',
@@ -368,6 +583,7 @@
                 flightRows
               )}
               ${transferNote}
+              ${renderTransferPlanner(portal, subs)}
             </section>
             <section class="ops-panel ops-merged-block" id="dining" hidden>
               <h3>🍽 Питание</h3>
@@ -871,7 +1087,28 @@
         }
       })
 
+      document.addEventListener('input', (e) => {
+        const input = e.target.closest('.transfer-driver-input')
+        if (!input) return
+        const idx = Number(input.dataset.transferIdx)
+        if (window.transferPlannerRows?.[idx]) {
+          window.transferPlannerRows[idx].driver = input.value
+        }
+      })
+
       document.addEventListener('click', (e) => {
+        const waBtn = e.target.closest('[data-whatsapp-transfer]')
+        if (waBtn) {
+          e.preventDefault()
+          const idx = Number(waBtn.dataset.whatsappTransfer)
+          const row = window.transferPlannerRows?.[idx]
+          const portal = getPortalData()
+          if (!row || !portal) return
+          const text = buildChicheWhatsAppText(row, portal.groupName)
+          window.open(whatsappChicheUrl(text), '_blank', 'noopener')
+          return
+        }
+
         const viewBtn = e.target.closest('[data-view]')
         if (viewBtn) {
           e.preventDefault()

@@ -471,6 +471,50 @@ body.ops {
   font-weight: 600;
 }
 
+.ops-transfer-planner {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.ops-transfer-planner h4 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--ocean);
+}
+
+.ops-transfer-table .transfer-driver-input {
+  width: 100%;
+  min-width: 5.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.ops-btn-whatsapp {
+  background: #25d366;
+  color: #fff;
+  border-color: #1da851;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.ops-btn-whatsapp:hover {
+  background: #1da851;
+}
+
+.ops-transfer-totals td {
+  background: var(--bg);
+  border-top: 2px solid var(--border);
+}
+
+.ops-transfer-totals-sub td {
+  background: var(--bg);
+  border-bottom: none;
+}
+
 .ops-guest-section {
   margin-top: 1.5rem;
 }
