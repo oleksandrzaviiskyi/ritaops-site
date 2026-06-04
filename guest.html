@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guest form — Las Canas</title>
+    <link rel="stylesheet" href="/portal.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1 id="pageTitle">Las Canas Beach Retreat</h1>
+        <p id="pageSubtitle">Guest information form</p>
+        <p id="groupDates" style="margin: 0.35rem 0 0; opacity: 0.9; font-size: 0.9rem"></p>
+      </div>
+    </header>
+
+    <div id="errorBox" class="error-box wrap" hidden></div>
+    <div id="thanksBox" class="card wrap" hidden>
+      <h2 style="margin: 0 0 0.5rem; color: var(--ocean)">Thank you!</h2>
+      <p style="margin: 0">We'll be in touch soon.</p>
+    </div>
+
+    <form id="guestForm" class="wrap" hidden>
+      <section class="card">
+        <h2>Your details</h2>
+        <label>Your name</label>
+        <input name="guestName" required autocomplete="name" />
+        <div class="grid2">
+          <div>
+            <label>Adults in your booking</label>
+            <input name="adults" type="number" min="0" value="1" />
+          </div>
+          <div>
+            <label>Children</label>
+            <input name="children" type="number" min="0" value="0" />
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Flights</h2>
+        <div id="flightsList"></div>
+        <button type="button" class="btn btn-secondary" id="addFlight">+ Add flight</button>
+      </section>
+
+      <section class="card">
+        <h2>Dietary restrictions</h2>
+        <div id="dietaryList"></div>
+        <button type="button" class="btn btn-secondary" id="addDietary">+ Add restriction</button>
+      </section>
+
+      <section class="card">
+        <h2>Activities</h2>
+        <div id="activitiesList"></div>
+        <button type="button" class="btn btn-secondary" id="addActivity">+ Add activity</button>
+        <label style="margin-top: 1rem; display: flex; align-items: flex-start; gap: 0.5rem">
+          <input name="massageRequested" type="checkbox" style="width: auto; margin-top: 0.2rem" />
+          <span>I would like a massage (60 min · $60 USD per person)</span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Special requests</h2>
+        <textarea name="specialRequests" rows="4" placeholder="Anything we should know…"></textarea>
+      </section>
+
+      <button type="submit" class="btn">Submit</button>
+    </form>
+
+    <script>
+      const pathMatch = location.pathname.match(/\/guest\/([^/]+)/)
+      const groupSlug = pathMatch && decodeURIComponent(pathMatch[1])
+
+      const errorBox = document.getElementById('errorBox')
+      const thanksBox = document.getElementById('thanksBox')
+      const form = document.getElementById('guestForm')
+
+      function showError(msg) {
+        errorBox.hidden = false
+        errorBox.textContent = msg
+        form.hidden = true
+        thanksBox.hidden = true
+      }
+
+      function uid() {
+        return Math.random().toString(36).slice(2, 10)
+      }
+
+      function flightTemplate(f = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="flight">
+            <button type="button" class="remove">Remove</button>
+            <label>Direction</label>
+            <select data-field="direction">
+              <option value="arrival" ${f.direction === 'arrival' ? 'selected' : ''}>Arrival</option>
+              <option value="departure" ${f.direction === 'departure' ? 'selected' : ''}>Departure</option>
+            </select>
+            <div class="grid2">
+              <div><label>Flight number</label><input data-field="flightNumber" value="${f.flightNumber || ''}" /></div>
+              <div><label>Date</label><input data-field="date" type="date" value="${f.date || ''}" /></div>
+            </div>
+            <div class="grid2">
+              <div><label>Time</label><input data-field="time" value="${f.time || ''}" /></div>
+              <div><label>Airport</label>
+                <select data-field="airport">
+                  <option value="">—</option>
+                  <option value="POP" ${f.airport === 'POP' ? 'selected' : ''}>POP</option>
+                  <option value="PUJ" ${f.airport === 'PUJ' ? 'selected' : ''}>PUJ</option>
+                  <option value="SDQ" ${f.airport === 'SDQ' ? 'selected' : ''}>SDQ</option>
+                </select>
+              </div>
+            </div>
+            <label>Passengers</label><input data-field="passengers" type="number" min="0" value="${f.passengers ?? ''}" />
+          </div>`
+      }
+
+      function dietaryTemplate(d = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="dietary">
+            <button type="button" class="remove">Remove</button>
+            <label>Guest name (if not you)</label><input data-field="guestName" value="${d.guestName || ''}" />
+            <label>Restriction</label>
+            <select data-field="restriction">
+              <option value="vegetarian" ${d.restriction === 'vegetarian' ? 'selected' : ''}>Vegetarian</option>
+              <option value="vegan" ${d.restriction === 'vegan' ? 'selected' : ''}>Vegan</option>
+              <option value="gluten_free" ${d.restriction === 'gluten_free' ? 'selected' : ''}>Gluten-free</option>
+              <option value="lactose_free" ${d.restriction === 'lactose_free' ? 'selected' : ''}>Lactose-free</option>
+              <option value="allergy" ${d.restriction === 'allergy' ? 'selected' : ''}>Allergy</option>
+              <option value="halal" ${d.restriction === 'halal' ? 'selected' : ''}>Halal</option>
+              <option value="other" ${d.restriction === 'other' ? 'selected' : ''}>Other</option>
+            </select>
+            <label>Details</label><input data-field="details" value="${d.details || ''}" />
+          </div>`
+      }
+
+      function activityTemplate(a = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="activity">
+            <button type="button" class="remove">Remove</button>
+            <label>Activity</label>
+            <select data-field="activity">
+              <option value="gri_gri" ${a.activity === 'gri_gri' ? 'selected' : ''}>Laguna Gri Gri</option>
+              <option value="playa_grande" ${a.activity === 'playa_grande' ? 'selected' : ''}>Playa Grande</option>
+              <option value="kite_surfing" ${a.activity === 'kite_surfing' ? 'selected' : ''}>Kite Surfing</option>
+              <option value="horse_riding" ${a.activity === 'horse_riding' ? 'selected' : ''}>Horse Riding</option>
+              <option value="cultural_tour" ${a.activity === 'cultural_tour' ? 'selected' : ''}>Cultural Tour</option>
+              <option value="yoga" ${a.activity === 'yoga' ? 'selected' : ''}>Yoga</option>
+              <option value="massage" ${a.activity === 'massage' ? 'selected' : ''}>Massage</option>
+              <option value="other" ${a.activity === 'other' ? 'selected' : ''}>Other</option>
+            </select>
+            <p class="activity-hint activity-hint-massage" ${a.activity === 'massage' ? '' : 'hidden'}>💆 Massage · 60 min · $60 USD per person</p>
+            <label>Date</label><input data-field="date" type="date" value="${a.date || ''}" />
+            <label>Participants</label><input data-field="guests" type="number" min="0" value="${a.guests ?? ''}" />
+            <label>Notes</label><input data-field="notes" value="${a.notes || ''}" />
+          </div>`
+      }
+
+      function syncMassageHints(root) {
+        const scope = root || document
+        scope.querySelectorAll('.repeat-block[data-kind="activity"]').forEach((block) => {
+          const select = block.querySelector('[data-field="activity"]')
+          const hint = block.querySelector('.activity-hint-massage')
+          if (select && hint) hint.hidden = select.value !== 'massage'
+        })
+      }
+
+      function collectRepeats(containerId, kind) {
+        const items = []
+        document.querySelectorAll(`#${containerId} .repeat-block[data-kind="${kind}"]`).forEach((el) => {
+          const row = {_key: el.dataset.key}
+          el.querySelectorAll('[data-field]').forEach((input) => {
+            const name = input.dataset.field
+            let val = input.type === 'checkbox' ? input.checked : input.value
+            if (input.type === 'number' && val !== '') val = Number(val)
+            if (val !== '' && val != null) row[name] = val
+          })
+          items.push(row)
+        })
+        return items
+      }
+
+      document.getElementById('addFlight').onclick = () => {
+        document.getElementById('flightsList').insertAdjacentHTML('beforeend', flightTemplate())
+      }
+      document.getElementById('addDietary').onclick = () => {
+        document.getElementById('dietaryList').insertAdjacentHTML('beforeend', dietaryTemplate())
+      }
+      document.getElementById('addActivity').onclick = () => {
+        const list = document.getElementById('activitiesList')
+        list.insertAdjacentHTML('beforeend', activityTemplate())
+        syncMassageHints(list)
+      }
+
+      document.body.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove')) {
+          e.target.closest('.repeat-block')?.remove()
+        }
+      })
+
+      document.getElementById('activitiesList').addEventListener('change', (e) => {
+        if (!e.target.matches('[data-field="activity"]')) return
+        const hint = e.target.closest('.repeat-block')?.querySelector('.activity-hint-massage')
+        if (hint) hint.hidden = e.target.value !== 'massage'
+      })
+
+      async function loadGroup() {
+        if (!groupSlug) {
+          showError('Invalid link. Use the guest link from your organizer.')
+          return
+        }
+        const res = await fetch(`/api/guest?groupSlug=${encodeURIComponent(groupSlug)}`)
+        const json = await res.json()
+        if (!res.ok) {
+          showError(json.error || 'Could not load group')
+          return
+        }
+        const g = json.group
+        document.getElementById('pageTitle').textContent =
+          `Welcome to ${g.groupName || 'your group'} · Las Canas Beach Retreat`
+        const dates =
+          g.checkIn || g.checkOut
+            ? `${g.checkIn || '?'} — ${g.checkOut || '?'}`
+            : ''
+        document.getElementById('groupDates').textContent = dates ? `Stay dates: ${dates}` : ''
+        errorBox.hidden = true
+        form.hidden = false
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const data = {
+          groupSlug,
+          guestName: form.guestName.value.trim(),
+          adults: form.adults.value ? Number(form.adults.value) : null,
+          children: form.children.value ? Number(form.children.value) : 0,
+          massageRequested: form.massageRequested.checked,
+          specialRequests: form.specialRequests.value || null,
+          flights: collectRepeats('flightsList', 'flight'),
+          dietaryRestrictions: collectRepeats('dietaryList', 'dietary'),
+          activities: collectRepeats('activitiesList', 'activity')
+        }
+        const res = await fetch('/api/guest', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        })
+        const json = await res.json()
+        if (!res.ok) {
+          alert(json.error || 'Submit failed')
+          return
+        }
+        form.hidden = true
+        thanksBox.hidden = false
+        window.scrollTo(0, 0)
+      })
+
+      loadGroup()
+    </script>
+  </body>
+</html>

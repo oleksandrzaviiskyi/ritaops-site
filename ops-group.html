@@ -31,6 +31,10 @@
           <strong>Ссылка организатору</strong>
           <p style="font-size:0.75rem;word-break:break-all;margin:0.5rem 0" id="organizerUrl"></p>
           <button type="button" class="ops-btn" id="copyOrganizer">Копировать</button>
+          <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0" />
+          <strong>Guest link</strong>
+          <p style="font-size:0.75rem;word-break:break-all;margin:0.5rem 0" id="guestUrl"></p>
+          <button type="button" class="ops-btn" id="copyGuest">Копировать для гостей</button>
         </div>
       </aside>
 
@@ -446,12 +450,29 @@
           : '—'
 
         const joinUrl = p.organizerJoinUrl || p.organizerPortalUrl
-        if (joinUrl) {
+        const guestUrl =
+          p.guestFormUrl ||
+          (p.groupSlug || p.slug
+            ? `${location.origin}/guest/${encodeURIComponent(p.groupSlug || p.slug)}`
+            : null)
+        if (joinUrl || guestUrl) {
           document.getElementById('organizerLinkBox').hidden = false
-          document.getElementById('organizerUrl').textContent = joinUrl
-          document.getElementById('copyOrganizer').onclick = () => {
-            navigator.clipboard?.writeText(joinUrl)
-            alert('Ссылка скопирована')
+          if (joinUrl) {
+            document.getElementById('organizerUrl').textContent = joinUrl
+            document.getElementById('copyOrganizer').onclick = () => {
+              navigator.clipboard?.writeText(joinUrl)
+              alert('Ссылка скопирована')
+            }
+          } else {
+            document.getElementById('organizerUrl').textContent = '—'
+            document.getElementById('copyOrganizer').disabled = true
+          }
+          if (guestUrl) {
+            document.getElementById('guestUrl').textContent = guestUrl
+            document.getElementById('copyGuest').onclick = () => {
+              navigator.clipboard?.writeText(guestUrl)
+              alert('Guest link copied')
+            }
           }
         }
 

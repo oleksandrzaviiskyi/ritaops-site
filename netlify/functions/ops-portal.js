@@ -15,6 +15,7 @@ const PORTAL_QUERY = `*[_type == "groupPortal" && portalSlug.current == $slug][0
   status, progressPercent, lastPortalSaveAt, flights, transferNeeded,
   dietaryRestrictions, menuPlan, activities, specialRequests, organizerEmail,
   "slug": portalSlug.current,
+  "groupSlug": portalSlug.current,
   portalAccessToken
 }`
 
@@ -63,10 +64,14 @@ exports.handler = async (event) => {
 
     let organizerJoinUrl = null
     let organizerPortalUrl = null
+    let guestFormUrl = null
     if (staff && portalAccessToken && slug) {
       const code = portalJoinCode(slug, portalAccessToken)
       organizerJoinUrl = `${base}/join/${encodeURIComponent(code)}`
       organizerPortalUrl = `${base}/portal/${encodeURIComponent(slug)}?token=${encodeURIComponent(portalAccessToken)}`
+      guestFormUrl = `${base}/guest/${encodeURIComponent(slug)}`
+    } else if (staff && slug) {
+      guestFormUrl = `${base}/guest/${encodeURIComponent(slug)}`
     }
 
     return {
@@ -77,7 +82,9 @@ exports.handler = async (event) => {
           ...safe,
           property: 'Las Canas Beach Retreat',
           organizerJoinUrl,
-          organizerPortalUrl
+          organizerPortalUrl,
+          guestFormUrl,
+          groupSlug: slug
         }
       })
     }
