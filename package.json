@@ -1,4 +1,6 @@
 {
+  "name": "ritaops-site",
+  "version": "1.0.0",
   "dependencies": {
     "@sanity/client": "^6.0.0"
   }
