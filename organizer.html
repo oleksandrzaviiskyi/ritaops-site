@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Las Canas — портал группы</title>
+    <link rel="stylesheet" href="/portal.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1 id="pageTitle">Las Canas Beach Retreat</h1>
+        <p id="pageSubtitle">Портал организатора группы</p>
+        <div class="status-bar">
+          <span id="progressLabel">Прогресс: 0%</span>
+          <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+        </div>
+      </div>
+    </header>
+
+    <div id="errorBox" class="error-box wrap" hidden></div>
+
+    <form id="portalForm" class="wrap" hidden>
+      <section class="card">
+        <h2>Основная информация</h2>
+        <label>Название группы</label>
+        <input name="groupName" required />
+        <div class="grid2">
+          <div>
+            <label>Дата заезда</label>
+            <input name="checkIn" type="date" />
+          </div>
+          <div>
+            <label>Дата выезда</label>
+            <input name="checkOut" type="date" />
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label>Всего гостей</label>
+            <input name="totalGuests" type="number" min="1" />
+          </div>
+          <div>
+            <label>Взрослых</label>
+            <input name="adults" type="number" min="0" />
+          </div>
+        </div>
+        <label>Детей</label>
+        <input name="children" type="number" min="0" value="0" />
+        <label>Тип мероприятия</label>
+        <select name="eventType">
+          <option value="">— выберите —</option>
+          <option value="yoga_retreat">Йога-ретрит</option>
+          <option value="wellness_retreat">Wellness-ретрит</option>
+          <option value="wedding">Свадьба</option>
+          <option value="family_reunion">Семейная встреча</option>
+          <option value="corporate_retreat">Корпоративный ретрит</option>
+          <option value="surf_camp">Сёрф-кэмп</option>
+          <option value="private_vacation">Частный отдых</option>
+        </select>
+        <label>Email организатора</label>
+        <input name="organizerEmail" type="email" />
+      </section>
+
+      <section class="card">
+        <h2>Рейсы и трансфер</h2>
+        <label>
+          <input name="transferNeeded" type="checkbox" checked />
+          Нужен трансфер от аэропорта
+        </label>
+        <div id="flightsList"></div>
+        <button type="button" class="btn btn-secondary" id="addFlight">+ Добавить рейс</button>
+      </section>
+
+      <section class="card">
+        <h2>Питание</h2>
+        <p style="color: var(--muted); font-size: 0.9rem; margin-top: 0">
+          Укажите пожелания по меню по дням. Диеты и аллергии — отдельным списком.
+        </p>
+        <div id="dietaryList"></div>
+        <button type="button" class="btn btn-secondary" id="addDietary">+ Диетическое ограничение</button>
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 1.25rem 0" />
+        <div id="menuList"></div>
+        <button type="button" class="btn btn-secondary" id="addMenuDay">+ День меню</button>
+      </section>
+
+      <section class="card">
+        <h2>Активности</h2>
+        <div id="activitiesList"></div>
+        <button type="button" class="btn btn-secondary" id="addActivity">+ Активность</button>
+      </section>
+
+      <section class="card">
+        <h2>Специальные пожелания</h2>
+        <textarea name="specialRequests" rows="4" placeholder="Всё, что важно для комфорта группы…"></textarea>
+      </section>
+
+      <button type="submit" class="btn">Сохранить</button>
+    </form>
+
+    <div class="toast" id="toast">Сохранено</div>
+
+    <script>
+      const params = new URLSearchParams(location.search)
+      const pathMatch = location.pathname.match(/\/portal\/([^/]+)/)
+      const slug = params.get('slug') || (pathMatch && pathMatch[1])
+      const token = params.get('token')
+
+      const errorBox = document.getElementById('errorBox')
+      const form = document.getElementById('portalForm')
+      let portalData = null
+
+      function showError(msg) {
+        errorBox.hidden = false
+        errorBox.textContent = msg
+        form.hidden = true
+      }
+
+      function setProgress(pct) {
+        document.getElementById('progressLabel').textContent = `Прогресс: ${pct}%`
+        document.getElementById('progressFill').style.width = `${pct}%`
+      }
+
+      function uid() {
+        return Math.random().toString(36).slice(2, 10)
+      }
+
+      function flightTemplate(f = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="flight">
+            <button type="button" class="remove">Удалить</button>
+            <label>Направление</label>
+            <select data-field="direction">
+              <option value="arrival" ${f.direction === 'arrival' ? 'selected' : ''}>Прилёт</option>
+              <option value="departure" ${f.direction === 'departure' ? 'selected' : ''}>Отлёт</option>
+            </select>
+            <div class="grid2">
+              <div><label>Номер рейса</label><input data-field="flightNumber" value="${f.flightNumber || ''}" /></div>
+              <div><label>Дата</label><input data-field="date" type="date" value="${f.date || ''}" /></div>
+            </div>
+            <div class="grid2">
+              <div><label>Время</label><input data-field="time" value="${f.time || ''}" /></div>
+              <div><label>Аэропорт</label>
+                <select data-field="airport">
+                  <option value="">—</option>
+                  <option value="POP" ${f.airport === 'POP' ? 'selected' : ''}>POP</option>
+                  <option value="PUJ" ${f.airport === 'PUJ' ? 'selected' : ''}>PUJ</option>
+                  <option value="SDQ" ${f.airport === 'SDQ' ? 'selected' : ''}>SDQ</option>
+                </select>
+              </div>
+            </div>
+            <label>Пассажиров</label><input data-field="passengers" type="number" min="0" value="${f.passengers ?? ''}" />
+            <label>Заметки</label><input data-field="notes" value="${f.notes || ''}" />
+          </div>`
+      }
+
+      function dietaryTemplate(d = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="dietary">
+            <button type="button" class="remove">Удалить</button>
+            <label>Имя гостя</label><input data-field="guestName" value="${d.guestName || ''}" />
+            <label>Ограничение</label>
+            <select data-field="restriction">
+              <option value="vegetarian" ${d.restriction === 'vegetarian' ? 'selected' : ''}>Вегетарианец</option>
+              <option value="vegan" ${d.restriction === 'vegan' ? 'selected' : ''}>Веган</option>
+              <option value="gluten_free" ${d.restriction === 'gluten_free' ? 'selected' : ''}>Без глютена</option>
+              <option value="lactose_free" ${d.restriction === 'lactose_free' ? 'selected' : ''}>Без лактозы</option>
+              <option value="allergy" ${d.restriction === 'allergy' ? 'selected' : ''}>Аллергия</option>
+              <option value="halal" ${d.restriction === 'halal' ? 'selected' : ''}>Халяль</option>
+              <option value="other" ${d.restriction === 'other' ? 'selected' : ''}>Другое</option>
+            </select>
+            <label>Подробности</label><input data-field="details" value="${d.details || ''}" />
+          </div>`
+      }
+
+      function menuTemplate(m = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="menu">
+            <button type="button" class="remove">Удалить</button>
+            <label>Дата</label><input data-field="date" type="date" value="${m.date || ''}" />
+            <label>Завтрак</label><textarea data-field="breakfast">${m.breakfast || ''}</textarea>
+            <label>Обед</label><textarea data-field="lunch">${m.lunch || ''}</textarea>
+            <label>Ужин</label><textarea data-field="dinner">${m.dinner || ''}</textarea>
+            <label>Заметки</label><input data-field="notes" value="${m.notes || ''}" />
+          </div>`
+      }
+
+      function activityTemplate(a = {}, key = uid()) {
+        return `
+          <div class="repeat-block" data-key="${key}" data-kind="activity">
+            <button type="button" class="remove">Удалить</button>
+            <label>Активность</label>
+            <select data-field="activity">
+              <option value="gri_gri" ${a.activity === 'gri_gri' ? 'selected' : ''}>Laguna Gri Gri</option>
+              <option value="playa_grande" ${a.activity === 'playa_grande' ? 'selected' : ''}>Playa Grande</option>
+              <option value="kite_surfing" ${a.activity === 'kite_surfing' ? 'selected' : ''}>Кайт-сёрфинг</option>
+              <option value="horse_riding" ${a.activity === 'horse_riding' ? 'selected' : ''}>Верховая езда</option>
+              <option value="cultural_tour" ${a.activity === 'cultural_tour' ? 'selected' : ''}>Культурная экскурсия</option>
+              <option value="yoga" ${a.activity === 'yoga' ? 'selected' : ''}>Йога</option>
+              <option value="massage" ${a.activity === 'massage' ? 'selected' : ''}>Массаж</option>
+              <option value="other" ${a.activity === 'other' ? 'selected' : ''}>Другое</option>
+            </select>
+            <label>Дата</label><input data-field="date" type="date" value="${a.date || ''}" />
+            <label>Участников</label><input data-field="guests" type="number" min="0" value="${a.guests ?? ''}" />
+            <label>Заметки</label><input data-field="notes" value="${a.notes || ''}" />
+          </div>`
+      }
+
+      function collectRepeats(containerId, kind) {
+        const items = []
+        document.querySelectorAll(`#${containerId} .repeat-block[data-kind="${kind}"]`).forEach((el) => {
+          const row = {_key: el.dataset.key}
+          el.querySelectorAll('[data-field]').forEach((input) => {
+            const name = input.dataset.field
+            let val = input.type === 'checkbox' ? input.checked : input.value
+            if (input.type === 'number' && val !== '') val = Number(val)
+            if (val !== '' && val != null) row[name] = val
+          })
+          items.push(row)
+        })
+        return items
+      }
+
+      function fillForm(p) {
+        portalData = p
+        document.getElementById('pageTitle').textContent = p.groupName || 'Las Canas Beach Retreat'
+        form.groupName.value = p.groupName || ''
+        form.checkIn.value = p.checkIn || ''
+        form.checkOut.value = p.checkOut || ''
+        form.totalGuests.value = p.totalGuests ?? ''
+        form.adults.value = p.adults ?? ''
+        form.children.value = p.children ?? 0
+        form.eventType.value = p.eventType || ''
+        form.organizerEmail.value = p.organizerEmail || ''
+        form.transferNeeded.checked = p.transferNeeded !== false
+        form.specialRequests.value = p.specialRequests || ''
+        setProgress(p.progressPercent ?? 0)
+
+        const fl = document.getElementById('flightsList')
+        fl.innerHTML = (p.flights || []).map((f) => flightTemplate(f, f._key || uid())).join('') || ''
+        const di = document.getElementById('dietaryList')
+        di.innerHTML = (p.dietaryRestrictions || [])
+          .map((d) => dietaryTemplate(d, d._key || uid()))
+          .join('')
+        const mn = document.getElementById('menuList')
+        mn.innerHTML = (p.menuPlan || []).map((m) => menuTemplate(m, m._key || uid())).join('') || ''
+        const ac = document.getElementById('activitiesList')
+        ac.innerHTML = (p.activities || []).map((a) => activityTemplate(a, a._key || uid())).join('') || ''
+      }
+
+      document.getElementById('addFlight').onclick = () => {
+        document.getElementById('flightsList').insertAdjacentHTML('beforeend', flightTemplate())
+      }
+      document.getElementById('addDietary').onclick = () => {
+        document.getElementById('dietaryList').insertAdjacentHTML('beforeend', dietaryTemplate())
+      }
+      document.getElementById('addMenuDay').onclick = () => {
+        document.getElementById('menuList').insertAdjacentHTML('beforeend', menuTemplate())
+      }
+      document.getElementById('addActivity').onclick = () => {
+        document.getElementById('activitiesList').insertAdjacentHTML('beforeend', activityTemplate())
+      }
+
+      document.body.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove')) {
+          e.target.closest('.repeat-block')?.remove()
+        }
+      })
+
+      async function load() {
+        if (!slug || !token) {
+          showError(
+            'Неверная ссылка. Нужны параметры ?slug=…&token=… (организатор получает полную ссылку от Las Canas).'
+          )
+          return
+        }
+        const res = await fetch(`/api/portal?slug=${encodeURIComponent(slug)}&token=${encodeURIComponent(token)}`)
+        const json = await res.json()
+        if (!res.ok) {
+          showError(json.error || 'Не удалось загрузить портал')
+          return
+        }
+        errorBox.hidden = true
+        form.hidden = false
+        fillForm(json.portal)
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const data = {
+          groupName: form.groupName.value,
+          checkIn: form.checkIn.value || null,
+          checkOut: form.checkOut.value || null,
+          totalGuests: form.totalGuests.value ? Number(form.totalGuests.value) : null,
+          adults: form.adults.value ? Number(form.adults.value) : null,
+          children: form.children.value ? Number(form.children.value) : 0,
+          eventType: form.eventType.value || null,
+          organizerEmail: form.organizerEmail.value || null,
+          transferNeeded: form.transferNeeded.checked,
+          specialRequests: form.specialRequests.value || null,
+          flights: collectRepeats('flightsList', 'flight'),
+          dietaryRestrictions: collectRepeats('dietaryList', 'dietary'),
+          menuPlan: collectRepeats('menuList', 'menu'),
+          activities: collectRepeats('activitiesList', 'activity')
+        }
+        const res = await fetch('/api/portal', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({slug, token, data})
+        })
+        const json = await res.json()
+        if (!res.ok) {
+          alert(json.error || 'Ошибка сохранения')
+          return
+        }
+        setProgress(json.progressPercent)
+        const toast = document.getElementById('toast')
+        toast.classList.add('show')
+        setTimeout(() => toast.classList.remove('show'), 2500)
+      })
+
+      load()
+    </script>
+  </body>
+</html>

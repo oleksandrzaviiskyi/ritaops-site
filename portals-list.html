@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Групповые порталы — Sanity</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 1.5rem;
+        background: #f6f1e8;
+        color: #1c2b2f;
+      }
+      h1 {
+        font-size: 1.35rem;
+        color: #1a4d5c;
+        margin: 0 0 0.25rem;
+      }
+      .meta {
+        color: #5a6b70;
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+      }
+      table {
+        width: 100%;
+        max-width: 900px;
+        border-collapse: collapse;
+        background: #fff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.65rem 0.85rem;
+        border-bottom: 1px solid #e8e0d4;
+      }
+      th {
+        background: #1a4d5c;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .empty,
+      .error {
+        padding: 1rem;
+        border-radius: 8px;
+        max-width: 900px;
+      }
+      .error {
+        background: #fde8e4;
+        color: #a33;
+      }
+      .loading {
+        color: #5a6b70;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Групповые порталы</h1>
+    <p class="meta">
+      Только чтение · Project <code>0po0panc</code> · dataset <code>production</code>
+    </p>
+    <p id="status" class="loading">Загрузка…</p>
+    <div id="output"></div>
+
+    <script>
+      const PROJECT_ID = '0po0panc'
+      const DATASET = 'production'
+      const API_VERSION = '2025-05-20'
+
+      const GROQ = `*[_type == "groupPortal"] | order(checkIn asc) {
+        _id,
+        groupName,
+        checkIn,
+        checkOut,
+        totalGuests,
+        status,
+        progressPercent,
+        "slug": portalSlug.current
+      }`
+
+      const STATUS = {
+        new: 'Новый',
+        in_progress: 'В процессе',
+        menu_done: 'Меню внесено',
+        flights_done: 'Рейсы внесены',
+        ready: 'Готов к заезду'
+      }
+
+      async function loadPortals() {
+        const status = document.getElementById('status')
+        const output = document.getElementById('output')
+
+        const query = encodeURIComponent(GROQ)
+        const url = `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/query/${DATASET}?query=${query}`
+
+        try {
+          const res = await fetch(url)
+          const json = await res.json()
+
+          if (!res.ok) {
+            throw new Error(json.error?.description || json.message || res.statusText)
+          }
+
+          const docs = json.result || []
+          status.textContent = `Найдено документов: ${docs.length}`
+
+          if (docs.length === 0) {
+            output.innerHTML = '<p class="empty">Документов groupPortal пока нет.</p>'
+            return
+          }
+
+          const rows = docs
+            .map(
+              (d) => `
+            <tr>
+              <td>${escapeHtml(d.groupName || '—')}</td>
+              <td>${escapeHtml(d.slug || '—')}</td>
+              <td>${escapeHtml(d.checkIn || '—')}</td>
+              <td>${escapeHtml(d.checkOut || '—')}</td>
+              <td>${d.totalGuests ?? '—'}</td>
+              <td>${escapeHtml(STATUS[d.status] || d.status || '—')}</td>
+              <td>${d.progressPercent != null ? d.progressPercent + '%' : '—'}</td>
+            </tr>`
+            )
+            .join('')
+
+          output.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Группа</th>
+                  <th>Slug</th>
+                  <th>Заезд</th>
+                  <th>Выезд</th>
+                  <th>Гости</th>
+                  <th>Статус</th>
+                  <th>Прогресс</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>`
+        } catch (err) {
+          status.textContent = ''
+          output.innerHTML = `<p class="error">Ошибка загрузки: ${escapeHtml(err.message)}</p>`
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+      }
+
+      loadPortals()
+    </script>
+  </body>
+</html>
