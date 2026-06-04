@@ -174,8 +174,33 @@
         return {total: 95, chiche: 80, lascanas: 15}
       }
 
-      function groupArrivalsByWindow(arrivals) {
-        const sorted = [...arrivals].sort((a, b) => flightTimestamp(a) - flightTimestamp(b))
+      function minutesToTimeLabel(totalMins) {
+        const normalized = ((totalMins % 1440) + 1440) % 1440
+        const h24 = Math.floor(normalized / 60)
+        const m = normalized % 60
+        const ampm = h24 >= 12 ? 'pm' : 'am'
+        let h12 = h24 % 12
+        if (h12 === 0) h12 = 12
+        return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+      }
+
+      function computePickupFromFlights(flights) {
+        const withTime = flights.filter((f) => f.time)
+        if (!withTime.length) return '—'
+        let earliest = withTime[0]
+        let minTs = flightTimestamp(earliest)
+        withTime.forEach((f) => {
+          const ts = flightTimestamp(f)
+          if (ts < minTs) {
+            minTs = ts
+            earliest = f
+          }
+        })
+        return minutesToTimeLabel(parseTimeMinutes(earliest.time) - 180)
+      }
+
+      function groupFlightsByWindow(flights) {
+        const sorted = [...flights].sort((a, b) => flightTimestamp(a) - flightTimestamp(b))
         const groups = []
         let current = []
 
@@ -211,11 +236,12 @@
         return transfers
       }
 
-      function summarizeTransferGroup(flights, passengers, splitBus) {
+      function summarizeTransferGroup(flights, passengers, splitBus, type) {
         const numbers = flights
           .map((f) => f.flightNumber)
           .filter(Boolean)
-        const flightNumbers = [...new Set(numbers)].join(', ') || '—'
+        const flightsList = [...new Set(numbers)]
+        const flightNumbers = flightsList.join(', ') || '—'
         const times = flights.map((f) => f.time).filter(Boolean)
         const time =
           times.length === 0
@@ -232,49 +258,124 @@
           splitBus && flightNumbers !== '—'
             ? `${flightNumbers} (bus ${splitBus})`
             : flightNumbers
+        const pickupTime = type === 'departure' ? computePickupFromFlights(flights) : null
 
         return {
+          type,
           flights,
+          flightsList,
           flightNumbers: flightsLabel,
           date,
           time,
+          pickupTime,
           airport,
           passengers,
           driver: 'Chiche',
-          ...pricing
+          total: pricing.total,
+          chiche: pricing.chiche,
+          lascanas: pricing.lascanas
         }
       }
 
-      function getArrivalFlights(portal, guestSubmissions) {
+      function getFlightsByDirection(portal, guestSubmissions, direction) {
         return mergeFlights(portal, guestSubmissions).filter(
-          (f) => String(f.direction || '').toLowerCase() === 'arrival'
+          (f) => String(f.direction || '').toLowerCase() === direction
         )
       }
 
-      function buildTransferPlannerRowsFromArrivals(arrivals) {
-        const groups = groupArrivalsByWindow(arrivals)
+      function buildPlannerRowsFromFlights(flightList, type) {
+        const groups = groupFlightsByWindow(flightList)
         const expanded = expandGroupsToTransfers(groups)
         return expanded.map((t) =>
-          summarizeTransferGroup(t.flights, t.passengers, t.splitBus)
+          summarizeTransferGroup(t.flights, t.passengers, t.splitBus, type)
         )
       }
 
-      function buildTransferPlannerRows(portal, guestSubmissions) {
-        return buildTransferPlannerRowsFromArrivals(getArrivalFlights(portal, guestSubmissions))
+      function savedTransferToRow(t) {
+        const flightsList = Array.isArray(t.flights) ? t.flights : []
+        return {
+          _id: t._id,
+          type: t.type === 'departure' ? 'departure' : 'arrival',
+          flights: [],
+          flightsList,
+          flightNumbers: flightsList.join(', ') || '—',
+          date: t.date || '—',
+          time: t.time || '—',
+          pickupTime: t.pickupTime || (t.type === 'departure' ? '—' : null),
+          airport: 'POP',
+          passengers: t.passengers ?? 1,
+          driver: t.driver || 'Chiche',
+          total: t.total ?? 0,
+          chiche: t.driverPay ?? 0,
+          lascanas: t.lasCanas ?? 0
+        }
+      }
+
+      function initTransferPlannerState(portal, guestSubmissions, savedTransfers) {
+        const saved = Array.isArray(savedTransfers) ? savedTransfers : []
+        if (saved.length) {
+          return {
+            arrival: saved.filter((t) => t.type === 'arrival').map(savedTransferToRow),
+            departure: saved.filter((t) => t.type === 'departure').map(savedTransferToRow)
+          }
+        }
+        const arrivals = getFlightsByDirection(portal, guestSubmissions, 'arrival')
+        const departures = getFlightsByDirection(portal, guestSubmissions, 'departure')
+        console.log('arrivals:', arrivals)
+        console.log('departures:', departures)
+        return {
+          arrival: buildPlannerRowsFromFlights(arrivals, 'arrival'),
+          departure: buildPlannerRowsFromFlights(departures, 'departure')
+        }
+      }
+
+      function getTransferRow(type, index) {
+        return window.transferPlannerState?.[type]?.[index]
+      }
+
+      function collectTransfersForSave() {
+        const state = window.transferPlannerState || {arrival: [], departure: []}
+        const all = [...state.arrival, ...state.departure]
+        return all.map((row) => ({
+          type: row.type,
+          flights:
+            row.flightsList?.length
+              ? row.flightsList
+              : String(row.flightNumbers || '')
+                  .replace(/\(bus \d+\)/gi, '')
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+          date: row.date && row.date !== '—' ? row.date : null,
+          time: row.time && row.time !== '—' ? row.time : null,
+          pickupTime:
+            row.pickupTime && row.pickupTime !== '—' ? row.pickupTime : null,
+          passengers: row.passengers,
+          driver: row.driver,
+          total: row.total,
+          chiche: row.chiche,
+          lasCanas: row.lascanas
+        }))
       }
 
       function buildChicheWhatsAppText(transfer, groupName) {
         const airport = transfer.airport || 'POP'
-        return [
+        const lines = [
           'Hola Chiche! 🚐',
           `Group: ${groupName || 'Group'}`,
           `Date: ${transfer.date}`,
           `Flights: ${transfer.flightNumbers}`,
+          transfer.type === 'departure' && transfer.pickupTime
+            ? `Pickup: ${transfer.pickupTime}`
+            : null,
           `Time: ${transfer.time}`,
           `Passengers: ${transfer.passengers}`,
           `Airport: ${airport}`,
-          '→ Las Canas Beach Retreat'
-        ].join('\n')
+          transfer.type === 'departure'
+            ? 'Las Canas Beach Retreat → Airport'
+            : '→ Las Canas Beach Retreat'
+        ]
+        return lines.filter(Boolean).join('\n')
       }
 
       function whatsappChicheUrl(text) {
@@ -282,42 +383,49 @@
         return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
       }
 
-      function renderTransferPlanner(portal, guestSubmissions) {
-        const arrivals = getArrivalFlights(portal, guestSubmissions)
-        console.log('arrivals:', arrivals)
-        const rows = buildTransferPlannerRowsFromArrivals(arrivals)
-        window.transferPlannerRows = rows
-
-        const body = rows.length
-          ? rows
-              .map((t, i) => {
-                const flightsCell = escapeHtml(t.flightNumbers)
-                return `<tr data-transfer-row="${i}">
+      function renderTransferTableRows(rows, type) {
+        const isDeparture = type === 'departure'
+        const colSpan = isDeparture ? 11 : 10
+        if (!rows.length) {
+          const msg =
+            type === 'departure'
+              ? 'No departure flights found'
+              : 'No arrival flights found'
+          return `<tr class="ops-transfer-empty"><td colspan="${colSpan}">${msg}</td></tr>`
+        }
+        return rows
+          .map((t, i) => {
+            const pickupCell = isDeparture
+              ? `<td>${escapeHtml(t.pickupTime || '—')}</td>`
+              : ''
+            return `<tr data-transfer-row data-transfer-type="${type}" data-transfer-idx="${i}">
               <td>${i + 1}</td>
-              <td>${flightsCell}</td>
+              <td>${escapeHtml(t.flightNumbers)}</td>
               <td>${escapeHtml(t.date)}</td>
               <td>${escapeHtml(t.time)}</td>
+              ${pickupCell}
               <td>${t.passengers}</td>
-              <td><input type="text" class="transfer-driver-input" data-transfer-idx="${i}" value="${escapeHtml(t.driver)}" /></td>
+              <td><input type="text" class="transfer-driver-input" data-transfer-type="${type}" data-transfer-idx="${i}" value="${escapeHtml(t.driver)}" /></td>
               <td>$${t.total}</td>
               <td>$${t.chiche}</td>
               <td>$${t.lascanas}</td>
-              <td><button type="button" class="ops-btn ops-btn-whatsapp" data-whatsapp-transfer="${i}">WhatsApp Chiche</button></td>
+              <td><button type="button" class="ops-btn ops-btn-whatsapp" data-whatsapp-transfer="${i}" data-transfer-type="${type}">WhatsApp Chiche</button></td>
             </tr>`
-              })
-              .join('')
-          : `<tr class="ops-transfer-empty"><td colspan="10">No arrival flights found</td></tr>`
+          })
+          .join('')
+      }
 
-        const sumTotal = rows.reduce((s, t) => s + t.total, 0)
-        const sumChiche = rows.reduce((s, t) => s + t.chiche, 0)
-        const sumLascanas = rows.reduce((s, t) => s + t.lascanas, 0)
+      function renderTransferSection(type, title, rows) {
+        const isDeparture = type === 'departure'
+        const pickupTh = isDeparture ? '<th>Pickup time</th>' : ''
+        const sumTotal = rows.reduce((s, t) => s + (t.total || 0), 0)
+        const sumChiche = rows.reduce((s, t) => s + (t.chiche || 0), 0)
+        const sumLascanas = rows.reduce((s, t) => s + (t.lascanas || 0), 0)
+        const colSpan = isDeparture ? 5 : 4
 
         return `
-          <div class="ops-transfer-planner" id="transfer-planner" data-transfer-planner>
-            <h4>🚐 Transfer Planner</h4>
-            <p style="margin:0 0 0.75rem;font-size:0.82rem;color:var(--muted)">
-              Arrivals ≤20 min grouped · &gt;9 passengers → 2 buses · 1–5: $75 · 6–9: $95
-            </p>
+          <div class="ops-transfer-section" data-transfer-section="${type}">
+            <h5>${title} (${rows.length})</h5>
             <div class="ops-data-table-wrap">
               <table class="ops-data-table ops-transfer-table">
                 <thead>
@@ -326,6 +434,7 @@
                     <th>Flights</th>
                     <th>Date</th>
                     <th>Time</th>
+                    ${pickupTh}
                     <th>Passengers</th>
                     <th>Driver</th>
                     <th>Total</th>
@@ -334,25 +443,122 @@
                     <th></th>
                   </tr>
                 </thead>
-                <tbody>${body}</tbody>
+                <tbody>${renderTransferTableRows(rows, type)}</tbody>
                 <tfoot>
                   <tr class="ops-transfer-totals">
-                    <td colspan="4"><strong>Total transfers: ${rows.length}</strong></td>
-                    <td colspan="2"></td>
+                    <td colspan="${colSpan}"><strong>Subtotal: ${rows.length}</strong></td>
+                    <td></td>
                     <td><strong>$${sumTotal}</strong></td>
                     <td><strong>$${sumChiche}</strong></td>
                     <td><strong>$${sumLascanas}</strong></td>
                     <td></td>
                   </tr>
-                  <tr class="ops-transfer-totals-sub">
-                    <td colspan="10" style="font-size:0.82rem;color:var(--muted)">
-                      Total revenue $${sumTotal} · Chiche $${sumChiche} · Las Canas profit $${sumLascanas}
-                    </td>
-                  </tr>
                 </tfoot>
               </table>
             </div>
           </div>`
+      }
+
+      function renderTransferPlanner(portal, guestSubmissions, savedTransfers) {
+        window.transferPlannerState = initTransferPlannerState(
+          portal,
+          guestSubmissions,
+          savedTransfers
+        )
+        const {arrival, departure} = window.transferPlannerState
+        const allRows = [...arrival, ...departure]
+        const sumTotal = allRows.reduce((s, t) => s + (t.total || 0), 0)
+        const sumChiche = allRows.reduce((s, t) => s + (t.chiche || 0), 0)
+        const sumLascanas = allRows.reduce((s, t) => s + (t.lascanas || 0), 0)
+        const hasSaved = Array.isArray(savedTransfers) && savedTransfers.length > 0
+
+        return `
+          <div class="ops-transfer-planner" id="transfer-planner" data-transfer-planner>
+            <div class="ops-transfer-planner-head">
+              <h4>🚐 Transfer Planner</h4>
+              <button type="button" class="ops-btn" id="btnSaveTransfers">Save transfers</button>
+            </div>
+            <p style="margin:0 0 0.75rem;font-size:0.82rem;color:var(--muted)">
+              ≤20 min grouped · &gt;9 pax → 2 buses · 1–5: $75 · 6–9: $95
+              ${hasSaved ? ' · <span style="color:var(--accent)">Saved in Sanity</span>' : ''}
+            </p>
+            ${renderTransferSection('arrival', 'Arrivals', arrival)}
+            ${renderTransferSection('departure', 'Departures', departure)}
+            <p class="ops-transfer-grand-total" style="margin:0.75rem 0 0;font-size:0.88rem">
+              <strong>All transfers: ${allRows.length}</strong> ·
+              Total $${sumTotal} · Chiche $${sumChiche} · Las Canas $${sumLascanas}
+            </p>
+            <p id="transferSaveStatus" style="margin:0.35rem 0 0;font-size:0.82rem;color:var(--muted)" hidden></p>
+          </div>`
+      }
+
+      function countMassageRequests(guestSubmissions) {
+        const subs = Array.isArray(guestSubmissions) ? guestSubmissions : []
+        let count = 0
+        subs.forEach((g) => {
+          const acts = Array.isArray(g.activities) ? g.activities : []
+          const massageActs = acts.filter((a) => a.activity === 'massage')
+          if (g.massageRequested || massageActs.length) {
+            if (massageActs.length) {
+              count += massageActs.reduce((s, a) => s + (Number(a.guests) || 1), 0)
+            } else {
+              count += 1
+            }
+          }
+        })
+        return count
+      }
+
+      function aggregateActivitiesMap(portal, guestSubmissions) {
+        const map = {}
+        const add = (activity, participants) => {
+          const key = activity || 'other'
+          const n = Number(participants)
+          map[key] = (map[key] || 0) + (Number.isFinite(n) && n > 0 ? n : 1)
+        }
+        ;(Array.isArray(guestSubmissions) ? guestSubmissions : []).forEach((g) => {
+          ;(g.activities || []).forEach((a) => add(a.activity, a.guests))
+        })
+        ;(Array.isArray(portal?.activities) ? portal.activities : []).forEach((a) => {
+          add(a.activity, a.guests)
+        })
+        return map
+      }
+
+      function renderGroupRevenueSummary(portal, guestSubmissions, savedTransfers) {
+        const saved = Array.isArray(savedTransfers) ? savedTransfers : []
+        const transfers =
+          saved.length > 0
+            ? saved
+            : [...(window.transferPlannerState?.arrival || []), ...(window.transferPlannerState?.departure || [])]
+        const transferCount = transfers.length
+        const transferLasCanas = transfers.reduce(
+          (s, t) => s + (Number(t.lasCanas ?? t.lascanas) || 0),
+          0
+        )
+        const massageCount = countMassageRequests(guestSubmissions)
+        const massageRevenue = massageCount * 15
+        const activityMap = aggregateActivitiesMap(portal, guestSubmissions)
+        const activityLines = Object.entries(activityMap)
+          .map(([key, n]) => {
+            const label = ACTIVITY_LABELS[key] || key
+            return `<li>${escapeHtml(label)} — ${n} participant${n === 1 ? '' : 's'}</li>`
+          })
+          .join('')
+        const totalRevenue = transferLasCanas + massageRevenue
+
+        return `
+          <section class="ops-panel ops-revenue-summary" id="group-revenue">
+            <h3>Group Revenue Summary</h3>
+            <ul class="ops-revenue-lines">
+              <li><strong>Transfers:</strong> ${transferCount} · Las Canas profit <strong>$${transferLasCanas}</strong>${saved.length ? '' : ' <span style="color:var(--muted)">(unsaved plan)</span>'}</li>
+              <li><strong>Massage:</strong> ${massageCount} request${massageCount === 1 ? '' : 's'} × $15 = <strong>$${massageRevenue}</strong></li>
+              <li><strong>Activities:</strong>
+                <ul class="ops-revenue-activities">${activityLines || '<li>—</li>'}</ul>
+              </li>
+            </ul>
+            <p class="ops-revenue-total"><strong>Total Las Canas Revenue: $${totalRevenue}</strong></p>
+          </section>`
       }
 
       const PRINT_SECTION_TITLES = {
@@ -532,7 +738,7 @@
         return `<div class="ops-data-table-wrap"><table class="ops-data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
       }
 
-      function renderMergedSectionBlocks(portal, guestSubmissions) {
+      function renderMergedSectionBlocks(portal, guestSubmissions, savedTransfers) {
         const subs = guestSubmissions || []
         const flights = mergeFlights(portal, subs)
         const flightRows = flights.map((f) => [
@@ -584,7 +790,7 @@
                 flightRows
               )}
               ${transferNote}
-              ${renderTransferPlanner(portal, subs)}
+              ${renderTransferPlanner(portal, subs, savedTransfers)}
             </section>
             <section class="ops-panel ops-merged-block" id="dining" hidden>
               <h3>🍽 Питание</h3>
@@ -970,9 +1176,10 @@
         XLSX.writeFile(wb, `ritaops-${slug || 'group'}-report.xlsx`)
       }
 
-      function render(p, guests) {
+      function render(p, guests, savedTransfers) {
         window.portalData = p
         window.guestSubmissions = guests || []
+        window.savedTransfers = savedTransfers || []
         const slug = new URLSearchParams(location.search).get('slug')
         const key = staffKey()
         const backHref = key ? `/dashboard?key=${encodeURIComponent(key)}` : '/dashboard'
@@ -1062,7 +1269,7 @@
 
           <div class="ops-grid-cards">${cards}</div>
 
-          ${renderMergedSectionBlocks(p, guestList)}
+          ${renderMergedSectionBlocks(p, guestList, savedTransfers)}
 
           <div class="ops-bottom">
             <div class="ops-panel">
@@ -1080,8 +1287,57 @@
             </div>
           </div>
 
+          ${renderGroupRevenueSummary(p, guestList, savedTransfers)}
+
           ${renderGuestSubmissions(guests)}`
 
+      }
+
+      async function saveTransfersToSanity() {
+        const portal = getPortalData()
+        const slug =
+          portal?.groupSlug ||
+          portal?.slug ||
+          new URLSearchParams(location.search).get('slug')
+        if (!slug) {
+          alert('Group slug missing')
+          return
+        }
+        const statusEl = document.getElementById('transferSaveStatus')
+        const btn = document.getElementById('btnSaveTransfers')
+        if (btn) btn.disabled = true
+        if (statusEl) {
+          statusEl.hidden = false
+          statusEl.textContent = 'Saving…'
+        }
+        try {
+          const res = await fetch('/api/save-transfers', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              staffKey: staffKey(),
+              groupSlug: slug,
+              transfers: collectTransfersForSave()
+            })
+          })
+          const json = await res.json()
+          if (!res.ok) throw new Error(json.error || res.statusText)
+          window.savedTransfers = json.transfers || []
+          if (statusEl) statusEl.textContent = `Saved ${window.savedTransfers.length} transfers`
+          const key = staffKey()
+          const qs = new URLSearchParams({slug})
+          if (key) qs.set('key', key)
+          const reload = await fetch(`/api/ops-portal?${qs}`)
+          const data = await reload.json()
+          if (reload.ok) {
+            render(data.portal, data.guests, data.transfers)
+          }
+        } catch (err) {
+          if (statusEl) statusEl.textContent = 'Error: ' + err.message
+          alert(err.message)
+        } finally {
+          if (btn) btn.disabled = false
+        }
       }
 
       document.getElementById('btnPrintAll').addEventListener('click', printAll)
@@ -1100,18 +1356,25 @@
       document.addEventListener('input', (e) => {
         const input = e.target.closest('.transfer-driver-input')
         if (!input) return
+        const type = input.dataset.transferType
         const idx = Number(input.dataset.transferIdx)
-        if (window.transferPlannerRows?.[idx]) {
-          window.transferPlannerRows[idx].driver = input.value
-        }
+        const row = getTransferRow(type, idx)
+        if (row) row.driver = input.value
       })
 
       document.addEventListener('click', (e) => {
+        if (e.target.closest('#btnSaveTransfers')) {
+          e.preventDefault()
+          saveTransfersToSanity()
+          return
+        }
+
         const waBtn = e.target.closest('[data-whatsapp-transfer]')
         if (waBtn) {
           e.preventDefault()
+          const type = waBtn.dataset.transferType
           const idx = Number(waBtn.dataset.whatsappTransfer)
-          const row = window.transferPlannerRows?.[idx]
+          const row = getTransferRow(type, idx)
           const portal = getPortalData()
           if (!row || !portal) return
           const text = buildChicheWhatsAppText(row, portal.groupName)
@@ -1145,7 +1408,7 @@
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || res.statusText)
         window.portalData = json.portal
-        render(json.portal, json.guests)
+        render(json.portal, json.guests, json.transfers)
       }
 
       load().catch((e) => {

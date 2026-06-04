@@ -50,3 +50,8 @@
   from = "/api/create-group"
   to = "/.netlify/functions/create-group"
   status = 200
+
+[[redirects]]
+  from = "/api/save-transfers"
+  to = "/.netlify/functions/save-transfers"
+  status = 200

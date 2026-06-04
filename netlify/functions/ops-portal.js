@@ -63,6 +63,14 @@ exports.handler = async (event) => {
       {id: doc._id}
     )
 
+    const transfers = await client.fetch(
+      `*[_type == "transfer" && groupPortal._ref == $id] | order(type asc, date asc){
+        _id, type, flights, date, time, pickupTime, passengers, driver,
+        total, driverPay, lasCanas, status
+      }`,
+      {id: doc._id}
+    )
+
     const enriched = enrichPortal(doc)
     const {portalAccessToken, ...safe} = enriched
     const host = event.headers.host || 'ritaops.com'
@@ -94,7 +102,8 @@ exports.handler = async (event) => {
           guestFormUrl,
           groupSlug: slug
         },
-        guests: guests || []
+        guests: guests || [],
+        transfers: transfers || []
       })
     }
   } catch (err) {

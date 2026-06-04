@@ -489,9 +489,50 @@ body.ops {
   padding: 1.25rem;
 }
 
+.ops-transfer-planner-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
 .ops-transfer-planner h4 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 1rem;
+  color: var(--ocean);
+}
+
+.ops-transfer-section {
+  margin-bottom: 1.25rem;
+}
+
+.ops-transfer-section h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+  color: var(--ocean);
+}
+
+.ops-revenue-summary {
+  margin: 1.5rem 0;
+}
+
+.ops-revenue-lines {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.ops-revenue-activities {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.ops-revenue-total {
+  margin: 0;
+  font-size: 1.1rem;
   color: var(--ocean);
 }
 
