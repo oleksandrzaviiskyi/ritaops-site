@@ -14,8 +14,16 @@ const LIST_QUERY = `*[_type == "groupPortal" && defined(portalSlug.current) && d
   portalAccessToken
 }`
 
+function readJoinCode(event) {
+  const fromQuery = event.queryStringParameters?.code
+  const fromPath = event.path?.split('/join/')?.[1]
+  const fromParams = event.pathParameters?.code
+  const raw = fromQuery || fromPath || fromParams || ''
+  return decodeURIComponent(raw.split('?')[0].split('/')[0]).trim()
+}
+
 exports.handler = async (event) => {
-  const code = (event.queryStringParameters?.code || '').trim()
+  const code = readJoinCode(event)
 
   if (!code) {
     return {statusCode: 400, body: 'Missing join code'}
