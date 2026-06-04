@@ -1,5 +1,6 @@
 const {createClient} = require('@sanity/client')
 const {enrichPortal} = require('./lib/progress')
+const {portalJoinCode} = require('./lib/joinCode')
 
 const client = createClient({
   projectId: '0po0panc',
@@ -55,6 +56,18 @@ exports.handler = async (event) => {
 
     const enriched = enrichPortal(doc)
     const {portalAccessToken, ...safe} = enriched
+    const host = event.headers.host || 'ritaops.com'
+    const proto = event.headers['x-forwarded-proto'] || 'https'
+    const base = `${proto}://${host}`
+    const staff = staffAuthorized(event)
+
+    let organizerJoinUrl = null
+    let organizerPortalUrl = null
+    if (staff && portalAccessToken && slug) {
+      const code = portalJoinCode(slug, portalAccessToken)
+      organizerJoinUrl = `${base}/join/${encodeURIComponent(code)}`
+      organizerPortalUrl = `${base}/portal/${encodeURIComponent(slug)}?token=${encodeURIComponent(portalAccessToken)}`
+    }
 
     return {
       statusCode: 200,
@@ -63,10 +76,8 @@ exports.handler = async (event) => {
         portal: {
           ...safe,
           property: 'Las Canas Beach Retreat',
-          organizerPortalUrl:
-            staffAuthorized(event) && portalAccessToken
-              ? `https://ritaops.com/portal/${slug}?token=${portalAccessToken}`
-              : null
+          organizerJoinUrl,
+          organizerPortalUrl
         }
       })
     }

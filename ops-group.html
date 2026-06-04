@@ -445,11 +445,12 @@
           ? new Date(p.lastPortalSaveAt).toLocaleDateString('ru-RU')
           : '—'
 
-        if (p.organizerPortalUrl) {
+        const joinUrl = p.organizerJoinUrl || p.organizerPortalUrl
+        if (joinUrl) {
           document.getElementById('organizerLinkBox').hidden = false
-          document.getElementById('organizerUrl').textContent = p.organizerPortalUrl
+          document.getElementById('organizerUrl').textContent = joinUrl
           document.getElementById('copyOrganizer').onclick = () => {
-            navigator.clipboard?.writeText(p.organizerPortalUrl)
+            navigator.clipboard?.writeText(joinUrl)
             alert('Ссылка скопирована')
           }
         }
@@ -463,7 +464,7 @@
             <p>${escapeHtml(s.desc)}</p>
             <div class="ops-ring" style="${ringStyle(sp)}">${sp}%</div>
             <div class="ops-card-actions">
-              <a class="ops-btn" href="${p.organizerPortalUrl || '#'}" ${p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+              <a class="ops-btn" href="${joinUrl || p.organizerPortalUrl || '#'}" ${joinUrl || p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
               <button type="button" class="ops-btn ops-btn-print" data-print="${s.printId}">🖨 Print</button>
             </div>
           </article>`

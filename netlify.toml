@@ -30,3 +30,8 @@
   from = "/api/ops-portal"
   to = "/.netlify/functions/ops-portal"
   status = 200
+
+[[redirects]]
+  from = "/join/:code"
+  to = "/.netlify/functions/join?code=:code"
+  status = 200
