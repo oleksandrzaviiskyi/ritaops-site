@@ -106,19 +106,19 @@ function buildReminders(doc) {
   const dietary = Array.isArray(doc.dietaryRestrictions) ? doc.dietaryRestrictions : []
 
   if (!flights.some((f) => f?.direction === 'arrival' && f.date)) {
-    items.push({id: 'flights', text: 'Добавить рейсы прилёта группы', priority: 'high'})
+    items.push({id: 'flights', text: 'Add group arrival flights', priority: 'high'})
   }
   if (menuDays.length === 0) {
-    items.push({id: 'menu', text: 'Заполнить меню по дням', priority: 'high'})
+    items.push({id: 'menu', text: 'Fill in daily menu', priority: 'high'})
   }
   if (dietary.length === 0 && (doc.totalGuests || 0) > 0) {
-    items.push({id: 'diet', text: 'Уточнить диетические ограничения гостей', priority: 'medium'})
+    items.push({id: 'diet', text: 'Confirm guest dietary restrictions', priority: 'medium'})
   }
   if (!doc.checkIn || !doc.checkOut) {
-    items.push({id: 'dates', text: 'Указать даты заезда и выезда', priority: 'high'})
+    items.push({id: 'dates', text: 'Set check-in and check-out dates', priority: 'high'})
   }
   if ((doc.progressPercent ?? 0) < 30) {
-    items.push({id: 'kickoff', text: 'Новая группа — отправить организатору ссылку на портал', priority: 'medium'})
+    items.push({id: 'kickoff', text: 'New group — send organizer portal link', priority: 'medium'})
   }
 
   return items

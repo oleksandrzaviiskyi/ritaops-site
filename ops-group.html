@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RitaOps — Группа</title>
+    <title>RitaOps — Group</title>
     <link rel="stylesheet" href="/ritaops-dashboard.css" />
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   </head>
@@ -19,39 +19,39 @@
         </div>
         <nav>
           <ul class="ops-nav" id="sideNav">
-            <li><a href="/dashboard" id="navBack">← Все группы</a></li>
-            <li><a href="#overview" class="active">📊 Обзор</a></li>
-            <li><a href="#flights">✈️ Рейсы и трансфер</a></li>
-            <li><a href="#dining">🍽 Питание</a></li>
-            <li><a href="#activities">🌴 Активности</a></li>
-            <li><a href="#notes">📝 Пожелания</a></li>
+            <li><a href="/dashboard" id="navBack">← All groups</a></li>
+            <li><a href="#overview" class="active">📊 Overview</a></li>
+            <li><a href="#flights">✈️ Flights & Transfer</a></li>
+            <li><a href="#dining">🍽 Nutrition</a></li>
+            <li><a href="#activities">🌴 Activities</a></li>
+            <li><a href="#notes">📝 Wishes</a></li>
           </ul>
         </nav>
         <div class="ops-help" id="organizerLinkBox" hidden>
-          <strong>Ссылка организатору</strong>
+          <strong>Organizer link</strong>
           <p style="font-size:0.75rem;word-break:break-all;margin:0.5rem 0" id="organizerUrl"></p>
-          <button type="button" class="ops-btn" id="copyOrganizer">Копировать</button>
+          <button type="button" class="ops-btn" id="copyOrganizer">Copy</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0" />
           <strong>Guest link</strong>
           <p style="font-size:0.75rem;word-break:break-all;margin:0.5rem 0" id="guestUrl"></p>
-          <button type="button" class="ops-btn" id="copyGuest">Копировать для гостей</button>
+          <button type="button" class="ops-btn" id="copyGuest">Copy for guests</button>
         </div>
       </aside>
 
       <main class="ops-main">
         <header class="ops-topbar">
           <div class="ops-topbar-left">
-            <span class="title">Карточка группы</span>
+            <span class="title">Group Card</span>
             <div class="ops-topbar-actions">
               <button type="button" class="ops-toolbar-btn" id="btnPrintAll">🖨 Print All</button>
               <button type="button" class="ops-toolbar-btn" id="btnExportExcel">⬇ Export Excel</button>
             </div>
           </div>
-          <a href="/dashboard" id="topBack" class="ops-topbar-back">← Группы</a>
+          <a href="/dashboard" id="topBack" class="ops-topbar-back">← Groups</a>
         </header>
 
         <div class="ops-content" id="content">
-          <p style="color:var(--muted)">Загрузка…</p>
+          <p style="color:var(--muted)">Loading…</p>
         </div>
       </main>
     </div>
@@ -608,8 +608,8 @@
           printId: 'flights',
           icon: '✈️',
           color: '#4a90c4',
-          title: 'Рейсы и трансфер',
-          desc: 'Прилёты, отлёты и трансфер от аэропорта.',
+          title: 'Flights & Transfer',
+          desc: 'Arrivals, departures, and airport transfers.',
           key: 'travel',
           href: '#flights'
         },
@@ -618,8 +618,8 @@
           printId: 'dining',
           icon: '🍽',
           color: '#3d8f5a',
-          title: 'Питание',
-          desc: 'Меню по дням и диетические ограничения.',
+          title: 'Nutrition',
+          desc: 'Daily menu and dietary restrictions.',
           key: 'food',
           href: '#dining'
         },
@@ -628,8 +628,8 @@
           printId: 'activities',
           icon: '🌴',
           color: '#d98a2b',
-          title: 'Активности',
-          desc: 'Экскурсии и программа группы.',
+          title: 'Activities',
+          desc: 'Excursions and group program.',
           key: 'program',
           href: '#activities'
         },
@@ -638,8 +638,8 @@
           printId: 'core',
           icon: '📋',
           color: '#7b68a6',
-          title: 'Основные данные',
-          desc: 'Даты, гости, тип мероприятия.',
+          title: 'Basic Data',
+          desc: 'Dates, guests, event type.',
           key: 'core',
           href: '#overview'
         },
@@ -648,8 +648,8 @@
           printId: 'notes',
           icon: '💬',
           color: '#c45c3e',
-          title: 'Пожелания',
-          desc: 'Специальные запросы группы.',
+          title: 'Wishes',
+          desc: 'Special group requests.',
           key: 'notes',
           href: '#notes'
         }
@@ -729,7 +729,7 @@
 
       function renderMergedTable(headers, rows) {
         if (!rows.length) {
-          return '<p style="margin:0;color:var(--muted);font-size:0.88rem">Нет данных</p>'
+          return '<p style="margin:0;color:var(--muted);font-size:0.88rem">No data</p>'
         }
         const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')
         const body = rows
@@ -752,9 +752,9 @@
         ])
         const transferNote =
           portal.transferNeeded === true
-            ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Трансфер:</strong> требуется</p>'
+            ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Transfer:</strong> required</p>'
             : portal.transferNeeded === false
-              ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Трансфер:</strong> не требуется</p>'
+              ? '<p style="margin:0.75rem 0 0;font-size:0.88rem"><strong>Transfer:</strong> not required</p>'
               : ''
 
         const dietary = mergeDietary(portal, subs)
@@ -784,7 +784,7 @@
         return `
           <div class="ops-merged-sections" id="merged-sections" hidden>
             <section class="ops-panel ops-merged-block" id="flights" hidden>
-              <h3>✈️ Рейсы и трансфер</h3>
+              <h3>✈️ Flights & Transfer</h3>
               ${renderMergedTable(
                 ['Guest', 'Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
                 flightRows
@@ -793,14 +793,14 @@
               ${renderTransferPlanner(portal, subs, savedTransfers)}
             </section>
             <section class="ops-panel ops-merged-block" id="dining" hidden>
-              <h3>🍽 Питание</h3>
-              <h4 style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Диетические ограничения</h4>
+              <h3>🍽 Nutrition</h3>
+              <h4 style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Dietary restrictions</h4>
               ${renderMergedTable(['Guest', 'Name', 'Restriction', 'Details'], dietRows)}
-              <h4 style="margin:1.25rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Меню по дням (организатор)</h4>
+              <h4 style="margin:1.25rem 0 0.5rem;font-size:0.9rem;color:var(--muted)">Menu by day (organizer)</h4>
               ${renderMergedTable(['Date', 'Breakfast', 'Lunch', 'Dinner'], menuRows)}
             </section>
             <section class="ops-panel ops-merged-block" id="activities" hidden>
-              <h3>🌴 Активности</h3>
+              <h3>🌴 Activities</h3>
               ${renderMergedTable(
                 ['Guest', 'Activity', 'Date', 'Participants', 'Notes'],
                 actRows
@@ -1190,7 +1190,7 @@
         const {sections: sec, percent: pct} = progressWithGuests(p, guestList)
         const nights = nightsBetween(p.checkIn, p.checkOut)
         const updated = p.lastPortalSaveAt
-          ? new Date(p.lastPortalSaveAt).toLocaleDateString('ru-RU')
+          ? new Date(p.lastPortalSaveAt).toLocaleDateString('en-US')
           : '—'
 
         const joinUrl = p.organizerJoinUrl || p.organizerPortalUrl
@@ -1205,7 +1205,7 @@
             document.getElementById('organizerUrl').textContent = joinUrl
             document.getElementById('copyOrganizer').onclick = () => {
               navigator.clipboard?.writeText(joinUrl)
-              alert('Ссылка скопирована')
+              alert('Link copied')
             }
           } else {
             document.getElementById('organizerUrl').textContent = '—'
@@ -1233,7 +1233,7 @@
             <p>${escapeHtml(s.desc)}</p>
             <div class="ops-ring" style="${ringStyle(sp)}">${sp}%</div>
             <div class="ops-card-actions">
-              <a class="ops-btn" href="${joinUrl || p.organizerPortalUrl || '#'}" ${joinUrl || p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+              <a class="ops-btn" href="${joinUrl || p.organizerPortalUrl || '#'}" ${joinUrl || p.organizerPortalUrl ? 'target="_blank"' : ''}>Open in portal</a>
               ${viewBtn}
               <button type="button" class="ops-btn ops-btn-print" data-print="${s.printId}">🖨 Print</button>
             </div>
@@ -1252,20 +1252,20 @@
                 <div class="ops-hero-kicker">RITAOPS · ${escapeHtml(p.property || 'Las Canas')}</div>
                 <h2>${escapeHtml(p.groupName)}</h2>
                 <div class="ops-hero-meta">
-                  <span>📅 ${escapeHtml(p.checkIn || '?')} — ${escapeHtml(p.checkOut || '?')}${nights ? ` (${nights} ночей)` : ''}</span>
-                  <span>👥 ${p.totalGuests ?? '—'} гостей · ${p.adults ?? '—'} взр.${p.children ? ` · ${p.children} дет.` : ''}</span>
+                  <span>📅 ${escapeHtml(p.checkIn || '?')} — ${escapeHtml(p.checkOut || '?')}${nights ? ` (${nights} nights)` : ''}</span>
+                  <span>👥 ${p.totalGuests ?? '—'} guests · ${p.adults ?? '—'} adults${p.children ? ` · ${p.children} children` : ''}</span>
                 </div>
               </div>
               <div class="ops-progress-card">
-                <h3>Прогресс группы</h3>
+                <h3>Group progress</h3>
                 <p class="ops-progress-pct">${pct}%</p>
                 <div class="ops-progress-bar"><span style="width:${pct}%"></span></div>
-                <p style="margin:0;font-size:0.78rem;color:var(--muted)">Обновлено: ${updated}</p>
+                <p style="margin:0;font-size:0.78rem;color:var(--muted)">Updated: ${updated}</p>
               </div>
             </div>
           </section>
 
-          <p style="margin:1rem 0;color:var(--muted)">Подразделения видят статус по блокам. Организатор заполняет данные в своём портале.</p>
+          <p style="margin:1rem 0;color:var(--muted)">Teams see status by section. The organizer fills in data in their portal.</p>
 
           <div class="ops-grid-cards">${cards}</div>
 
@@ -1273,17 +1273,17 @@
 
           <div class="ops-bottom">
             <div class="ops-panel">
-              <h3>Сводка группы</h3>
+              <h3>Group Summary</h3>
               <div class="ops-stats">
-                <div><strong>${p.totalGuests ?? '—'}</strong><span>Гостей</span></div>
-                <div><strong>${p.adults ?? '—'}</strong><span>Взрослых</span></div>
-                <div><strong>${p.children ?? 0}</strong><span>Детей</span></div>
-                <div><strong>${nights ?? '—'}</strong><span>Ночей</span></div>
+                <div><strong>${p.totalGuests ?? '—'}</strong><span>Guests</span></div>
+                <div><strong>${p.adults ?? '—'}</strong><span>Adults</span></div>
+                <div><strong>${p.children ?? 0}</strong><span>Children</span></div>
+                <div><strong>${nights ?? '—'}</strong><span>Nights</span></div>
               </div>
             </div>
             <div class="ops-panel">
-              <h3>Напоминания RitaOps</h3>
-              <ul class="ops-reminders">${reminders || '<li>Нет срочных пунктов</li>'}</ul>
+              <h3>RitaOps reminders</h3>
+              <ul class="ops-reminders">${reminders || '<li>No urgent items</li>'}</ul>
             </div>
           </div>
 
@@ -1398,7 +1398,7 @@
         const slug = new URLSearchParams(location.search).get('slug')
         if (!slug) {
           document.getElementById('content').innerHTML =
-            '<p>Укажите slug в URL: /ops/group?slug=…</p>'
+            '<p>Add slug to the URL: /ops/group?slug=…</p>'
           return
         }
         const key = staffKey()

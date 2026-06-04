@@ -1,4 +1,4 @@
-/* RitaOps — операционный дашборд */
+/* RitaOps — operations dashboard */
 :root {
   --bg: #f4f0e8;
   --sidebar: #faf8f4;
@@ -649,7 +649,7 @@ body.ops {
   color: var(--accent);
 }
 
-/* Список групп (главный дашборд) */
+/* Group list (main dashboard) */
 .ops-groups-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -709,7 +709,7 @@ body.ops {
   }
 }
 
-/* Печать секции из ops-group (без pop-up) */
+/* Print section from ops-group (no pop-up) */
 @media screen {
   #print-area {
     display: none;

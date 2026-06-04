@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RitaOps — Группы</title>
+    <title>RitaOps — Groups</title>
     <link rel="stylesheet" href="/ritaops-dashboard.css" />
   </head>
   <body class="ops">
@@ -13,26 +13,26 @@
           <div class="ops-brand-icon">☀</div>
           <div>
             <h1>RitaOps</h1>
-            <p>Операционная система</p>
+            <p>Operations platform</p>
           </div>
         </div>
         <nav>
           <ul class="ops-nav">
-            <li><a href="/dashboard" class="active">📊 Группы</a></li>
-            <li><a href="/" title="Скоро">🏨 Объекты</a></li>
-            <li><a href="#" title="Скоро">📋 Задачи</a></li>
-            <li><a href="#" title="Скоро">💬 Сообщения</a></li>
+            <li><a href="/dashboard" class="active">📊 Groups</a></li>
+            <li><a href="/" title="Coming soon">🏨 Properties</a></li>
+            <li><a href="#" title="Coming soon">📋 Tasks</a></li>
+            <li><a href="#" title="Coming soon">💬 Messages</a></li>
           </ul>
         </nav>
         <div class="ops-help">
-          <strong>Las Canas</strong> — первый объект RitaOps.<br />
-          Каждая группа = карточка с рейсами, меню и активностями для подразделений.
+          <strong>Las Canas</strong> — first property on RitaOps.<br />
+          Each group is a card with flights, menu, and activities for your teams.
         </div>
       </aside>
 
       <main class="ops-main">
         <header class="ops-topbar">
-          <span class="title">Групповые заезды</span>
+          <span class="title">Group Stays</span>
           <div class="ops-topbar-right">
             <button type="button" class="ops-toolbar-btn" id="btnNewGroup">＋ New Group</button>
             <span id="userLabel" style="font-size: 0.85rem; color: var(--muted)">RitaOps · Staff</span>
@@ -41,7 +41,7 @@
 
         <div class="ops-content">
           <p id="intro" style="color: var(--muted); margin: 0 0 1.25rem">
-            Загрузка групп из Sanity…
+            Loading groups from Sanity…
           </p>
           <div id="groups" class="ops-groups-grid"></div>
         </div>
@@ -113,11 +113,11 @@
 
     <script>
       const STATUS = {
-        new: 'Новая',
-        in_progress: 'В работе',
-        menu_done: 'Меню',
-        flights_done: 'Рейсы',
-        ready: 'Готова'
+        new: 'New',
+        in_progress: 'In progress',
+        menu_done: 'Menu',
+        flights_done: 'Flights',
+        ready: 'Ready'
       }
 
       const modalBackdrop = document.getElementById('modalBackdrop')
@@ -146,7 +146,7 @@
       }
 
       function formatDates(checkIn, checkOut) {
-        if (!checkIn) return 'Даты не указаны'
+        if (!checkIn) return 'Dates not set'
         if (!checkOut) return checkIn
         return `${checkIn} — ${checkOut}`
       }
@@ -185,12 +185,12 @@
 
         const portals = (json.portals || []).filter((p) => p.slug && p.groupName)
         document.getElementById('intro').textContent =
-          `Всего групп: ${portals.length} · объект: ${json.property || 'Las Canas Beach Retreat'}`
+          `Total groups: ${portals.length} · property: ${json.property || 'Las Canas Beach Retreat'}`
 
         const grid = document.getElementById('groups')
         if (portals.length === 0) {
           grid.innerHTML =
-            '<p style="grid-column:1/-1;color:var(--muted)">Нет групп. Нажмите <strong>＋ New Group</strong> чтобы создать первую.</p>'
+            '<p style="grid-column:1/-1;color:var(--muted)">No groups yet. Click <strong>＋ New Group</strong> to create the first one.</p>'
           return
         }
 
@@ -202,13 +202,13 @@
             const keyQs = key ? `&key=${encodeURIComponent(key)}` : ''
             return `
           <a class="ops-group-card${isNew ? ' new-group' : ''}" href="/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}">
-            ${isNew ? '<span class="ops-badge">Новая группа</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
+            ${isNew ? '<span class="ops-badge">New group</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
             <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
-            <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} ночей` : ''}</p>
-            <p style="margin:0 0 0.75rem;font-size:0.88rem">${p.totalGuests ?? '—'} гостей${p.adults != null ? ` (${p.adults} взр.${p.children ? `, ${p.children} дет.` : ''})` : ''}</p>
+            <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} nights` : ''}</p>
+            <p style="margin:0 0 0.75rem;font-size:0.88rem">${p.totalGuests ?? '—'} guests${p.adults != null ? ` (${p.adults} adults${p.children ? `, ${p.children} children` : ''})` : ''}</p>
             <div class="ops-progress-bar"><span style="width:${pct}%"></span></div>
-            <p style="margin:0.5rem 0 0;font-size:0.85rem;font-weight:600;color:var(--accent)">${pct}% заполнено</p>
-            ${p.reminderCount ? `<p style="margin:0.35rem 0 0;font-size:0.78rem;color:var(--warn)">${p.reminderCount} напоминаний</p>` : ''}
+            <p style="margin:0.5rem 0 0;font-size:0.85rem;font-weight:600;color:var(--accent)">${pct}% complete</p>
+            ${p.reminderCount ? `<p style="margin:0.35rem 0 0;font-size:0.78rem;color:var(--warn)">${p.reminderCount} reminders</p>` : ''}
           </a>`
           })
           .join('')
@@ -223,7 +223,7 @@
       document.getElementById('btnCloseSuccess').addEventListener('click', () => {
         closeModal()
         load().catch((e) => {
-          document.getElementById('intro').textContent = 'Ошибка: ' + e.message
+          document.getElementById('intro').textContent = 'Error: ' + e.message
         })
       })
 
@@ -279,7 +279,7 @@
       })
 
       load().catch((e) => {
-        document.getElementById('intro').textContent = 'Ошибка: ' + e.message
+        document.getElementById('intro').textContent = 'Error: ' + e.message
       })
     </script>
   </body>
