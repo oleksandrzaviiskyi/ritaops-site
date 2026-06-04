@@ -10,3 +10,8 @@
   from = "/api/portal"
   to = "/.netlify/functions/portal"
   status = 200
+
+[[redirects]]
+  from = "/api/portals"
+  to = "/.netlify/functions/portals"
+  status = 200
