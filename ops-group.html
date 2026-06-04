@@ -46,9 +46,52 @@
     </div>
 
     <script>
+      /** @type {Record<string, object> | null} */
+      let portalData = null
+
+      const PRINT_SECTION_TITLES = {
+        flights: 'Flights & Transport',
+        dining: 'Nutrition',
+        activities: 'Activities',
+        core: 'Basic Data',
+        notes: 'Wishes'
+      }
+
+      const EVENT_TYPE_LABELS = {
+        yoga_retreat: 'Yoga Retreat',
+        wellness_retreat: 'Wellness Retreat',
+        wedding: 'Wedding',
+        family_reunion: 'Family Reunion',
+        corporate_retreat: 'Corporate Retreat',
+        surf_camp: 'Surf Camp',
+        private_vacation: 'Private Vacation'
+      }
+
+      const RESTRICTION_LABELS = {
+        vegetarian: 'Vegetarian',
+        vegan: 'Vegan',
+        gluten_free: 'Gluten-free',
+        lactose_free: 'Lactose-free',
+        allergy: 'Allergy',
+        halal: 'Halal',
+        other: 'Other'
+      }
+
+      const ACTIVITY_LABELS = {
+        gri_gri: 'Laguna Gri Gri',
+        playa_grande: 'Playa Grande',
+        kite_surfing: 'Kite Surfing',
+        horse_riding: 'Horse Riding',
+        cultural_tour: 'Cultural Tour',
+        yoga: 'Yoga',
+        massage: 'Massage',
+        other: 'Other'
+      }
+
       const SECTIONS = [
         {
           id: 'flights',
+          printId: 'flights',
           icon: '✈️',
           color: '#4a90c4',
           title: 'Рейсы и трансфер',
@@ -58,6 +101,7 @@
         },
         {
           id: 'dining',
+          printId: 'dining',
           icon: '🍽',
           color: '#3d8f5a',
           title: 'Питание',
@@ -67,6 +111,7 @@
         },
         {
           id: 'activities',
+          printId: 'activities',
           icon: '🌴',
           color: '#d98a2b',
           title: 'Активности',
@@ -76,6 +121,7 @@
         },
         {
           id: 'core',
+          printId: 'core',
           icon: '📋',
           color: '#7b68a6',
           title: 'Основные данные',
@@ -85,6 +131,7 @@
         },
         {
           id: 'notes',
+          printId: 'notes',
           icon: '💬',
           color: '#c45c3e',
           title: 'Пожелания',
@@ -121,7 +168,143 @@
         return `background: conic-gradient(var(--accent) ${p * 3.6}deg, var(--border) 0)`
       }
 
+      function printTable(headers, rows) {
+        if (!rows.length) {
+          return '<p class="empty">No data</p>'
+        }
+        const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')
+        const body = rows
+          .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`)
+          .join('')
+        return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
+      }
+
+      function buildPrintBody(sectionId, p) {
+        if (sectionId === 'flights') {
+          const flights = Array.isArray(p.flights) ? p.flights : []
+          const rows = flights.map((f) => [
+            f.direction === 'arrival' ? 'Arrival' : f.direction === 'departure' ? 'Departure' : '—',
+            f.flightNumber || '—',
+            f.date || '—',
+            f.time || '—',
+            f.airport || '—',
+            f.passengers != null ? String(f.passengers) : '—'
+          ])
+          const transfer =
+            p.transferNeeded === true
+              ? '<p><strong>Airport transfer:</strong> Required</p>'
+              : p.transferNeeded === false
+                ? '<p><strong>Airport transfer:</strong> Not required</p>'
+                : ''
+          return (
+            printTable(
+              ['Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
+              rows
+            ) + transfer
+          )
+        }
+
+        if (sectionId === 'dining') {
+          const dietary = Array.isArray(p.dietaryRestrictions) ? p.dietaryRestrictions : []
+          const dietRows = dietary.map((d) => [
+            d.guestName || '—',
+            RESTRICTION_LABELS[d.restriction] || d.restriction || '—',
+            d.details || '—'
+          ])
+          const menu = Array.isArray(p.menuPlan) ? p.menuPlan : []
+          const menuRows = menu.map((m) => [
+            m.date || '—',
+            (m.breakfast || '—').replace(/\n/g, ' '),
+            (m.lunch || '—').replace(/\n/g, ' '),
+            (m.dinner || '—').replace(/\n/g, ' ')
+          ])
+          return (
+            '<h2>Dietary restrictions</h2>' +
+            printTable(['Guest Name', 'Restriction', 'Details'], dietRows) +
+            '<h2>Menu by day</h2>' +
+            printTable(['Date', 'Breakfast', 'Lunch', 'Dinner'], menuRows)
+          )
+        }
+
+        if (sectionId === 'activities') {
+          const acts = Array.isArray(p.activities) ? p.activities : []
+          const rows = acts.map((a) => [
+            ACTIVITY_LABELS[a.activity] || a.activity || '—',
+            a.date || '—',
+            a.guests != null ? String(a.guests) : '—',
+            a.notes || '—'
+          ])
+          return printTable(['Activity', 'Date', 'Participants', 'Notes'], rows)
+        }
+
+        if (sectionId === 'core') {
+          const nights = nightsBetween(p.checkIn, p.checkOut)
+          const dates =
+            p.checkIn || p.checkOut
+              ? `${p.checkIn || '—'} — ${p.checkOut || '—'}${nights ? ` (${nights} nights)` : ''}`
+              : '—'
+          const guests =
+            p.totalGuests != null
+              ? `${p.totalGuests} total (${p.adults ?? '—'} adults, ${p.children ?? 0} children)`
+              : '—'
+          return `<table class="kv"><tbody>
+            <tr><th>Group name</th><td>${escapeHtml(p.groupName || '—')}</td></tr>
+            <tr><th>Dates</th><td>${escapeHtml(dates)}</td></tr>
+            <tr><th>Guests</th><td>${escapeHtml(guests)}</td></tr>
+            <tr><th>Event type</th><td>${escapeHtml(EVENT_TYPE_LABELS[p.eventType] || p.eventType || '—')}</td></tr>
+            <tr><th>Organizer email</th><td>${escapeHtml(p.organizerEmail || '—')}</td></tr>
+          </tbody></table>`
+        }
+
+        if (sectionId === 'notes') {
+          const text = (p.specialRequests || '').trim()
+          return text
+            ? `<div class="text-block">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`
+            : '<p class="empty">No special requests</p>'
+        }
+
+        return '<p class="empty">Unknown section</p>'
+      }
+
+      function printSection(sectionId) {
+        if (!portalData) return
+        const property = portalData.property || 'Las Canas Beach Retreat'
+        const groupName = portalData.groupName || 'Group'
+        const sectionTitle = PRINT_SECTION_TITLES[sectionId] || sectionId
+        const header = `RitaOps · ${property} · ${groupName} · ${sectionTitle}`
+        const body = buildPrintBody(sectionId, portalData)
+        const html = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(header)}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #1c2b2f; }
+  h1 { font-size: 1rem; margin: 0 0 1.25rem; font-weight: 600; border-bottom: 2px solid #1a4d5c; padding-bottom: 0.5rem; }
+  h2 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; color: #1a4d5c; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem; }
+  th, td { border: 1px solid #ccc; padding: 0.45rem 0.55rem; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; }
+  table.kv th { width: 28%; background: #f8f8f8; }
+  .empty { color: #666; font-style: italic; }
+  .text-block { white-space: pre-wrap; line-height: 1.5; }
+  @media print { body { margin: 0.75rem; } }
+</style>
+</head><body>
+<h1>${escapeHtml(header)}</h1>
+${body}
+<script>window.onload = function() { window.print(); }<\/script>
+</body></html>`
+        const win = window.open('', '_blank', 'noopener,noreferrer')
+        if (!win) {
+          alert('Разрешите всплывающие окна для печати')
+          return
+        }
+        win.document.write(html)
+        win.document.close()
+      }
+
       function render(p) {
+        portalData = p
         const slug = new URLSearchParams(location.search).get('slug')
         const key = staffKey()
         const backHref = key ? `/dashboard?key=${encodeURIComponent(key)}` : '/dashboard'
@@ -152,7 +335,10 @@
             <h4>${escapeHtml(s.title)}</h4>
             <p>${escapeHtml(s.desc)}</p>
             <div class="ops-ring" style="${ringStyle(sp)}">${sp}%</div>
-            <a class="ops-btn" href="${p.organizerPortalUrl || '#'}" ${p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+            <div class="ops-card-actions">
+              <a class="ops-btn" href="${p.organizerPortalUrl || '#'}" ${p.organizerPortalUrl ? 'target="_blank"' : ''}>Открыть в портале</a>
+              <button type="button" class="ops-btn ops-btn-print" data-print="${s.printId}">🖨 Print</button>
+            </div>
           </article>`
         }).join('')
 
@@ -200,6 +386,14 @@
               <ul class="ops-reminders">${reminders || '<li>Нет срочных пунктов</li>'}</ul>
             </div>
           </div>`
+
+        document.getElementById('content').onclick = (e) => {
+          const btn = e.target.closest('[data-print]')
+          if (btn) {
+            e.preventDefault()
+            printSection(btn.getAttribute('data-print'))
+          }
+        }
       }
 
       async function load() {

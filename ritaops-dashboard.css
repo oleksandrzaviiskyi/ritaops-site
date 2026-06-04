@@ -286,6 +286,22 @@ body.ops {
   background: var(--ocean-dark);
 }
 
+.ops-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ops-btn-print {
+  background: var(--card);
+  color: var(--ocean);
+  border: 1px solid var(--border);
+}
+
+.ops-btn-print:hover {
+  background: var(--bg);
+}
+
 .ops-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
