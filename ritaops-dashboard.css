@@ -116,14 +116,56 @@ body.ops {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   padding: 0.85rem 1.5rem;
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
 
+.ops-topbar-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
 .ops-topbar .title {
   font-weight: 600;
   color: var(--ocean);
+}
+
+.ops-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ops-toolbar-btn {
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ocean);
+  cursor: pointer;
+}
+
+.ops-toolbar-btn:hover {
+  background: var(--bg);
+  border-color: var(--ocean);
+}
+
+.ops-topbar-back {
+  font-size: 0.85rem;
+  color: var(--ocean);
+  text-decoration: none;
+}
+
+.ops-topbar-back:hover {
+  text-decoration: underline;
 }
 
 .ops-content {
@@ -444,6 +486,20 @@ body.ops {
   font-weight: 600;
   border-bottom: 2px solid #1a4d5c;
   padding-bottom: 0.5rem;
+}
+
+#print-area .print-section-block {
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  page-break-inside: avoid;
+}
+
+#print-area .print-section-heading {
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem;
+  color: #1a4d5c;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.35rem;
 }
 
 #print-area h2 {

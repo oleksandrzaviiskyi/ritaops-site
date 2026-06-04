@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RitaOps — Группа</title>
     <link rel="stylesheet" href="/ritaops-dashboard.css" />
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   </head>
   <body class="ops">
     <div class="ops-layout">
@@ -35,8 +36,14 @@
 
       <main class="ops-main">
         <header class="ops-topbar">
-          <span class="title">Карточка группы</span>
-          <a href="/dashboard" id="topBack" style="font-size:0.85rem;color:var(--ocean)">← Группы</a>
+          <div class="ops-topbar-left">
+            <span class="title">Карточка группы</span>
+            <div class="ops-topbar-actions">
+              <button type="button" class="ops-toolbar-btn" id="btnPrintAll">🖨 Print All</button>
+              <button type="button" class="ops-toolbar-btn" id="btnExportExcel">⬇ Export Excel</button>
+            </div>
+          </div>
+          <a href="/dashboard" id="topBack" class="ops-topbar-back">← Группы</a>
         </header>
 
         <div class="ops-content" id="content">
@@ -59,6 +66,8 @@
         core: 'Basic Data',
         notes: 'Wishes'
       }
+
+      const PRINT_ALL_ORDER = ['core', 'flights', 'dining', 'activities', 'notes']
 
       const EVENT_TYPE_LABELS = {
         yoga_retreat: 'Yoga Retreat',
@@ -269,12 +278,25 @@
         return '<p class="empty">Unknown section</p>'
       }
 
-      function printSection(sectionId) {
+      function requirePortalData() {
         const p = getPortalData()
         if (!p || (!p.groupName && !p.slug)) {
           alert('Data not loaded yet')
-          return
+          return null
         }
+        return p
+      }
+
+      function runPrint(html) {
+        const area = document.getElementById('print-area')
+        area.innerHTML = html
+        window.addEventListener('afterprint', () => { area.innerHTML = '' }, {once: true})
+        window.print()
+      }
+
+      function printSection(sectionId) {
+        const p = requirePortalData()
+        if (!p) return
 
         const property = p.property || 'Las Canas Beach Retreat'
         const groupName = p.groupName || p.slug || 'Group'
@@ -282,15 +304,130 @@
         const header = `RitaOps · ${property} · ${groupName} · ${sectionTitle}`
         const body = buildPrintBody(sectionId, p)
 
-        const area = document.getElementById('print-area')
-        area.innerHTML = `<div class="print-sheet"><h1 class="print-title">${escapeHtml(header)}</h1>${body}</div>`
+        runPrint(`<div class="print-sheet"><h1 class="print-title">${escapeHtml(header)}</h1>${body}</div>`)
+      }
 
-        const cleanup = () => {
-          area.innerHTML = ''
+      function printAll() {
+        const p = requirePortalData()
+        if (!p) return
+
+        const property = p.property || 'Las Canas Beach Retreat'
+        const groupName = p.groupName || p.slug || 'Group'
+        const mainTitle = `RitaOps · ${property} · ${groupName} · Full Report`
+
+        const sectionsHtml = PRINT_ALL_ORDER.map((id) => {
+          const title = PRINT_SECTION_TITLES[id]
+          const body = buildPrintBody(id, p)
+          return `<section class="print-section-block"><h2 class="print-section-heading">${escapeHtml(title)}</h2>${body}</section>`
+        }).join('')
+
+        runPrint(
+          `<div class="print-sheet"><h1 class="print-title">${escapeHtml(mainTitle)}</h1>${sectionsHtml}</div>`
+        )
+      }
+
+      function exportExcel() {
+        const p = requirePortalData()
+        if (!p) return
+
+        if (typeof XLSX === 'undefined') {
+          alert('Excel library not loaded. Check your connection.')
+          return
         }
-        window.addEventListener('afterprint', cleanup, {once: true})
 
-        window.print()
+        const wb = XLSX.utils.book_new()
+        const nights = nightsBetween(p.checkIn, p.checkOut)
+        const dates =
+          p.checkIn || p.checkOut
+            ? `${p.checkIn || ''} — ${p.checkOut || ''}${nights ? ` (${nights} nights)` : ''}`
+            : ''
+        const guests =
+          p.totalGuests != null
+            ? `${p.totalGuests} (${p.adults ?? '—'} adults, ${p.children ?? 0} children)`
+            : ''
+
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet([
+            ['Group name', p.groupName || ''],
+            ['Dates', dates],
+            ['Guests', guests],
+            ['Event type', EVENT_TYPE_LABELS[p.eventType] || p.eventType || ''],
+            ['Organizer email', p.organizerEmail || '']
+          ]),
+          'Overview'
+        )
+
+        const flights = Array.isArray(p.flights) ? p.flights : []
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet([
+            ['Direction', 'Flight №', 'Date', 'Time', 'Airport', 'Passengers'],
+            ...flights.map((f) => [
+              f.direction === 'arrival' ? 'Arrival' : f.direction === 'departure' ? 'Departure' : '',
+              f.flightNumber || '',
+              f.date || '',
+              f.time || '',
+              f.airport || '',
+              f.passengers != null ? f.passengers : ''
+            ]),
+            [],
+            ['Airport transfer', p.transferNeeded === true ? 'Required' : p.transferNeeded === false ? 'Not required' : '']
+          ]),
+          'Flights'
+        )
+
+        const dietary = Array.isArray(p.dietaryRestrictions) ? p.dietaryRestrictions : []
+        const menu = Array.isArray(p.menuPlan) ? p.menuPlan : []
+        const nutritionRows = [
+          ['Dietary restrictions'],
+          ['Guest Name', 'Restriction', 'Details'],
+          ...dietary.map((d) => [
+            d.guestName || '',
+            RESTRICTION_LABELS[d.restriction] || d.restriction || '',
+            d.details || ''
+          ]),
+          [],
+          ['Menu by day'],
+          ['Date', 'Breakfast', 'Lunch', 'Dinner'],
+          ...menu.map((m) => [
+            m.date || '',
+            m.breakfast || '',
+            m.lunch || '',
+            m.dinner || ''
+          ])
+        ]
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(nutritionRows), 'Nutrition')
+
+        const acts = Array.isArray(p.activities) ? p.activities : []
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet([
+            ['Activity', 'Date', 'Participants', 'Notes'],
+            ...acts.map((a) => [
+              ACTIVITY_LABELS[a.activity] || a.activity || '',
+              a.date || '',
+              a.guests != null ? a.guests : '',
+              a.notes || ''
+            ])
+          ]),
+          'Activities'
+        )
+
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet([
+            ['Special Requests'],
+            [(p.specialRequests || '').trim() || '—']
+          ]),
+          'Wishes'
+        )
+
+        const slug = (p.slug || p.groupName || 'group')
+          .replace(/[^a-z0-9-_]+/gi, '-')
+          .replace(/^-|-$/g, '')
+          .toLowerCase()
+        XLSX.writeFile(wb, `ritaops-${slug || 'group'}-report.xlsx`)
       }
 
       function render(p) {
@@ -378,6 +515,9 @@
           </div>`
 
       }
+
+      document.getElementById('btnPrintAll').addEventListener('click', printAll)
+      document.getElementById('btnExportExcel').addEventListener('click', exportExcel)
 
       document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-print]')
