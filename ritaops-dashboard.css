@@ -472,9 +472,21 @@ body.ops {
 }
 
 .ops-transfer-planner {
+  display: block;
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
+}
+
+#flights:not([hidden]) .ops-transfer-planner {
+  display: block !important;
+}
+
+.ops-transfer-empty td {
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  padding: 1.25rem;
 }
 
 .ops-transfer-planner h4 {

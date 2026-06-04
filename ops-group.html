@@ -145,17 +145,15 @@
       function parseTimeMinutes(timeStr) {
         if (!timeStr) return 0
         const s = String(timeStr).trim()
-        const m24 = s.match(/^(\d{1,2}):(\d{2})/)
-        if (m24) return parseInt(m24[1], 10) * 60 + parseInt(m24[2], 10)
-        const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i)
-        if (m12) {
-          let h = parseInt(m12[1], 10)
-          const pm = m12[3].toLowerCase() === 'pm'
-          if (pm && h < 12) h += 12
-          if (!pm && h === 12) h = 0
-          return h * 60 + parseInt(m12[2], 10)
-        }
-        return 0
+        // "3:30", "3:30 AM", "10:30 am", "10:30:00", "10:30:00 PM"
+        const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?/i)
+        if (!m) return 0
+        let h = parseInt(m[1], 10)
+        const mins = parseInt(m[2], 10)
+        const ampm = m[3] ? m[3].toLowerCase() : null
+        if (ampm === 'pm' && h < 12) h += 12
+        if (ampm === 'am' && h === 12) h = 0
+        return h * 60 + mins
       }
 
       function flightTimestamp(f) {
@@ -247,15 +245,22 @@
         }
       }
 
-      function buildTransferPlannerRows(portal, guestSubmissions) {
-        const arrivals = mergeFlights(portal, guestSubmissions).filter(
-          (f) => f.direction === 'arrival'
+      function getArrivalFlights(portal, guestSubmissions) {
+        return mergeFlights(portal, guestSubmissions).filter(
+          (f) => String(f.direction || '').toLowerCase() === 'arrival'
         )
+      }
+
+      function buildTransferPlannerRowsFromArrivals(arrivals) {
         const groups = groupArrivalsByWindow(arrivals)
         const expanded = expandGroupsToTransfers(groups)
         return expanded.map((t) =>
           summarizeTransferGroup(t.flights, t.passengers, t.splitBus)
         )
+      }
+
+      function buildTransferPlannerRows(portal, guestSubmissions) {
+        return buildTransferPlannerRowsFromArrivals(getArrivalFlights(portal, guestSubmissions))
       }
 
       function buildChicheWhatsAppText(transfer, groupName) {
@@ -278,21 +283,16 @@
       }
 
       function renderTransferPlanner(portal, guestSubmissions) {
-        const rows = buildTransferPlannerRows(portal, guestSubmissions)
+        const arrivals = getArrivalFlights(portal, guestSubmissions)
+        console.log('arrivals:', arrivals)
+        const rows = buildTransferPlannerRowsFromArrivals(arrivals)
         window.transferPlannerRows = rows
 
-        if (!rows.length) {
-          return `
-            <div class="ops-transfer-planner" id="transfer-planner">
-              <h4>🚐 Transfer Planner</h4>
-              <p style="margin:0;color:var(--muted);font-size:0.88rem">Нет рейсов прилёта для планирования трансферов.</p>
-            </div>`
-        }
-
-        const body = rows
-          .map((t, i) => {
-            const flightsCell = escapeHtml(t.flightNumbers)
-            return `<tr data-transfer-row="${i}">
+        const body = rows.length
+          ? rows
+              .map((t, i) => {
+                const flightsCell = escapeHtml(t.flightNumbers)
+                return `<tr data-transfer-row="${i}">
               <td>${i + 1}</td>
               <td>${flightsCell}</td>
               <td>${escapeHtml(t.date)}</td>
@@ -304,18 +304,19 @@
               <td>$${t.lascanas}</td>
               <td><button type="button" class="ops-btn ops-btn-whatsapp" data-whatsapp-transfer="${i}">WhatsApp Chiche</button></td>
             </tr>`
-          })
-          .join('')
+              })
+              .join('')
+          : `<tr class="ops-transfer-empty"><td colspan="10">No arrival flights found</td></tr>`
 
         const sumTotal = rows.reduce((s, t) => s + t.total, 0)
         const sumChiche = rows.reduce((s, t) => s + t.chiche, 0)
         const sumLascanas = rows.reduce((s, t) => s + t.lascanas, 0)
 
         return `
-          <div class="ops-transfer-planner" id="transfer-planner">
+          <div class="ops-transfer-planner" id="transfer-planner" data-transfer-planner>
             <h4>🚐 Transfer Planner</h4>
             <p style="margin:0 0 0.75rem;font-size:0.82rem;color:var(--muted)">
-              Прилёты ≤20 мин объединяются · &gt;9 пассажиров → 2 автобуса · 1–5: $75 · 6–9: $95
+              Arrivals ≤20 min grouped · &gt;9 passengers → 2 buses · 1–5: $75 · 6–9: $95
             </p>
             <div class="ops-data-table-wrap">
               <table class="ops-data-table ops-transfer-table">
@@ -775,6 +776,11 @@
         if (wrap) wrap.hidden = true
       }
 
+      function ensureTransferPlannerVisible() {
+        const planner = document.querySelector('[data-transfer-planner]')
+        if (planner) planner.hidden = false
+      }
+
       function showMergedPanel(sectionId) {
         if (!MERGED_PANEL_IDS.includes(sectionId)) return
         hideMergedPanels()
@@ -783,6 +789,7 @@
         if (wrap) wrap.hidden = false
         if (el) {
           el.hidden = false
+          if (sectionId === 'flights') ensureTransferPlannerVisible()
           el.scrollIntoView({behavior: 'smooth', block: 'start'})
         }
       }
@@ -817,7 +824,10 @@
         if (!p) return
 
         const showOnScreen = MERGED_PANEL_IDS.includes(sectionId)
-        if (showOnScreen) showMergedPanel(sectionId)
+        if (showOnScreen) {
+          showMergedPanel(sectionId)
+          if (sectionId === 'flights') ensureTransferPlannerVisible()
+        }
 
         const property = p.property || 'Las Canas Beach Retreat'
         const groupName = p.groupName || p.slug || 'Group'
