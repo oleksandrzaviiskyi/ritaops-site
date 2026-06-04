@@ -127,8 +127,12 @@
 
       // Ссылка организатора: /portal.html?slug=demo-portal-2026&token=ВАШ_СЕКРЕТ
       const params = new URLSearchParams(location.search)
-      const slug = params.get('slug')
-      const accessToken = params.get('token')
+      const pathMatch = location.pathname.match(/\/portal\/([^/]+)/)
+      const slug =
+        params.get('slug') ||
+        (pathMatch && decodeURIComponent(pathMatch[1])) ||
+        sessionStorage.getItem('portalSlug')
+      const accessToken = params.get('token') || sessionStorage.getItem('portalToken')
 
       const form = document.getElementById('form')
       const successEl = document.getElementById('success')

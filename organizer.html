@@ -103,8 +103,12 @@
     <script>
       const params = new URLSearchParams(location.search)
       const pathMatch = location.pathname.match(/\/portal\/([^/]+)/)
-      const slug = params.get('slug') || (pathMatch && pathMatch[1])
-      const token = params.get('token')
+      const slugFromPath = pathMatch && decodeURIComponent(pathMatch[1])
+      const slug =
+        params.get('slug') || slugFromPath || sessionStorage.getItem('portalSlug')
+      const token = params.get('token') || sessionStorage.getItem('portalToken')
+
+      if (slug) sessionStorage.setItem('portalSlug', slug)
 
       const errorBox = document.getElementById('errorBox')
       const form = document.getElementById('portalForm')
@@ -286,7 +290,9 @@
 
       async function load() {
         if (!slug || !token) {
-          showError('Invalid link. Parameters ?slug=…&token=… are required. Please use the full link provided by Las Canas.')
+          showError(
+            'Invalid or expired link. Please use the join link from Las Canas (ritaops.com/join/…).'
+          )
           return
         }
         const res = await fetch(`/api/portal?slug=${encodeURIComponent(slug)}&token=${encodeURIComponent(token)}`)

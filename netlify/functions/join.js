@@ -22,6 +22,19 @@ function readJoinCode(event) {
   return decodeURIComponent(raw.split('?')[0].split('/')[0]).trim()
 }
 
+function joinBridgeHtml(slug, token) {
+  const portalPath = `/portal/${slug}`
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/>
+<title>Opening portal…</title>
+<script>
+sessionStorage.setItem('portalSlug', ${JSON.stringify(slug)});
+sessionStorage.setItem('portalToken', ${JSON.stringify(token)});
+location.replace(${JSON.stringify(portalPath)});
+</script>
+</head><body><p>Opening portal…</p></body></html>`
+}
+
 exports.handler = async (event) => {
   const code = readJoinCode(event)
 
@@ -39,13 +52,13 @@ exports.handler = async (event) => {
       return {statusCode: 404, body: 'Join link not found or expired'}
     }
 
-    const host = event.headers.host || 'ritaops.com'
-    const proto = event.headers['x-forwarded-proto'] || 'https'
-    const location = `${proto}://${host}/portal/${encodeURIComponent(match.slug)}?token=${encodeURIComponent(match.portalAccessToken)}`
-
     return {
-      statusCode: 302,
-      headers: {Location: location, 'Cache-Control': 'no-store'}
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store'
+      },
+      body: joinBridgeHtml(match.slug, match.portalAccessToken)
     }
   } catch (err) {
     return {statusCode: 500, body: err.message}
