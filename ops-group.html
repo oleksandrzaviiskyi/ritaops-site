@@ -47,7 +47,7 @@
               <button type="button" class="ops-toolbar-btn" id="btnExportExcel">⬇ Export Excel</button>
             </div>
           </div>
-          <a href="/dashboard" id="topBack" class="ops-topbar-back">← Groups</a>
+          <a href="/group-portal/lascanasbeachretreat" id="topBack" class="ops-topbar-back">← Groups</a>
         </header>
 
         <div class="ops-content" id="content">
@@ -655,6 +655,8 @@
         }
       ]
 
+      const PORTAL_HOME = '/group-portal/lascanasbeachretreat'
+
       function staffKey() {
         const fromUrl = new URLSearchParams(location.search).get('key')
         if (fromUrl) {
@@ -1182,7 +1184,7 @@
         window.savedTransfers = savedTransfers || []
         const slug = new URLSearchParams(location.search).get('slug')
         const key = staffKey()
-        const backHref = key ? `/dashboard?key=${encodeURIComponent(key)}` : '/dashboard'
+        const backHref = key ? `${PORTAL_HOME}?key=${encodeURIComponent(key)}` : PORTAL_HOME
         document.getElementById('navBack').href = backHref
         document.getElementById('topBack').href = backHref
 
