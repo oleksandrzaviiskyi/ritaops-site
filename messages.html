@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RitaOps — Messages &amp; Contacts</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F2EC;
+  --surface: #FDFCF9;
+  --surface2: #F0EDE5;
+  --border: rgba(60,55,45,0.12);
+  --border-strong: rgba(60,55,45,0.22);
+  --text: #1C1A15;
+  --text-2: #6B6657;
+  --text-3: #9E9888;
+  --green: #3A6B35;
+  --green-bg: #EAF2E8;
+  --green-mid: #97C459;
+  --amber: #8A5A0A;
+  --amber-bg: #FDF0DA;
+  --amber-mid: #E8A030;
+  --red: #8B2020;
+  --red-bg: #FBEAEA;
+  --blue: #1A4A7A;
+  --blue-bg: #E6F0FA;
+  --purple: #3C3489;
+  --purple-bg: #EEEDFE;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+}
+.logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.logo-mark {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  letter-spacing: 0.03em;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 20px;
+  font-size: 13px; color: var(--text-2);
+  cursor: pointer; border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 500;
+  border-right: 2px solid var(--text);
+}
+.nav-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+.nav-dot.green { background: var(--green-mid); }
+.nav-dot.amber { background: var(--amber-mid); }
+.nav-section {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.1em;
+  color: var(--text-3); padding: 16px 20px 6px;
+  text-transform: uppercase;
+}
+.sidebar-messages-btn {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface2);
+  border-top: 0.5px solid var(--border);
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-messages-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.sidebar-messages-btn.active {
+  background: var(--surface2);
+  font-weight: 600;
+  border-right: 2px solid var(--text);
+}
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-3);
+}
+.prop-badge {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.main { padding: 32px 36px; overflow-y: auto; }
+.page-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-size: 22px; font-weight: 300; letter-spacing: -0.02em; color: var(--text);
+}
+.page-title span { font-weight: 500; }
+.page-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--text-3);
+  margin-top: 4px;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 16px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-bar::placeholder { color: var(--text-3); }
+.search-bar:focus { border-color: var(--border-strong); }
+
+.category-filters {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.filter-tab {
+  font-size: 12px; padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); cursor: pointer; font-family: inherit;
+}
+.filter-tab:hover { border-color: var(--border-strong); }
+.filter-tab.active {
+  background: var(--text); color: var(--bg); border-color: var(--text);
+}
+
+.contacts-section { margin-bottom: 28px; }
+.contacts-section-title {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  margin-bottom: 12px;
+}
+.contacts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.contact-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.contact-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.contact-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  flex-shrink: 0;
+}
+.contact-avatar.guest { background: var(--blue-bg); color: var(--blue); }
+.contact-avatar.staff { background: var(--green-bg); color: var(--green); }
+.contact-avatar.driver { background: var(--amber-bg); color: var(--amber); }
+.contact-avatar.supplier { background: var(--purple-bg); color: var(--purple); }
+.contact-body { flex: 1; min-width: 0; }
+.contact-name {
+  font-size: 14px; font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 3px;
+}
+.contact-role { font-size: 12px; color: var(--text-2); margin-bottom: 2px; }
+.contact-context {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--text-3);
+  margin-bottom: 12px;
+}
+.contact-actions { display: flex; gap: 8px; }
+.btn-action {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 7px 10px; border-radius: 8px;
+  font-size: 11px; font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.btn-action:hover { opacity: 0.85; }
+.btn-whatsapp {
+  background: var(--green-bg); color: var(--green);
+  border: 1px solid rgba(58,107,53,0.2);
+}
+.btn-call {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border);
+}
+.contacts-empty {
+  grid-column: 1 / -1;
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">RITAOPS</div>
+    <div class="logo-sub">Operations platform</div>
+  </div>
+
+  <div class="nav-section">Guests</div>
+  <a class="nav-item" href="/ops">
+    <span class="nav-dot green"></span> Arrivals
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Transfers
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Kitchen · Restaurant · Bar
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Activities
+  </a>
+
+  <div class="nav-section">Staff</div>
+  <a class="nav-item" href="#">
+    <span class="nav-dot amber"></span> Inventory &amp; Purchases
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Housekeeping
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Maintenance
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Improvements
+  </a>
+
+  <a class="sidebar-messages-btn active" href="/messages">💬 Messages &amp; Contacts</a>
+
+  <div class="sidebar-footer">
+    <div class="prop-badge">Las Canas Beach</div>
+    <div style="margin-top:6px;font-size:10px;">RitaOps · Staff</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Messages &amp; <span>contacts</span></div>
+      <div class="page-date">Quick access to everyone at Las Canas</div>
+    </div>
+  </div>
+
+  <input type="search" class="search-bar" id="search" placeholder="Search by name, role, or arrival…" autocomplete="off" />
+
+  <div class="category-filters" id="category-filters">
+    <button type="button" class="filter-tab active" data-filter="all">All</button>
+    <button type="button" class="filter-tab" data-filter="guest">Guests</button>
+    <button type="button" class="filter-tab" data-filter="staff">Staff</button>
+    <button type="button" class="filter-tab" data-filter="driver">Drivers</button>
+    <button type="button" class="filter-tab" data-filter="supplier">Suppliers</button>
+  </div>
+
+  <div id="contacts-root"></div>
+</main>
+</div>
+
+<script>
+const CATEGORY_LABELS = {
+  guest: 'Guests',
+  staff: 'Staff',
+  driver: 'Drivers',
+  supplier: 'Suppliers'
+}
+
+const CONTACTS = [
+  {
+    category: 'guest',
+    name: 'Johnson M. & T.',
+    role: 'Individual · 2 guests',
+    context: 'Arriving Jun 18',
+    phone: '+1 212 555 1234',
+    initials: 'JM'
+  },
+  {
+    category: 'guest',
+    name: 'EF Cultural Tour',
+    role: 'Group · organizer Sarah K.',
+    context: 'Arriving Jun 8',
+    phone: '+1 917 555 0001',
+    initials: 'EF'
+  },
+  {
+    category: 'guest',
+    name: 'Chen A. & B.',
+    role: 'Individual · 2 guests',
+    context: 'Arriving Jun 25',
+    phone: '+1 310 555 9876',
+    initials: 'CB'
+  },
+  {
+    category: 'staff',
+    name: 'Ricardo C.',
+    role: 'Chef · Kitchen',
+    context: 'On call today',
+    phone: '+1 809 555 0011',
+    initials: 'RC'
+  },
+  {
+    category: 'staff',
+    name: 'Miguel L.',
+    role: 'Bartender · Bar',
+    context: 'On call today',
+    phone: '+1 809 555 0022',
+    initials: 'ML'
+  },
+  {
+    category: 'staff',
+    name: 'Ana M.',
+    role: 'Housekeeping',
+    context: 'Day off today',
+    phone: '+1 809 555 0033',
+    initials: 'AM'
+  },
+  {
+    category: 'driver',
+    name: 'Juan R.',
+    role: 'Driver · Transfers',
+    context: 'SDQ airport runs',
+    phone: '+1 809 555 0044',
+    initials: 'JR'
+  },
+  {
+    category: 'supplier',
+    name: 'Mercado Plaza',
+    role: 'Food & Beverages',
+    context: 'Orders by 10am',
+    phone: '+1 809 555 0055',
+    initials: 'MP'
+  },
+  {
+    category: 'supplier',
+    name: 'Barceló Distributor',
+    role: 'Bar',
+    context: 'Weekly delivery Thu',
+    phone: '+1 809 555 0066',
+    initials: 'BD'
+  }
+]
+
+let activeFilter = 'all'
+let searchQuery = ''
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function phoneDigits(phone) {
+  return String(phone).replace(/\D/g, '')
+}
+
+function contactMatchesSearch(c) {
+  if (!searchQuery) return true
+  const hay = `${c.name} ${c.role} ${c.context} ${c.category} ${CATEGORY_LABELS[c.category]}`.toLowerCase()
+  return hay.includes(searchQuery)
+}
+
+function contactMatchesFilter(c) {
+  if (activeFilter === 'all') return true
+  return c.category === activeFilter
+}
+
+function renderContacts() {
+  const root = document.getElementById('contacts-root')
+  const filtered = CONTACTS.filter((c) => contactMatchesFilter(c) && contactMatchesSearch(c))
+  const categories =
+    activeFilter === 'all'
+      ? ['guest', 'staff', 'driver', 'supplier']
+      : [activeFilter]
+
+  if (!filtered.length) {
+    root.innerHTML = '<p class="contacts-empty">No contacts match your search.</p>'
+    return
+  }
+
+  root.innerHTML = categories
+    .map((cat) => {
+      const items = filtered.filter((c) => c.category === cat)
+      if (!items.length) return ''
+      const cards = items
+        .map((c) => {
+          const digits = phoneDigits(c.phone)
+          const tel = c.phone.replace(/\s/g, '')
+          return `
+        <div class="contact-card" data-category="${c.category}">
+          <div class="contact-avatar ${c.category}">${escapeHtml(c.initials)}</div>
+          <div class="contact-body">
+            <div class="contact-name">${escapeHtml(c.name)}</div>
+            <div class="contact-role">${escapeHtml(c.role)}</div>
+            <div class="contact-context">${escapeHtml(c.context)}</div>
+            <div class="contact-actions">
+              <a class="btn-action btn-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              <a class="btn-action btn-call" href="tel:${tel}">Call</a>
+            </div>
+          </div>
+        </div>`
+        })
+        .join('')
+      return `
+      <section class="contacts-section">
+        <div class="contacts-section-title">${CATEGORY_LABELS[cat]}</div>
+        <div class="contacts-grid">${cards}</div>
+      </section>`
+    })
+    .join('')
+}
+
+document.getElementById('category-filters').addEventListener('click', (e) => {
+  const tab = e.target.closest('.filter-tab')
+  if (!tab) return
+  activeFilter = tab.dataset.filter
+  document.querySelectorAll('.filter-tab').forEach((t) => t.classList.remove('active'))
+  tab.classList.add('active')
+  renderContacts()
+})
+
+document.getElementById('search').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim().toLowerCase()
+  renderContacts()
+})
+
+renderContacts()
+</script>
+</body>
+</html>
