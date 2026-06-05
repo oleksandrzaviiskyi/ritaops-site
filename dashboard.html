@@ -138,6 +138,12 @@
         return sessionStorage.getItem('ritaops_staff_key') || ''
       }
 
+      function opsGroupHref(slug) {
+        const key = staffKey()
+        const base = `/ops/group?slug=${encodeURIComponent(slug)}`
+        return key ? `${base}&key=${encodeURIComponent(key)}` : base
+      }
+
       function escapeHtml(s) {
         return String(s ?? '')
           .replace(/&/g, '&amp;')
@@ -199,9 +205,8 @@
             const pct = p.progressPercent ?? 0
             const isNew = p.status === 'new' || pct < 15
             const nights = nightsBetween(p.checkIn, p.checkOut)
-            const keyQs = key ? `&key=${encodeURIComponent(key)}` : ''
             return `
-          <a class="ops-group-card${isNew ? ' new-group' : ''}" href="/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}">
+          <a class="ops-group-card${isNew ? ' new-group' : ''}" href="${opsGroupHref(p.slug)}">
             ${isNew ? '<span class="ops-badge">New group</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
             <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
             <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} nights` : ''}</p>
@@ -277,6 +282,8 @@
           btn.disabled = false
         }
       })
+
+      staffKey()
 
       load().catch((e) => {
         document.getElementById('intro').textContent = 'Error: ' + e.message
