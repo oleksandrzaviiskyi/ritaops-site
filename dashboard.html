@@ -129,19 +129,23 @@
       let successOrganizerLink = ''
       let successGuestLink = ''
 
+      const STAFF_KEY_STORAGE = 'ritaops_staff_key'
+
       function staffKey() {
-        const fromUrl = new URLSearchParams(location.search).get('key')
+        const params = new URLSearchParams(location.search)
+        const fromUrl = (params.get('key') || '').trim()
         if (fromUrl) {
-          sessionStorage.setItem('ritaops_staff_key', fromUrl)
+          sessionStorage.setItem(STAFF_KEY_STORAGE, fromUrl)
           return fromUrl
         }
-        return sessionStorage.getItem('ritaops_staff_key') || ''
+        return (sessionStorage.getItem(STAFF_KEY_STORAGE) || '').trim()
       }
 
       function opsGroupHref(slug) {
         const key = staffKey()
-        const base = `/ops/group?slug=${encodeURIComponent(slug)}`
-        return key ? `${base}&key=${encodeURIComponent(key)}` : base
+        const qs = new URLSearchParams({slug})
+        if (key) qs.set('key', key)
+        return `/ops/group?${qs}`
       }
 
       function escapeHtml(s) {
@@ -205,8 +209,9 @@
             const pct = p.progressPercent ?? 0
             const isNew = p.status === 'new' || pct < 15
             const nights = nightsBetween(p.checkIn, p.checkOut)
+            const groupHref = opsGroupHref(p.slug)
             return `
-          <a class="ops-group-card${isNew ? ' new-group' : ''}" href="${opsGroupHref(p.slug)}">
+          <a class="ops-group-card${isNew ? ' new-group' : ''}" href="${groupHref}" data-slug="${escapeHtml(p.slug)}">
             ${isNew ? '<span class="ops-badge">New group</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
             <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
             <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} nights` : ''}</p>
@@ -281,6 +286,16 @@
         } finally {
           btn.disabled = false
         }
+      })
+
+      document.getElementById('groups').addEventListener('click', (e) => {
+        const card = e.target.closest('a.ops-group-card[data-slug]')
+        if (!card) return
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+        const slug = card.dataset.slug
+        if (!slug) return
+        e.preventDefault()
+        location.href = opsGroupHref(slug)
       })
 
       staffKey()
