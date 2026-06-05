@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RitaOps — Staff Login</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F2EC;
+  --surface: #FDFCF9;
+  --surface2: #F0EDE5;
+  --border: rgba(60,55,45,0.12);
+  --border-strong: rgba(60,55,45,0.22);
+  --text: #1C1A15;
+  --text-2: #6B6657;
+  --text-3: #9E9888;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  line-height: 1.5;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px 32px;
+  text-align: center;
+}
+
+.logo-mark {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.login-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 28px;
+}
+
+.login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: var(--text);
+  color: var(--bg);
+  transition: background 0.15s;
+}
+.login-btn:hover { background: #3a3630; }
+
+.login-hint {
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.netlify-identity-widget {
+  margin-top: 16px;
+}
+</style>
+</head>
+<body>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+<div class="login-card">
+  <div class="logo-mark">RITAOPS</div>
+  <p class="login-sub">Las Canas · Staff login</p>
+  <button type="button" class="login-btn" id="btnLogin">Log in</button>
+  <div data-netlify-identity-button class="netlify-identity-widget"></div>
+  <p class="login-hint">Invite links open automatically to set your password.</p>
+</div>
+
+<script>
+function goToOps() {
+  window.location.replace('/ops')
+}
+
+function setupLogin() {
+  if (!window.netlifyIdentity) return
+
+  netlifyIdentity.on('init', (user) => {
+    if (user) {
+      goToOps()
+      return
+    }
+    if (window.location.hash.includes('invite_token')) {
+      netlifyIdentity.open('signup')
+    }
+  })
+
+  netlifyIdentity.on('login', goToOps)
+  netlifyIdentity.on('signup', goToOps)
+
+  document.getElementById('btnLogin').addEventListener('click', () => {
+    netlifyIdentity.open('login')
+  })
+}
+
+if (window.netlifyIdentity) {
+  setupLogin()
+} else {
+  window.addEventListener('load', setupLogin)
+}
+</script>
+</body>
+</html>
