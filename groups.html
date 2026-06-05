@@ -328,7 +328,25 @@ body {
 .card-body { padding: 16px 20px; }
 
 /* Progress blocks */
-.progress-blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.progress-blocks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.arrivals-section { margin-bottom: 14px; }
+.arrival-filters { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.filter-chip {
+  font-size: 12px; padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); cursor: pointer; font-family: inherit;
+}
+.filter-chip:hover { border-color: var(--border-strong); }
+.filter-chip.active {
+  background: var(--text); color: var(--surface); border-color: var(--text);
+}
+.type-pill {
+  display: inline-block; margin-top: 6px;
+  font-size: 10px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; letter-spacing: 0.04em;
+}
+.type-pill-group { background: var(--amber-bg); color: var(--amber); }
+.type-pill-individual { background: var(--blue-bg); color: var(--blue); }
 .prog-block {
   border-radius: 8px; padding: 10px 12px;
   border: 1px solid var(--border);
@@ -512,7 +530,7 @@ body {
   <!-- Header -->
   <div class="page-header">
     <div>
-      <div class="page-title">Group <span>stays</span></div>
+      <div class="page-title">Operations <span>center</span></div>
       <div class="page-date" id="page-date">Loading…</div>
     </div>
     <div style="display:flex;gap:8px;">
@@ -539,9 +557,15 @@ body {
     <div id="timeline-rows"></div>
   </div>
 
-  <!-- Group cards -->
-  <div class="section-head">
-    <div class="section-title">GROUP DETAILS</div>
+  <!-- Arrival cards -->
+  <div class="arrivals-section">
+    <div class="section-title">Arrivals</div>
+    <div class="arrival-filters" id="arrival-filters">
+      <button type="button" class="filter-chip active" data-filter="all">All</button>
+      <button type="button" class="filter-chip" data-filter="groups">Groups</button>
+      <button type="button" class="filter-chip" data-filter="individual">Individual</button>
+      <button type="button" class="filter-chip" data-filter="attention">Needs attention</button>
+    </div>
   </div>
   <div class="groups-grid" id="groups-grid"></div>
 
@@ -965,13 +989,269 @@ function paymentHtml(p) {
         </div>`
 }
 
-function alertsHtml(p) {
-  const reminders = Array.isArray(p.reminders) ? p.reminders : []
-  if (!reminders.length) return ''
-  return `<div class="alerts">${reminders
+function alertsHtml(alerts) {
+  const list = Array.isArray(alerts) ? alerts : []
+  if (!list.length) return ''
+  return `<div class="alerts">${list
     .slice(0, 3)
-    .map((r) => `<span class="alert-chip">⚠ ${escapeHtml(r.text)}</span>`)
+    .map((text) => `<span class="alert-chip">⚠ ${escapeHtml(text)}</span>`)
     .join('')}</div>`
+}
+
+const SAMPLE_INDIVIDUALS = [
+  {
+    id: 'johnson',
+    type: 'individual',
+    name: 'Johnson M. & T.',
+    checkIn: '2026-06-18',
+    checkOut: '2026-06-22',
+    adults: 2,
+    room: 'Room 2B',
+    pax: 2,
+    status: 'ready',
+    shell: 'ready',
+    blocks: {
+      dietary: {cls: 'done', status: 'Noted'},
+      room: {cls: 'done', status: 'Assigned'},
+      transfer: {cls: 'done', status: 'Booked'},
+      activities: {cls: 'partial', status: 'On request'}
+    },
+    payment: {amount: '$1,240', status: 'Paid', cls: 'paid'},
+    alerts: []
+  },
+  {
+    id: 'chen',
+    type: 'individual',
+    name: 'Chen A. & B.',
+    checkIn: '2026-06-25',
+    checkOut: '2026-06-28',
+    adults: 2,
+    room: 'Room 3A',
+    pax: 2,
+    status: 'in_progress',
+    shell: 'urgent',
+    blocks: {
+      dietary: {cls: 'done', status: 'Noted'},
+      room: {cls: 'done', status: 'Assigned'},
+      transfer: {cls: 'empty', status: 'Not booked'},
+      activities: {cls: 'partial', status: 'On request'}
+    },
+    payment: {amount: '$2,160', status: 'Deposit paid', cls: 'partial-paid'},
+    alerts: ['Transfer not booked']
+  }
+]
+
+let arrivalFilter = 'all'
+
+function blockHtml(label, cls, status) {
+  return `
+          <div class="prog-block ${cls}">
+            <div class="prog-block-label">${label}</div>
+            <div class="prog-block-status">${escapeHtml(status)}</div>
+          </div>`
+}
+
+function paymentRowHtml(amount, status, cls) {
+  return `
+        <div class="payment-row">
+          <div>
+            <div class="payment-label">PMS INVOICE</div>
+            <div class="payment-amount">${escapeHtml(amount)}</div>
+          </div>
+          <span class="payment-status ${cls}">${escapeHtml(status)}</span>
+        </div>`
+}
+
+function portalAlerts(p) {
+  return (Array.isArray(p.reminders) ? p.reminders : []).map((r) => r.text).filter(Boolean)
+}
+
+function groupArrivalFromPortal(p, keyQs) {
+  const sec = p.progressSections || {}
+  const food = sec.food ?? 0
+  const core = sec.core ?? 0
+  const travel = sec.travel ?? 0
+  const program = sec.program ?? 0
+  const alerts = portalAlerts(p)
+  const opsHref = `/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}`
+
+  return {
+    type: 'group',
+    id: p.slug,
+    name: p.groupName,
+    checkIn: p.checkIn,
+    checkOut: p.checkOut,
+    adults: p.adults,
+    children: p.children,
+    totalGuests: p.totalGuests,
+    pax: p.totalGuests ?? 0,
+    room: null,
+    status: p.status,
+    shell: cardShellClass(p),
+    badge: badgeClass(p.status),
+    badgeLabel: STATUS[p.status] || p.status,
+    opsHref,
+    blocks: [
+      {label: 'MENU', cls: progBlockClass(food), status: progStatusLabel(food, 'Confirmed', 'Draft')},
+      {label: 'ROOMS', cls: progBlockClass(core), status: progStatusLabel(core, 'Assigned', 'In progress')},
+      {label: 'TRANSFER', cls: progBlockClass(travel), status: progStatusLabel(travel, 'Booked', 'Pending')},
+      {label: 'ACTIVITIES', cls: progBlockClass(program), status: progStatusLabel(program, 'Done', 'Draft')}
+    ],
+    payment: paymentHtml(p),
+    alerts,
+    menuPlan: p.menuPlan,
+    activities: p.activities,
+    corePct: core
+  }
+}
+
+function individualDateLine(arrival) {
+  const nights = nightsBetween(arrival.checkIn, arrival.checkOut)
+  const range = `${fmtShortDate(arrival.checkIn)} → ${fmtShortDate(arrival.checkOut)}`
+  return `${range}${nights ? ` · ${nights} nights` : ''}`
+}
+
+function arrivalCardHtml(arrival) {
+  const isGroup = arrival.type === 'group'
+  const typePillCls = isGroup ? 'type-pill-group' : 'type-pill-individual'
+  const typeLabel = isGroup ? 'Group' : 'Individual'
+  const pax = arrival.pax ?? arrival.totalGuests ?? arrival.adults ?? '—'
+  const hasAlerts = (arrival.alerts || []).length > 0 ? '1' : '0'
+
+  let dateLine
+  let metaHtml
+  if (isGroup) {
+    const nights = nightsBetween(arrival.checkIn, arrival.checkOut)
+    dateLine =
+      arrival.checkIn && arrival.checkOut
+        ? `${fmtShortDate(arrival.checkIn)} → ${fmtShortDate(arrival.checkOut)}${nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}`
+        : arrival.checkIn
+          ? fmtShortDate(arrival.checkIn)
+          : 'Dates not set'
+    const adultsLine =
+      arrival.adults != null
+        ? `${arrival.adults} adults${arrival.children ? ` · ${arrival.children} children` : ''}`
+        : ''
+    const rooms = arrival.totalGuests ? Math.ceil(arrival.totalGuests / 2) : '—'
+    metaHtml = `
+          <div class="meta-item"><span class="meta-icon">👥</span> ${arrival.totalGuests ?? '—'} guests</div>
+          ${adultsLine ? `<div class="meta-item"><span class="meta-icon">👤</span> ${escapeHtml(adultsLine)}</div>` : ''}
+          <div class="meta-item"><span class="meta-icon">🛏</span> ${rooms} rooms</div>`
+  } else {
+    dateLine = individualDateLine(arrival)
+    metaHtml = `
+          <div class="meta-item"><span class="meta-icon">👤</span> ${arrival.adults} adults</div>
+          <div class="meta-item"><span class="meta-icon">🛏</span> ${escapeHtml(arrival.room)}</div>`
+  }
+
+  const blocksHtml = isGroup
+    ? arrival.blocks.map((b) => blockHtml(b.label, b.cls, b.status)).join('')
+    : [
+        blockHtml('DIETARY', arrival.blocks.dietary.cls, arrival.blocks.dietary.status),
+        blockHtml('ROOM', arrival.blocks.room.cls, arrival.blocks.room.status),
+        blockHtml('TRANSFER', arrival.blocks.transfer.cls, arrival.blocks.transfer.status),
+        blockHtml('ACTIVITIES', arrival.blocks.activities.cls, arrival.blocks.activities.status)
+      ].join('')
+
+  const paymentBlock = isGroup
+    ? arrival.payment
+    : paymentRowHtml(arrival.payment.amount, arrival.payment.status, arrival.payment.cls)
+
+  const detailHtml = isGroup
+    ? `
+      <div class="card-detail">
+        <div class="detail-grid">
+          <div class="detail-panel">
+            <h4>Menu</h4>
+            <table class="detail-table">
+              <thead><tr><th>Meal</th><th>Items</th></tr></thead>
+              <tbody>${menuDetailRows(arrival.menuPlan)}</tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Room assignments</h4>
+            <table class="detail-table">
+              <thead><tr><th>Room</th><th>Guests</th><th>Status</th></tr></thead>
+              <tbody>${roomsDetailRow(arrival, arrival.corePct)}</tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Activities</h4>
+            <table class="detail-table">
+              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
+              <tbody>${activitiesDetailRows(arrival.activities)}</tbody>
+            </table>
+          </div>
+        </div>
+        <p style="margin:12px 0 0;font-size:11px;"><a href="${escapeHtml(arrival.opsHref)}" style="color:var(--green);">Open full ops view →</a></p>
+      </div>`
+    : `
+      <div class="card-detail">
+        <div class="detail-grid">
+          <div class="detail-panel">
+            <h4>Dietary</h4>
+            <p style="font-size:12px;color:var(--text-2);margin:0;">${escapeHtml(arrival.blocks.dietary.status)}</p>
+          </div>
+          <div class="detail-panel">
+            <h4>Room</h4>
+            <p style="font-size:12px;color:var(--text-2);margin:0;">${escapeHtml(arrival.room)} · ${escapeHtml(arrival.blocks.room.status)}</p>
+          </div>
+          <div class="detail-panel">
+            <h4>Transfer &amp; activities</h4>
+            <p style="font-size:12px;color:var(--text-2);margin:0;">Transfer: ${escapeHtml(arrival.blocks.transfer.status)}<br />Activities: ${escapeHtml(arrival.blocks.activities.status)}</p>
+          </div>
+        </div>
+      </div>`
+
+  return `
+    <div class="group-card${arrival.shell ? ' ' + arrival.shell : ''}" data-arrival-type="${arrival.type}" data-has-alerts="${hasAlerts}" data-group="${escapeHtml(arrival.id)}"${arrival.opsHref ? ` data-ops-href="${escapeHtml(arrival.opsHref)}"` : ''}>
+      <div class="card-header">
+        <div class="card-top">
+          <div>
+            <div class="group-name">${escapeHtml(arrival.name)}</div>
+            <div class="group-dates">${escapeHtml(dateLine)}</div>
+            <span class="type-pill ${typePillCls}">${typeLabel} · ${pax} pax</span>
+          </div>
+          <span class="badge ${arrival.badge}">${escapeHtml(arrival.badgeLabel)}</span>
+        </div>
+        <div class="card-meta">${metaHtml}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="progress-blocks">${blocksHtml}</div>
+        ${paymentBlock}
+        ${alertsHtml(arrival.alerts)}
+      </div>
+      ${detailHtml}
+    </div>`
+}
+
+function applyArrivalFilter() {
+  const cards = document.querySelectorAll('#groups-grid .group-card')
+  let visible = 0
+  cards.forEach((card) => {
+    const type = card.dataset.arrivalType
+    const hasAlerts = card.dataset.hasAlerts === '1'
+    let show = true
+    if (arrivalFilter === 'groups') show = type === 'group'
+    else if (arrivalFilter === 'individual') show = type === 'individual'
+    else if (arrivalFilter === 'attention') show = hasAlerts
+    card.style.display = show ? '' : 'none'
+    if (show) visible++
+  })
+  const empty = document.getElementById('arrivals-filter-empty')
+  if (empty) empty.style.display = cards.length && visible === 0 ? 'block' : 'none'
+}
+
+function bindArrivalFilters() {
+  document.querySelectorAll('#arrival-filters .filter-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      arrivalFilter = chip.dataset.filter
+      document.querySelectorAll('#arrival-filters .filter-chip').forEach((c) => c.classList.remove('active'))
+      chip.classList.add('active')
+      applyArrivalFilter()
+    })
+  })
 }
 
 function renderGroupCards(portals) {
@@ -979,98 +1259,26 @@ function renderGroupCards(portals) {
   const key = staffKey()
   const keyQs = key ? `&key=${encodeURIComponent(key)}` : ''
 
-  if (!portals.length) {
+  const groupArrivals = portals.map((p) => groupArrivalFromPortal(p, keyQs))
+  const arrivals = [...groupArrivals, ...SAMPLE_INDIVIDUALS.map((a) => ({
+    ...a,
+    badge: badgeClass(a.status),
+    badgeLabel: STATUS[a.status] || a.status
+  }))]
+
+  if (!arrivals.length) {
     grid.innerHTML =
-      '<p style="grid-column:1/-1;color:var(--text-3);padding:24px 0;">No groups yet. <a href="/dashboard">Create one in the dashboard</a>.</p>'
+      '<p style="grid-column:1/-1;color:var(--text-3);padding:24px 0;">No arrivals yet. <a href="/dashboard">Create a group in the dashboard</a>.</p>'
     return
   }
 
-  grid.innerHTML = portals
-    .map((p) => {
-      const sec = p.progressSections || {}
-      const food = sec.food ?? 0
-      const core = sec.core ?? 0
-      const program = sec.program ?? 0
-      const nights = nightsBetween(p.checkIn, p.checkOut)
-      const dateLine =
-        p.checkIn && p.checkOut
-          ? `${fmtShortDate(p.checkIn)} → ${fmtShortDate(p.checkOut)}${nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}`
-          : p.checkIn
-            ? fmtShortDate(p.checkIn)
-            : 'Dates not set'
-      const adultsLine =
-        p.adults != null
-          ? `${p.adults} adults${p.children ? ` · ${p.children} children` : ''}`
-          : ''
-      const rooms = p.totalGuests ? Math.ceil(p.totalGuests / 2) : '—'
-      const shell = cardShellClass(p)
-      const opsHref = `/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}`
-
-      return `
-    <div class="group-card${shell ? ' ' + shell : ''}" data-group="${escapeHtml(p.slug)}" data-ops-href="${escapeHtml(opsHref)}">
-      <div class="card-header">
-        <div class="card-top">
-          <div>
-            <div class="group-name">${escapeHtml(p.groupName)}</div>
-            <div class="group-dates">${escapeHtml(dateLine)}</div>
-          </div>
-          <span class="badge ${badgeClass(p.status)}">${escapeHtml(STATUS[p.status] || p.status)}</span>
-        </div>
-        <div class="card-meta">
-          <div class="meta-item"><span class="meta-icon">👥</span> ${p.totalGuests ?? '—'} guests</div>
-          ${adultsLine ? `<div class="meta-item"><span class="meta-icon">👤</span> ${escapeHtml(adultsLine)}</div>` : ''}
-          <div class="meta-item"><span class="meta-icon">🛏</span> ${rooms} rooms</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="progress-blocks">
-          <div class="prog-block ${progBlockClass(food)}">
-            <div class="prog-block-label">MENU</div>
-            <div class="prog-block-status">${escapeHtml(progStatusLabel(food, 'Confirmed', 'Draft'))}</div>
-          </div>
-          <div class="prog-block ${progBlockClass(core)}">
-            <div class="prog-block-label">ROOMS</div>
-            <div class="prog-block-status">${escapeHtml(progStatusLabel(core, 'Assigned', 'In progress'))}</div>
-          </div>
-          <div class="prog-block ${progBlockClass(program)}">
-            <div class="prog-block-label">ACTIVITIES</div>
-            <div class="prog-block-status">${escapeHtml(progStatusLabel(program, 'Done', 'Draft'))}</div>
-          </div>
-        </div>
-        ${paymentHtml(p)}
-        ${alertsHtml(p)}
-      </div>
-      <div class="card-detail">
-        <div class="detail-grid">
-          <div class="detail-panel">
-            <h4>Menu</h4>
-            <table class="detail-table">
-              <thead><tr><th>Meal</th><th>Items</th></tr></thead>
-              <tbody>${menuDetailRows(p.menuPlan)}</tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Room assignments</h4>
-            <table class="detail-table">
-              <thead><tr><th>Room</th><th>Guests</th><th>Status</th></tr></thead>
-              <tbody>${roomsDetailRow(p, core)}</tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Activities</h4>
-            <table class="detail-table">
-              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
-              <tbody>${activitiesDetailRows(p.activities)}</tbody>
-            </table>
-          </div>
-        </div>
-        <p style="margin:12px 0 0;font-size:11px;"><a href="${escapeHtml(opsHref)}" style="color:var(--green);">Open full ops view →</a></p>
-      </div>
-    </div>`
-    })
-    .join('')
+  grid.innerHTML =
+    arrivals.map((a) => arrivalCardHtml(a)).join('') +
+    '<p id="arrivals-filter-empty" style="display:none;grid-column:1/-1;color:var(--text-3);padding:12px 0;">No arrivals match this filter.</p>'
 
   bindGroupCards()
+  bindArrivalFilters()
+  applyArrivalFilter()
 }
 
 function bindGroupCards() {
