@@ -177,15 +177,39 @@ footer{
 <body>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  // Handle identity redirects (invite, recovery tokens) on the homepage
-  if (window.netlifyIdentity) {
-    window.netlifyIdentity.on("init", user => {
-      if (!user) {
-        window.netlifyIdentity.on("login", () => {
-          document.location.href = "/ops";
-        });
+  function goToOps() {
+    window.location.replace("/ops");
+  }
+
+  function openWidgetForToken() {
+    const hash = window.location.hash;
+    if (hash.includes("invite_token")) {
+      netlifyIdentity.open("signup");
+    } else if (hash.includes("recovery_token")) {
+      netlifyIdentity.open("recovery");
+    }
+  }
+
+  function setupIdentity() {
+    if (!window.netlifyIdentity) return;
+
+    netlifyIdentity.on("init", (user) => {
+      if (user) {
+        goToOps();
+        return;
       }
+      openWidgetForToken();
     });
+
+    netlifyIdentity.on("login", goToOps);
+    netlifyIdentity.on("signup", goToOps);
+    window.addEventListener("hashchange", openWidgetForToken);
+  }
+
+  if (window.netlifyIdentity) {
+    setupIdentity();
+  } else {
+    window.addEventListener("load", setupIdentity);
   }
 </script>
 <main>
