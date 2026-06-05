@@ -7,9 +7,14 @@
   status = 200
 
 [[redirects]]
-  from = "/groups"
-  to = "/groups.html"
+  from = "/ops"
+  to = "/ops.html"
   status = 200
+
+[[redirects]]
+  from = "/groups"
+  to = "/ops"
+  status = 301
 
 [[redirects]]
   from = "/dashboard"
