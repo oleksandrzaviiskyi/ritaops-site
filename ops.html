@@ -96,8 +96,27 @@ body {
   color: var(--text-3); padding: 16px 20px 6px;
   text-transform: uppercase;
 }
-.sidebar-footer {
+.sidebar-messages-btn {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface2);
+  border-top: 0.5px solid var(--border);
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-messages-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
   font-size: 11px; color: var(--text-3);
@@ -555,9 +574,6 @@ body {
   <a class="nav-item" href="#">
     <span class="nav-dot"></span> Activities
   </a>
-  <a class="nav-item" href="#">
-    <span class="nav-dot"></span> Messages
-  </a>
 
   <div class="nav-section">Staff</div>
   <a class="nav-item" href="#">
@@ -572,6 +588,8 @@ body {
   <a class="nav-item" href="#">
     <span class="nav-dot"></span> Improvements
   </a>
+
+  <a class="sidebar-messages-btn" href="/messages">💬 Messages &amp; Contacts</a>
 
   <div class="sidebar-footer">
     <div class="prop-badge">Las Canas Beach</div>
