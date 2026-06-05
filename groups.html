@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RitaOps — Las Canas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F2EC;
+  --surface: #FDFCF9;
+  --surface2: #F0EDE5;
+  --border: rgba(60,55,45,0.12);
+  --border-strong: rgba(60,55,45,0.22);
+  --text: #1C1A15;
+  --text-2: #6B6657;
+  --text-3: #9E9888;
+  --green: #3A6B35;
+  --green-bg: #EAF2E8;
+  --green-mid: #97C459;
+  --amber: #8A5A0A;
+  --amber-bg: #FDF0DA;
+  --amber-mid: #E8A030;
+  --red: #8B2020;
+  --red-bg: #FBEAEA;
+  --blue: #1A4A7A;
+  --blue-bg: #E6F0FA;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── LAYOUT ── */
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+}
+.logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.logo-mark {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  letter-spacing: 0.03em;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 20px;
+  font-size: 13px; color: var(--text-2);
+  cursor: pointer; border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 500;
+  border-right: 2px solid var(--text);
+}
+.nav-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+.nav-dot.green { background: var(--green-mid); }
+.nav-dot.amber { background: var(--amber-mid); }
+.nav-dot.red { background: #E24B4A; }
+.nav-section {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.1em;
+  color: var(--text-3); padding: 16px 20px 6px;
+  text-transform: uppercase;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-3);
+}
+.prop-badge {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+/* ── MAIN ── */
+.main { padding: 32px 36px; overflow-y: auto; }
+.page-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-size: 22px; font-weight: 300; letter-spacing: -0.02em; color: var(--text);
+}
+.page-title span { font-weight: 500; }
+.page-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--text-3);
+  margin-top: 4px;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text);
+  transition: background 0.15s;
+}
+.btn:hover { background: var(--surface2); }
+.btn-primary {
+  background: var(--text); color: var(--bg);
+  border-color: var(--text);
+}
+.btn-primary:hover { background: #3a3630; }
+
+/* ── STAT ROW ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+.stat-label { font-size: 11px; color: var(--text-3); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 300; letter-spacing: -0.03em; color: var(--text); line-height: 1; }
+.stat-value.alert { color: var(--red); }
+.stat-meta { font-size: 11px; color: var(--text-3); margin-top: 5px; }
+
+/* ── TIMELINE ── */
+.section-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.timeline-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+.tl-grid { display: grid; grid-template-columns: 120px 1fr; gap: 0; }
+.tl-days {
+  display: flex; padding-left: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  margin-left: 120px;
+}
+.tl-day {
+  flex: 1; font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--text-3); text-align: center;
+  min-width: 18px;
+}
+.tl-day.today { color: var(--red); font-weight: 500; }
+.tl-row { display: flex; align-items: center; height: 36px; position: relative; }
+.tl-label { width: 120px; flex-shrink: 0; font-size: 12px; color: var(--text-2); padding-right: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-track { flex: 1; height: 100%; position: relative; }
+.tl-bar {
+  position: absolute; top: 9px; height: 18px; border-radius: 5px;
+  display: flex; align-items: center; padding: 0 10px;
+  font-size: 10px; font-weight: 500; white-space: nowrap;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.tl-bar:hover { opacity: 0.8; }
+.tl-bar.ready { background: var(--green-bg); color: var(--green); border: 1px solid rgba(58,107,53,0.2); }
+.tl-bar.progress { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(138,90,10,0.2); }
+.tl-today-line {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: var(--red); opacity: 0.4; pointer-events: none;
+}
+
+/* ── GROUP CARDS ── */
+.groups-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
+.group-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.group-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.group-card.expanded { grid-column: 1 / -1; transform: none; border-color: var(--border-strong); }
+.group-card.urgent { border-left: 3px solid var(--amber-mid); }
+.group-card.ready { border-left: 3px solid var(--green-mid); }
+.card-detail {
+  display: none;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  cursor: default;
+}
+.group-card.expanded .card-detail { display: block; }
+.detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.detail-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.detail-panel h4 {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  margin-bottom: 10px;
+}
+.detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.detail-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); font-weight: 500; text-align: left;
+  padding: 6px 8px 6px 0; border-bottom: 1px solid var(--border);
+}
+.detail-table td {
+  padding: 8px 8px 8px 0; color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.detail-table tr:last-child td,
+.detail-table tr:last-child th { border-bottom: none; }
+.inv-pick { width: 16px; height: 16px; accent-color: var(--text); cursor: pointer; }
+.inv-table th:first-child,
+.inv-table td:first-child { width: 36px; text-align: center; }
+#purchase-print-area {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+@media print {
+  body * { visibility: hidden; }
+  #purchase-print-area,
+  #purchase-print-area * { visibility: visible; }
+  #purchase-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px 32px;
+    background: #fff;
+  }
+}
+.purchase-print-title {
+  font-size: 18px; font-weight: 500; margin-bottom: 4px; color: var(--text);
+}
+.purchase-print-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--text-3);
+  margin-bottom: 20px;
+}
+.purchase-print-table { width: 100%; border-collapse: collapse; }
+.purchase-print-table th,
+.purchase-print-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.purchase-print-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.card-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.group-name { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+.group-dates { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+.badge {
+  font-size: 10px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.badge-ready { background: var(--green-bg); color: var(--green); }
+.badge-progress { background: var(--amber-bg); color: var(--amber); }
+.badge-new { background: var(--blue-bg); color: var(--blue); }
+
+.card-meta {
+  display: flex; gap: 16px;
+}
+.meta-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--text-2);
+}
+.meta-icon { font-size: 13px; opacity: 0.5; }
+
+.card-body { padding: 16px 20px; }
+
+/* Progress blocks */
+.progress-blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.prog-block {
+  border-radius: 8px; padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+.prog-block.done { background: var(--green-bg); border-color: rgba(58,107,53,0.15); }
+.prog-block.partial { background: var(--amber-bg); border-color: rgba(138,90,10,0.15); }
+.prog-block.empty { background: var(--surface2); }
+.prog-block-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 4px; }
+.prog-block-status { font-size: 12px; font-weight: 500; }
+.prog-block.done .prog-block-status { color: var(--green); }
+.prog-block.partial .prog-block-status { color: var(--amber); }
+.prog-block.empty .prog-block-status { color: var(--text-3); }
+
+/* Payment status */
+.payment-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface2); border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 10px;
+}
+.payment-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.payment-amount { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+.payment-status { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; }
+.paid { background: var(--green-bg); color: var(--green); }
+.partial-paid { background: var(--amber-bg); color: var(--amber); }
+.unpaid { background: var(--red-bg); color: var(--red); }
+
+/* Alerts */
+.alerts { display: flex; flex-wrap: wrap; gap: 6px; }
+.alert-chip {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  background: var(--red-bg); color: var(--red);
+  border: 1px solid rgba(139,32,32,0.12);
+}
+
+/* ── INVENTORY BLOCK ── */
+.inventory-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+.inv-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.inv-group-label {
+  font-size: 11px; color: var(--text-3);
+  font-family: 'DM Mono', monospace; margin-top: 2px;
+}
+.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-3); font-weight: 500;
+  padding: 10px 16px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.inv-table th:not(:first-child) { text-align: right; }
+.inv-table td {
+  padding: 10px 16px; font-size: 12px; color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-table td:not(:first-child) {
+  text-align: right; font-family: 'DM Mono', monospace; font-size: 11px;
+}
+.inv-name { font-size: 13px; }
+.inv-zone { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+.zone-kitchen { background: #EEEDFE; color: #3C3489; }
+.zone-bar { background: #E1F5EE; color: #085041; }
+
+.stock-indicator {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.stock-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-ok { background: var(--green-mid); }
+.dot-low { background: var(--amber-mid); }
+.dot-out { background: #E24B4A; }
+
+.deficit-chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: var(--red-bg); color: var(--red);
+  font-weight: 500;
+}
+.ok-chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: var(--green-bg); color: var(--green);
+}
+
+/* ── TASKS ── */
+.tasks-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.tasks-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.task-row {
+  display: grid; grid-template-columns: 24px 1fr auto auto;
+  gap: 12px; align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.task-row:last-child { border-bottom: none; }
+.task-row:hover { background: var(--surface2); }
+.task-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.task-check.done {
+  background: var(--green-mid); border-color: var(--green-mid);
+}
+.task-check.done::after {
+  content: ''; display: block; width: 5px; height: 8px;
+  border: 1.5px solid white; border-top: none; border-left: none;
+  transform: rotate(45deg) translateY(-1px);
+}
+.task-text { color: var(--text); }
+.task-text.done-text { color: var(--text-3); text-decoration: line-through; }
+.task-group { font-size: 10px; color: var(--text-3); background: var(--surface2); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.task-due { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-3); white-space: nowrap; }
+.task-due.overdue { color: var(--red); font-weight: 500; }
+
+/* Utility */
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">RITAOPS</div>
+    <div class="logo-sub">Operations platform</div>
+  </div>
+
+  <div class="nav-section">Главное</div>
+  <a class="nav-item active" href="/groups">
+    <span class="nav-dot green"></span> Groups
+  </a>
+  <a class="nav-item" href="/groups#tasks">
+    <span class="nav-dot"></span> Tasks
+  </a>
+  <a class="nav-item" href="/groups#inventory">
+    <span class="nav-dot amber"></span> Inventory
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Messages
+  </a>
+
+  <div class="nav-section">Property</div>
+  <a class="nav-item" href="/dashboard">
+    <span class="nav-dot"></span> Staff dashboard
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Team
+  </a>
+
+  <div class="sidebar-footer">
+    <div class="prop-badge">Las Canas Beach</div>
+    <div style="margin-top:6px;font-size:10px;">RitaOps · Staff</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Group <span>stays</span></div>
+      <div class="page-date">Чт 4 Jun 2026 · Las Canas Beach Retreat</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn">Export</button>
+      <a class="btn btn-primary" href="/dashboard" style="text-decoration:none;display:inline-flex;align-items:center;">+ New group</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Групп в июне</div>
+      <div class="stat-value">2</div>
+      <div class="stat-meta">70 guests total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Ближайший заезд</div>
+      <div class="stat-value">4 days</div>
+      <div class="stat-meta">тест2 · 8 Jun</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Оплата ожидается</div>
+      <div class="stat-value">$4 200</div>
+      <div class="stat-meta">тест2 · deposit</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Позиций дефицит</div>
+      <div class="stat-value alert">2</div>
+      <div class="stat-meta">purchase needed</div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section-head">
+    <div class="section-title">Когда заезжают</div>
+    <div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--text-3);">
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--green-mid);display:inline-block;"></span>Ready</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--amber-mid);display:inline-block;"></span>In progress</span>
+    </div>
+  </div>
+  <div class="timeline-wrap">
+    <div style="display:flex;margin-left:120px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:4px;">
+      <div id="tl-days" style="display:flex;flex:1;"></div>
+    </div>
+    <div class="tl-row" style="position:relative;">
+      <div class="tl-label">test</div>
+      <div class="tl-track" id="track-test"></div>
+    </div>
+    <div class="tl-row" style="position:relative;">
+      <div class="tl-label">тест2</div>
+      <div class="tl-track" id="track-test2"></div>
+    </div>
+  </div>
+
+  <!-- Group cards -->
+  <div class="section-head">
+    <div class="section-title">Детали групп</div>
+  </div>
+  <div class="groups-grid">
+
+    <!-- test: READY -->
+    <div class="group-card ready" data-group="test">
+      <div class="card-header">
+        <div class="card-top">
+          <div>
+            <div class="group-name">test</div>
+            <div class="group-dates">08.06 → 09.06 · 1 night</div>
+          </div>
+          <span class="badge badge-ready">Ready</span>
+        </div>
+        <div class="card-meta">
+          <div class="meta-item"><span class="meta-icon">👥</span> 20 guests</div>
+          <div class="meta-item"><span class="meta-icon">👤</span> 12 adults · 8 children</div>
+          <div class="meta-item"><span class="meta-icon">🛏</span> 10 rooms</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="progress-blocks">
+          <div class="prog-block done">
+            <div class="prog-block-label">Меню</div>
+            <div class="prog-block-status">Confirmed</div>
+          </div>
+          <div class="prog-block done">
+            <div class="prog-block-label">Размещение</div>
+            <div class="prog-block-status">Assigned</div>
+          </div>
+          <div class="prog-block done">
+            <div class="prog-block-label">Активности</div>
+            <div class="prog-block-status">Готово</div>
+          </div>
+        </div>
+        <div class="payment-row">
+          <div>
+            <div class="payment-label">Инвойс PMS</div>
+            <div class="payment-amount">$3 600</div>
+          </div>
+          <span class="payment-status paid">Paid</span>
+        </div>
+      </div>
+      <div class="card-detail">
+        <div class="detail-grid">
+          <div class="detail-panel">
+            <h4>Menu</h4>
+            <table class="detail-table">
+              <thead><tr><th>Meal</th><th>Items</th></tr></thead>
+              <tbody>
+                <tr><td>Breakfast</td><td>Fresh fruit, eggs, coffee</td></tr>
+                <tr><td>Lunch</td><td>Grilled chicken, rice, salad</td></tr>
+                <tr><td>Dinner</td><td>Fish of the day, vegetables</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Room assignments</h4>
+            <table class="detail-table">
+              <thead><tr><th>Room</th><th>Guests</th></tr></thead>
+              <tbody>
+                <tr><td>Casa 1 · 101</td><td>Smith family (4)</td></tr>
+                <tr><td>Casa 1 · 102</td><td>Johnson (2)</td></tr>
+                <tr><td>Casa 2 · 201</td><td>Group block (14)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Activities</h4>
+            <table class="detail-table">
+              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
+              <tbody>
+                <tr><td>Welcome dinner</td><td>Jun 8</td><td>20</td></tr>
+                <tr><td>Beach yoga</td><td>Jun 9 AM</td><td>12</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- тест2: IN PROGRESS -->
+    <div class="group-card urgent" data-group="test2">
+      <div class="card-header">
+        <div class="card-top">
+          <div>
+            <div class="group-name">тест2</div>
+            <div class="group-dates">14.06 → 15.06 · 1 night</div>
+          </div>
+          <span class="badge badge-progress">In progress</span>
+        </div>
+        <div class="card-meta">
+          <div class="meta-item"><span class="meta-icon">👥</span> 50 guests</div>
+          <div class="meta-item"><span class="meta-icon">👤</span> 50 adults</div>
+          <div class="meta-item"><span class="meta-icon">🛏</span> 25 rooms</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="progress-blocks">
+          <div class="prog-block partial">
+            <div class="prog-block-label">Меню</div>
+            <div class="prog-block-status">Draft</div>
+          </div>
+          <div class="prog-block empty">
+            <div class="prog-block-label">Размещение</div>
+            <div class="prog-block-status">Not started</div>
+          </div>
+          <div class="prog-block empty">
+            <div class="prog-block-label">Активности</div>
+            <div class="prog-block-status">Not started</div>
+          </div>
+        </div>
+        <div class="payment-row">
+          <div>
+            <div class="payment-label">Инвойс PMS · расчётная сумма</div>
+            <div class="payment-amount">$8 400 <span style="font-size:10px;color:var(--text-3);font-family:'DM Sans',sans-serif;">предв.</span></div>
+          </div>
+          <span class="payment-status partial-paid">Ждём deposit</span>
+        </div>
+        <div class="alerts">
+          <span class="alert-chip">⚠ Menu not finalized</span>
+          <span class="alert-chip">⚠ Rooms not assigned</span>
+          <span class="alert-chip">⚠ Inventory deficit</span>
+        </div>
+      </div>
+      <div class="card-detail">
+        <div class="detail-grid">
+          <div class="detail-panel">
+            <h4>Menu</h4>
+            <table class="detail-table">
+              <thead><tr><th>Meal</th><th>Items</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Breakfast</td><td>Continental buffet</td><td>Draft</td></tr>
+                <tr><td>Lunch</td><td>Chicken / vegetarian option</td><td>To confirm</td></tr>
+                <tr><td>Dinner</td><td>BBQ on the beach</td><td>To confirm</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Room assignments</h4>
+            <table class="detail-table">
+              <thead><tr><th>Room</th><th>Guests</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Casa 1 · 101–105</td><td>Block A (10)</td><td>Unassigned</td></tr>
+                <tr><td>Casa 2 · 201–210</td><td>Block B (15)</td><td>Unassigned</td></tr>
+                <tr><td>Casa 3 · 301–305</td><td>Staff + overflow</td><td>Hold</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Activities</h4>
+            <table class="detail-table">
+              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
+              <tbody>
+                <tr><td>Laguna Gri Gri</td><td>Jun 14</td><td>30</td></tr>
+                <tr><td>Massage</td><td>Jun 14–15</td><td>8</td></tr>
+                <tr><td>Transfer POP</td><td>Jun 14 / 15</td><td>50</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Inventory -->
+  <div id="inventory" class="section-head">
+    <div class="section-title">Inventory — потребность под тест2</div>
+    <button type="button" class="btn" id="btnPurchaseOrder" style="font-size:12px;padding:6px 12px;">Generate purchase order</button>
+  </div>
+  <div class="inventory-wrap">
+    <div class="inv-header">
+      <div>
+        <div style="font-size:14px;font-weight:500;">Stock vs demand</div>
+        <div class="inv-group-label">тест2 · 50 guests · 14 Jun</div>
+      </div>
+      <div style="display:flex;gap:8px;font-size:11px;color:var(--text-3);align-items:center;">
+        <span style="display:flex;align-items:center;gap:4px;"><span class="stock-dot dot-ok"></span>Достаточно</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span class="stock-dot dot-low"></span>Мало</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span class="stock-dot dot-out"></span>Нет</span>
+      </div>
+    </div>
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" class="inv-pick" id="inv-check-all" title="Select all shortfalls" /></th>
+          <th>Item</th>
+          <th>In stock</th>
+          <th>Needed</th>
+          <th>Deficit</th>
+        </tr>
+      </thead>
+      <tbody id="inv-tbody">
+        <tr data-order-item data-shortfall="13 kg">
+          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
+          <td><span class="inv-name">Chicken</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot dot-low"></span>12 кг</span></td>
+          <td>25 кг</td>
+          <td><span class="deficit-chip">−13 кг</span></td>
+        </tr>
+        <tr data-order-item data-shortfall="8 kg">
+          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
+          <td><span class="inv-name">Salmon</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot dot-out"></span>0 кг</span></td>
+          <td>8 кг</td>
+          <td><span class="deficit-chip">−8 кг</span></td>
+        </tr>
+        <tr data-order-item data-shortfall="26 btl.">
+          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
+          <td><span class="inv-name">Пиво Presidente</span><span class="inv-zone zone-bar">Bar</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot dot-low"></span>24 btl.</span></td>
+          <td>50 btl.</td>
+          <td><span class="deficit-chip">−26 btl.</span></td>
+        </tr>
+        <tr data-order-item>
+          <td><input type="checkbox" class="inv-pick inv-row-check" /></td>
+          <td><span class="inv-name">Ром Barceló</span><span class="inv-zone zone-bar">Bar</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot dot-ok"></span>8 btl.</span></td>
+          <td>4 btl.</td>
+          <td><span class="ok-chip">+4 btl.</span></td>
+        </tr>
+        <tr data-order-item>
+          <td><input type="checkbox" class="inv-pick inv-row-check" /></td>
+          <td><span class="inv-name">Water (packs)</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot dot-ok"></span>40 уп.</span></td>
+          <td>20 уп.</td>
+          <td><span class="ok-chip">+20 уп.</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tasks -->
+  <div id="tasks" class="section-head">
+    <div class="section-title">Tasks</div>
+    <button class="btn" style="font-size:12px;padding:6px 12px;">+ Задача</button>
+  </div>
+  <div class="tasks-wrap">
+    <div class="task-row">
+      <div class="task-check done"></div>
+      <div class="task-text done-text">Confirm menu for group test</div>
+      <span class="task-group">test</span>
+      <span class="task-due">3 Jun</span>
+    </div>
+    <div class="task-row">
+      <div class="task-check"></div>
+      <div class="task-text">Finalize тест2 menu with head chef</div>
+      <span class="task-group">тест2</span>
+      <span class="task-due overdue">today</span>
+    </div>
+    <div class="task-row">
+      <div class="task-check"></div>
+      <div class="task-text">Assign rooms for тест2 in PMS</div>
+      <span class="task-group">тест2</span>
+      <span class="task-due">6 Jun</span>
+    </div>
+    <div class="task-row">
+      <div class="task-check"></div>
+      <div class="task-text">Generate purchase order: chicken, salmon, beer</div>
+      <span class="task-group">Inventory</span>
+      <span class="task-due">7 Jun</span>
+    </div>
+    <div class="task-row">
+      <div class="task-check"></div>
+      <div class="task-text">Проверить deposit от EF Tours в PMS</div>
+      <span class="task-group">тест2</span>
+      <span class="task-due">8 Jun</span>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div id="purchase-print-area" aria-hidden="true"></div>
+
+<script>
+const days = 30;
+const today = 4;
+
+const tlDays = document.getElementById('tl-days');
+for (let i = 1; i <= days; i++) {
+  const d = document.createElement('div');
+  d.style.cssText = 'flex:1;font-family:"DM Mono",monospace;font-size:10px;color:var(--text-3);text-align:center;min-width:16px;';
+  if ([1,5,10,15,20,25,30].includes(i)) d.textContent = i;
+  if (i === today) { d.style.color = 'var(--red)'; d.style.fontWeight = '500'; d.textContent = i; }
+  tlDays.appendChild(d);
+}
+
+function buildBar(trackId, startDay, endDay, cls, label) {
+  const track = document.getElementById(trackId);
+  const pct = (d) => ((d - 1) / days * 100) + '%';
+  const bar = document.createElement('div');
+  bar.className = 'tl-bar ' + cls;
+  bar.style.left = pct(startDay);
+  bar.style.width = ((endDay - startDay) / days * 100) + '%';
+  bar.textContent = label;
+  track.style.position = 'relative';
+  track.appendChild(bar);
+
+  const line = document.createElement('div');
+  line.className = 'tl-today-line';
+  line.style.left = pct(today);
+  track.appendChild(line);
+}
+
+buildBar('track-test', 8, 9.5, 'ready', '8–9 Jun · 20 guests');
+buildBar('track-test2', 14, 15.5, 'progress', '14–15 Jun · 50 guests');
+
+/* Group cards — expand inline detail */
+document.querySelectorAll('.group-card').forEach((card) => {
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('input, button, select, textarea, a, label')) return
+    const isExpanded = card.classList.contains('expanded')
+    document.querySelectorAll('.group-card.expanded').forEach((c) => c.classList.remove('expanded'))
+    if (!isExpanded) card.classList.add('expanded')
+  })
+})
+
+/* Task checkboxes */
+document.querySelectorAll('.tasks-wrap .task-row').forEach((row) => {
+  const check = row.querySelector('.task-check')
+  const text = row.querySelector('.task-text')
+  if (!check || !text) return
+  check.addEventListener('click', (e) => {
+    e.stopPropagation()
+    check.classList.toggle('done')
+    text.classList.toggle('done-text', check.classList.contains('done'))
+  })
+})
+
+/* Inventory — select shortfalls & print purchase order */
+const invCheckAll = document.getElementById('inv-check-all')
+const invRows = () => Array.from(document.querySelectorAll('#inv-tbody tr[data-order-item]'))
+
+function syncInvCheckAll() {
+  const boxes = invRows().map((r) => r.querySelector('.inv-row-check')).filter(Boolean)
+  if (!invCheckAll || !boxes.length) return
+  const checked = boxes.filter((b) => b.checked).length
+  invCheckAll.checked = checked === boxes.length
+  invCheckAll.indeterminate = checked > 0 && checked < boxes.length
+}
+
+invRows().forEach((row) => {
+  const box = row.querySelector('.inv-row-check')
+  if (!box) return
+  box.addEventListener('click', (e) => e.stopPropagation())
+  box.addEventListener('change', syncInvCheckAll)
+})
+
+if (invCheckAll) {
+  invCheckAll.addEventListener('change', () => {
+    invRows().forEach((row) => {
+      const box = row.querySelector('.inv-row-check')
+      if (box) box.checked = invCheckAll.checked
+    })
+    syncInvCheckAll()
+  })
+  syncInvCheckAll()
+}
+
+document.getElementById('btnPurchaseOrder')?.addEventListener('click', () => {
+  const selected = invRows().filter((row) => row.querySelector('.inv-row-check')?.checked)
+  if (!selected.length) {
+    alert('Select at least one inventory item.')
+    return
+  }
+  const label = document.querySelector('.inv-group-label')?.textContent?.trim() || 'Las Canas'
+  const dateStr = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+  const rowsHtml = selected
+    .map((row) => {
+      const name = row.querySelector('.inv-name')?.textContent?.trim() || ''
+      const zone = row.querySelector('.inv-zone')?.textContent?.trim() || ''
+      const cells = row.querySelectorAll('td')
+      const inStock = cells[2]?.textContent?.trim() || ''
+      const needed = cells[3]?.textContent?.trim() || ''
+      const deficit = row.dataset.shortfall || cells[4]?.textContent?.trim() || '—'
+      const orderQty = deficit.startsWith('−') || deficit.startsWith('-') ? deficit.replace(/^[−-]\s*/, '') : deficit
+      return `<tr><td>${name}</td><td>${zone}</td><td>${inStock}</td><td>${needed}</td><td><strong>${orderQty}</strong></td></tr>`
+    })
+    .join('')
+
+  const area = document.getElementById('purchase-print-area')
+  area.innerHTML = `
+    <div class="purchase-print-title">Purchase order — Las Canas Beach Retreat</div>
+    <div class="purchase-print-meta">${label} · ${dateStr} · ${selected.length} item(s)</div>
+    <table class="purchase-print-table">
+      <thead>
+        <tr><th>Item</th><th>Zone</th><th>In stock</th><th>Needed</th><th>Order qty</th></tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  `
+  window.addEventListener(
+    'afterprint',
+    () => {
+      area.innerHTML = ''
+    },
+    {once: true}
+  )
+  window.print()
+})
+</script>
+</body>
+</html>
