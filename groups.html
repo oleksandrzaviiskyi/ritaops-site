@@ -674,43 +674,7 @@ body {
           <th>Deficit</th>
         </tr>
       </thead>
-      <tbody id="inv-tbody">
-        <tr data-order-item data-shortfall="13 kg">
-          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
-          <td><span class="inv-name">Chicken</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
-          <td><span class="stock-indicator"><span class="stock-dot dot-low"></span>12 kg</span></td>
-          <td>25 kg</td>
-          <td><span class="deficit-chip">−13 kg</span></td>
-        </tr>
-        <tr data-order-item data-shortfall="8 kg">
-          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
-          <td><span class="inv-name">Salmon</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
-          <td><span class="stock-indicator"><span class="stock-dot dot-out"></span>0 kg</span></td>
-          <td>8 kg</td>
-          <td><span class="deficit-chip">−8 kg</span></td>
-        </tr>
-        <tr data-order-item data-shortfall="26 btl.">
-          <td><input type="checkbox" class="inv-pick inv-row-check" checked /></td>
-          <td><span class="inv-name">Presidente beer</span><span class="inv-zone zone-bar">Bar</span></td>
-          <td><span class="stock-indicator"><span class="stock-dot dot-low"></span>24 btl.</span></td>
-          <td>50 btl.</td>
-          <td><span class="deficit-chip">−26 btl.</span></td>
-        </tr>
-        <tr data-order-item>
-          <td><input type="checkbox" class="inv-pick inv-row-check" /></td>
-          <td><span class="inv-name">Barceló rum</span><span class="inv-zone zone-bar">Bar</span></td>
-          <td><span class="stock-indicator"><span class="stock-dot dot-ok"></span>8 btl.</span></td>
-          <td>4 btl.</td>
-          <td><span class="ok-chip">+4 btl.</span></td>
-        </tr>
-        <tr data-order-item>
-          <td><input type="checkbox" class="inv-pick inv-row-check" /></td>
-          <td><span class="inv-name">Water (packs)</span><span class="inv-zone zone-kitchen">Kitchen</span></td>
-          <td><span class="stock-indicator"><span class="stock-dot dot-ok"></span>40 packs</span></td>
-          <td>20 packs</td>
-          <td><span class="ok-chip">+20 packs</span></td>
-        </tr>
-      </tbody>
+      <tbody id="inv-tbody"></tbody>
     </table>
   </div>
   </div>
@@ -1534,12 +1498,89 @@ function getUpcomingArrivals() {
     .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))
 }
 
-function getInventoryScopeArrivals() {
-  const upcoming = getUpcomingArrivals()
-  if (timeMode === 'today') return upcoming.slice(0, 1)
-  if (timeMode === 'week') return upcoming.filter((a) => isInNext7Days(a.checkIn))
-  if (timeMode === 'month') return upcoming.filter((a) => isInCurrentMonth(a.checkIn))
-  return upcoming
+const INVENTORY_CATALOG = [
+  {id: 'chicken', name: 'Chicken', zone: 'kitchen', zoneLabel: 'Kitchen', unit: 'kg', stock: 12, perGuest: 0.5},
+  {id: 'salmon', name: 'Salmon', zone: 'kitchen', zoneLabel: 'Kitchen', unit: 'kg', stock: 0, perGuest: 0.16},
+  {id: 'beer', name: 'Presidente beer', zone: 'bar', zoneLabel: 'Bar', unit: 'btl.', stock: 24, perGuest: 1},
+  {id: 'rum', name: 'Barceló rum', zone: 'bar', zoneLabel: 'Bar', unit: 'btl.', stock: 8, perGuest: 0.08},
+  {id: 'water', name: 'Water (packs)', zone: 'kitchen', zoneLabel: 'Kitchen', unit: 'packs', stock: 40, perGuest: 0.4}
+]
+
+function arrivalPax(arrival) {
+  return arrival.pax ?? arrival.totalGuests ?? arrival.adults ?? 0
+}
+
+function getMonthInventoryArrivals() {
+  const now = new Date()
+  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  return cachedArrivals.filter((a) => a.checkIn && monthKey(a.checkIn) === key)
+}
+
+function getInventoryDemandArrivals() {
+  if (timeMode === 'month') return getMonthInventoryArrivals()
+  return getUpcomingArrivals().slice(0, 1)
+}
+
+function formatInvQty(amount, unit) {
+  const n = Number.isInteger(amount) ? amount : Math.round(amount * 10) / 10
+  return unit === 'btl.' ? `${n} btl.` : `${n} ${unit}`
+}
+
+function computeInventoryRows(arrivals) {
+  return INVENTORY_CATALOG.map((item) => {
+    const needed = arrivals.reduce((sum, arrival) => {
+      const pax = arrivalPax(arrival)
+      return sum + Math.ceil(pax * item.perGuest)
+    }, 0)
+    const balance = item.stock - needed
+    return {...item, needed, balance}
+  })
+}
+
+function inventoryStockDot(item) {
+  if (item.stock === 0) return 'dot-out'
+  if (item.balance < 0) return 'dot-low'
+  return 'dot-ok'
+}
+
+function inventoryBalanceChip(item) {
+  const amt = Math.abs(item.balance)
+  const qty = formatInvQty(amt, item.unit)
+  if (item.balance < 0) {
+    return {html: `<span class="deficit-chip">−${qty}</span>`, shortfall: qty, hasDeficit: true}
+  }
+  if (item.balance > 0) {
+    return {html: `<span class="ok-chip">+${qty}</span>`, shortfall: '', hasDeficit: false}
+  }
+  return {html: `<span class="ok-chip">0</span>`, shortfall: '', hasDeficit: false}
+}
+
+function renderInventoryTable(arrivals) {
+  const tbody = document.getElementById('inv-tbody')
+  if (!tbody) return
+  if (!arrivals.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="5" style="padding:16px;font-size:12px;color:var(--text-3);">No arrivals in scope — inventory baseline only.</td></tr>'
+    bindInventoryCheckboxes()
+    return
+  }
+  const rows = computeInventoryRows(arrivals)
+  tbody.innerHTML = rows
+    .map((item) => {
+      const chip = inventoryBalanceChip(item)
+      const dot = inventoryStockDot(item)
+      const zoneCls = item.zone === 'bar' ? 'zone-bar' : 'zone-kitchen'
+      return `
+        <tr data-order-item${chip.hasDeficit ? ` data-shortfall="${escapeHtml(chip.shortfall)}"` : ''}>
+          <td><input type="checkbox" class="inv-pick inv-row-check"${chip.hasDeficit ? ' checked' : ''} /></td>
+          <td><span class="inv-name">${escapeHtml(item.name)}</span><span class="inv-zone ${zoneCls}">${escapeHtml(item.zoneLabel)}</span></td>
+          <td><span class="stock-indicator"><span class="stock-dot ${dot}"></span>${formatInvQty(item.stock, item.unit)}</span></td>
+          <td>${formatInvQty(item.needed, item.unit)}</td>
+          <td>${chip.html}</td>
+        </tr>`
+    })
+    .join('')
+  bindInventoryCheckboxes()
 }
 
 function findArrivalForTask(group) {
@@ -1714,7 +1755,7 @@ function applyTimeMode() {
     renderTimeline(cachedArrivals, {weekOnly: false})
   }
 
-  updateInventoryHeader()
+  updateInventory()
   renderTasks()
   updateArrivalDateLines()
   applyArrivalFilter()
@@ -1794,39 +1835,47 @@ function formatDemandWhen(checkIn) {
   return `in ${d} days`
 }
 
-function updateInventoryHeader() {
-  const scoped = getInventoryScopeArrivals()
-  const focus = scoped[0] || null
+function updateInventory() {
+  const arrivals = getInventoryDemandArrivals()
   const demandEl = document.getElementById('inv-demand-header')
   const label = document.querySelector('.inv-group-label')
+  const now = new Date()
+  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`
 
-  if (!focus) {
+  if (timeMode === 'month') {
+    const guestSum = arrivals.reduce((sum, a) => sum + arrivalPax(a), 0)
     if (demandEl) {
       demandEl.textContent =
-        timeMode === 'month'
-          ? 'No upcoming arrivals this month'
-          : timeMode === 'week'
-            ? 'No upcoming arrivals this week'
-            : 'No upcoming arrivals — stock baseline'
+        arrivals.length > 0
+          ? `Total demand · ${monthLabel} · ${arrivals.length} arrivals · ${guestSum} guests`
+          : `Total demand · ${monthLabel} · no arrivals scheduled`
     }
+    if (label) {
+      label.textContent =
+        arrivals.length > 0
+          ? `Stock vs demand · cumulative across ${arrivals.length} arrival${arrivals.length > 1 ? 's' : ''}`
+          : 'Stock baseline · order when groups are confirmed'
+    }
+    renderInventoryTable(arrivals)
+    return
+  }
+
+  const focus = arrivals[0] || null
+  if (!focus) {
+    if (demandEl) demandEl.textContent = 'No upcoming arrivals — stock baseline'
     if (label) label.textContent = 'Stock baseline · order when next group is confirmed'
+    renderInventoryTable([])
     return
   }
 
   const name = focus.name || focus.groupName
   const when = formatDemandWhen(focus.checkIn)
-  const scopeNote =
-    scoped.length > 1
-      ? ` · +${scoped.length - 1} more ${timeMode === 'month' ? 'this month' : 'this week'}`
-      : ''
-
-  if (demandEl) {
-    demandEl.textContent = `Needs for ${name} · ${fmtMonthDay(focus.checkIn)} · ${when}${scopeNote}`
-  }
+  if (demandEl) demandEl.textContent = `Needs for ${name} · ${fmtMonthDay(focus.checkIn)} · ${when}`
   if (label) {
-    const pax = focus.pax ?? focus.totalGuests ?? focus.adults ?? '—'
+    const pax = arrivalPax(focus) || '—'
     label.textContent = `Stock · for ${name} · ${pax} guests · ${fmtMonthDay(focus.checkIn)}`
   }
+  renderInventoryTable([focus])
 }
 
 async function load() {
@@ -1863,21 +1912,22 @@ function syncInvCheckAll() {
   invCheckAll.indeterminate = checked > 0 && checked < boxes.length
 }
 
-invRows().forEach((row) => {
-  const box = row.querySelector('.inv-row-check')
-  if (!box) return
-  box.addEventListener('click', (e) => e.stopPropagation())
-  box.addEventListener('change', syncInvCheckAll)
-})
-
-if (invCheckAll) {
-  invCheckAll.addEventListener('change', () => {
-    invRows().forEach((row) => {
-      const box = row.querySelector('.inv-row-check')
-      if (box) box.checked = invCheckAll.checked
-    })
-    syncInvCheckAll()
+function bindInventoryCheckboxes() {
+  invRows().forEach((row) => {
+    const box = row.querySelector('.inv-row-check')
+    if (!box) return
+    box.addEventListener('click', (e) => e.stopPropagation())
+    box.addEventListener('change', syncInvCheckAll)
   })
+  if (invCheckAll) {
+    invCheckAll.onchange = () => {
+      invRows().forEach((row) => {
+        const box = row.querySelector('.inv-row-check')
+        if (box) box.checked = invCheckAll.checked
+      })
+      syncInvCheckAll()
+    }
+  }
   syncInvCheckAll()
 }
 
