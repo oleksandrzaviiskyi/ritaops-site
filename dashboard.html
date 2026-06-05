@@ -3,47 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        display: none;
+      }
+    </style>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+      netlifyIdentity.on('init', () => {
+        const user = netlifyIdentity.currentUser()
+        if (!user) {
+          window.location.href = '/login'
+          return
+        }
+        document.body.style.display = 'block'
+        const label = document.getElementById('userLabel')
+        if (label) label.textContent = user.email || 'RitaOps · Staff'
+        if (typeof window.startDashboard === 'function') window.startDashboard()
+      })
+
+      netlifyIdentity.on('logout', () => {
+        window.location.href = '/login'
+      })
+
+      document.addEventListener('click', (e) => {
+        if (e.target.id === 'btnLogout') {
+          e.preventDefault()
+          netlifyIdentity.logout()
+        }
+      })
+    </script>
     <title>Las Canas Beach Retreat — Group Portal</title>
     <link rel="stylesheet" href="/ritaops-dashboard.css" />
   </head>
   <body class="ops">
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script>
-      document.documentElement.classList.add('auth-pending')
-
-      function setupDashboardAuth() {
-        if (!window.netlifyIdentity) return
-
-        netlifyIdentity.on('init', () => {
-          const user = netlifyIdentity.currentUser()
-          if (!user) {
-            window.location.replace('/login')
-            return
-          }
-          document.documentElement.classList.remove('auth-pending')
-          const label = document.getElementById('userLabel')
-          if (label) label.textContent = user.email || 'RitaOps · Staff'
-          if (typeof window.startDashboard === 'function') window.startDashboard()
-        })
-
-        netlifyIdentity.on('logout', () => {
-          window.location.replace('/login')
-        })
-
-        document.addEventListener('click', (e) => {
-          if (e.target.id === 'btnLogout') {
-            e.preventDefault()
-            netlifyIdentity.logout()
-          }
-        })
-      }
-
-      if (window.netlifyIdentity) {
-        setupDashboardAuth()
-      } else {
-        window.addEventListener('load', setupDashboardAuth)
-      }
-    </script>
     <div class="ops-layout">
       <aside class="ops-sidebar">
         <div class="ops-brand">
@@ -388,9 +381,6 @@
       }
 
       window.startDashboard = startDashboard
-      if (!document.documentElement.classList.contains('auth-pending')) {
-        startDashboard()
-      }
     </script>
   </body>
 </html>
