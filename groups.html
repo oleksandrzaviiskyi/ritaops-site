@@ -201,6 +201,14 @@ body {
 .tl-bar:hover { opacity: 0.8; }
 .tl-bar.ready { background: var(--green-bg); color: var(--green); border: 1px solid rgba(58,107,53,0.2); }
 .tl-bar.progress { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(138,90,10,0.2); }
+.tl-bar.departs { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(26,74,122,0.2); }
+.tl-bar.staying { background: var(--surface2); color: var(--text-2); border: 1px solid var(--border); }
+.timeline-subtitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
 .tl-today-line {
   position: absolute; top: 0; bottom: 0; width: 1px;
   background: var(--red); opacity: 0.4; pointer-events: none;
@@ -579,25 +587,13 @@ body {
   <!-- Stats -->
   <div class="stats" id="stats-row"></div>
 
-  <div class="today-panels" id="today-panels">
-    <div class="today-panel">
-      <h3>Check-ins · next 3 days</h3>
-      <div id="today-checkins"></div>
-    </div>
-    <div class="today-panel">
-      <h3>Tasks for today</h3>
-      <div id="today-tasks"></div>
-    </div>
-    <div class="today-panel">
-      <h3>Needs attention</h3>
-      <div id="today-attention"></div>
-    </div>
-  </div>
-
   <!-- Timeline -->
   <div id="timeline-section" style="display:none">
   <div class="section-head">
-    <div class="section-title">ARRIVAL SCHEDULE</div>
+    <div>
+      <div class="section-title" id="timeline-title">ARRIVAL SCHEDULE</div>
+      <div class="timeline-subtitle" id="timeline-subtitle" style="display:none"></div>
+    </div>
     <div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--text-3);">
       <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--green-mid);display:inline-block;"></span>Ready</span>
       <span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--amber-mid);display:inline-block;"></span>In progress</span>
@@ -611,7 +607,23 @@ body {
   </div>
   </div>
 
+  <div class="today-panels" id="today-panels" style="display:none">
+    <div class="today-panel">
+      <h3>On property today</h3>
+      <div id="today-on-property"></div>
+    </div>
+    <div class="today-panel">
+      <h3>Tasks for today</h3>
+      <div id="today-tasks"></div>
+    </div>
+    <div class="today-panel">
+      <h3>Needs attention</h3>
+      <div id="today-attention"></div>
+    </div>
+  </div>
+
   <!-- Arrival cards -->
+  <div id="arrivals-section">
   <div class="arrivals-section">
     <div class="section-title">Arrivals</div>
     <div class="arrival-filters" id="arrival-filters">
@@ -622,6 +634,7 @@ body {
     </div>
   </div>
   <div class="groups-grid" id="groups-grid"></div>
+  </div>
 
   <!-- Inventory -->
   <div id="inventory-section" style="display:none">
@@ -824,9 +837,41 @@ function isInNext7Days(iso) {
   return d != null && d >= 0 && d <= 7
 }
 
-function isImminentCheckIn(iso) {
-  const d = daysUntil(iso)
-  return d != null && d >= 0 && d <= 3
+function isCheckInToday(iso) {
+  return daysUntil(iso) === 0
+}
+
+function isCheckOutToday(iso) {
+  if (!iso) return false
+  return daysUntil(iso) === 0
+}
+
+function isOnPropertyToday(arrival) {
+  const inDate = parseDate(arrival.checkIn)
+  const outDate = parseDate(arrival.checkOut || arrival.checkIn)
+  if (!inDate || !outDate) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  inDate.setHours(0, 0, 0, 0)
+  outDate.setHours(0, 0, 0, 0)
+  return inDate <= today && today <= outDate
+}
+
+function isRelevantToday(arrival) {
+  if (!arrival.checkIn) return false
+  if (isCheckInToday(arrival.checkIn)) return true
+  if (arrival.checkOut && isCheckOutToday(arrival.checkOut)) return true
+  return isOnPropertyToday(arrival)
+}
+
+function getTodayRole(arrival) {
+  const arrives = isCheckInToday(arrival.checkIn)
+  const departs = arrival.checkOut && isCheckOutToday(arrival.checkOut)
+  if (arrives && departs) return 'turnover'
+  if (arrives) return 'arrives'
+  if (departs) return 'departs'
+  if (isOnPropertyToday(arrival)) return 'staying'
+  return null
 }
 
 function isInCurrentMonth(iso) {
@@ -838,10 +883,19 @@ function isInCurrentMonth(iso) {
 
 function arrivalMatchesTimeMode(arrival) {
   if (timeMode === 'month') return true
-  if (!arrival.checkIn) return false
-  if (timeMode === 'today') return isImminentCheckIn(arrival.checkIn)
-  if (timeMode === 'week') return isInNext7Days(arrival.checkIn)
+  if (timeMode === 'today') return isRelevantToday(arrival)
+  if (timeMode === 'week') return arrival.checkIn && isInNext7Days(arrival.checkIn)
   return true
+}
+
+function formatTodaySnapshotLine(arrival) {
+  const parts = []
+  if (isOnPropertyToday(arrival)) parts.push('On property')
+  if (isCheckInToday(arrival.checkIn)) parts.push('Arrives today')
+  if (arrival.checkOut && isCheckOutToday(arrival.checkOut)) parts.push('Departs today')
+  if (!parts.length) return '—'
+  const room = arrival.room ? ` · ${arrival.room}` : ''
+  return parts.join(' · ') + room
 }
 
 function arrivesInLabel(checkIn) {
@@ -855,6 +909,7 @@ function arrivesInLabel(checkIn) {
 }
 
 function formatArrivalDateLine(arrival) {
+  if (timeMode === 'today') return formatTodaySnapshotLine(arrival)
   if (timeMode === 'week' && arrival.checkIn) return arrivesInLabel(arrival.checkIn)
   if (arrival.type === 'individual') return individualDateLine(arrival)
   const nights = nightsBetween(arrival.checkIn, arrival.checkOut)
@@ -952,25 +1007,118 @@ function renderStats(portals, property) {
     `${fmtHeaderDate(now)} · ${property || 'Las Canas Beach Retreat'}`
 }
 
-function timelineItemsFromArrivals(arrivals, weekOnly) {
-  return arrivals
-    .filter((a) => a.checkIn && (!weekOnly || isInNext7Days(a.checkIn)))
-    .map((a) => ({
-      groupName: a.name,
-      checkIn: a.checkIn,
-      checkOut: a.checkOut,
-      status: a.status,
-      totalGuests: a.pax ?? a.totalGuests,
-      slug: a.id
-    }))
+function timelineItemsFromArrivals(arrivals, options = {}) {
+  const {weekOnly, todayOnly} = options
+  let list = arrivals.filter((a) => a.checkIn)
+  if (todayOnly) list = list.filter(isRelevantToday)
+  else if (weekOnly) list = list.filter((a) => isInNext7Days(a.checkIn))
+  return list.map((a) => ({
+    groupName: a.name,
+    checkIn: a.checkIn,
+    checkOut: a.checkOut,
+    status: a.status,
+    totalGuests: a.pax ?? a.totalGuests,
+    slug: a.id,
+    todayRole: todayOnly ? getTodayRole(a) : null
+  }))
+}
+
+function todayBarLabel(p) {
+  const pax = p.totalGuests ?? '—'
+  if (p.todayRole === 'arrives') return `Arrives · ${pax} pax`
+  if (p.todayRole === 'departs') return `Departs · ${pax} pax`
+  if (p.todayRole === 'turnover') return `Turnover · ${pax} pax`
+  return `On property · ${pax} pax`
+}
+
+function todayBarClass(p) {
+  if (p.todayRole === 'arrives') return 'ready'
+  if (p.todayRole === 'departs') return 'departs'
+  if (p.todayRole === 'turnover') return 'progress'
+  return 'staying'
+}
+
+function todayBarPosition(p) {
+  if (p.todayRole === 'arrives') return {start: 5, end: 45}
+  if (p.todayRole === 'departs') return {start: 55, end: 95}
+  return {start: 5, end: 95}
+}
+
+function renderTodayHourHeader() {
+  const tlDays = document.getElementById('tl-days')
+  tlDays.innerHTML = ''
+  for (let h = 0; h < 24; h++) {
+    const cell = document.createElement('div')
+    cell.style.cssText =
+      'flex:1;font-family:"DM Mono",monospace;font-size:9px;color:var(--text-3);text-align:center;min-width:12px;'
+    if (h % 6 === 0) cell.textContent = h === 0 ? '0h' : `${h}h`
+    tlDays.appendChild(cell)
+  }
+}
+
+function renderTodayTimeline(items) {
+  renderTodayHourHeader()
+  const rows = document.getElementById('timeline-rows')
+  const now = new Date()
+  const hourPct = ((now.getHours() + now.getMinutes() / 60) / 24) * 100
+
+  rows.innerHTML = items
+    .map((p) => {
+      const pos = todayBarPosition(p)
+      const label = todayBarLabel(p)
+      const cls = todayBarClass(p)
+      const trackId = 'track-' + String(p.slug || 'item').replace(/[^a-zA-Z0-9-_]/g, '_')
+      return `
+    <div class="tl-row" style="position:relative;">
+      <div class="tl-label">${escapeHtml(p.groupName)}</div>
+      <div class="tl-track" id="${trackId}" data-start="${pos.start}" data-end="${pos.end}" data-cls="${cls}" data-label="${escapeHtml(label)}"></div>
+    </div>`
+    })
+    .join('')
+
+  rows.querySelectorAll('.tl-track').forEach((track) => {
+    const start = Number(track.dataset.start)
+    const end = Number(track.dataset.end)
+    const bar = document.createElement('div')
+    bar.className = 'tl-bar ' + track.dataset.cls
+    bar.style.left = start + '%'
+    bar.style.width = end - start + '%'
+    bar.textContent = track.dataset.label
+    track.style.position = 'relative'
+    track.appendChild(bar)
+    const line = document.createElement('div')
+    line.className = 'tl-today-line'
+    line.style.left = hourPct + '%'
+    track.appendChild(line)
+  })
 }
 
 function renderTimeline(arrivals, options = {}) {
   const weekOnly = !!options.weekOnly
+  const todayOnly = !!options.todayOnly
   const now = new Date()
   now.setHours(0, 0, 0, 0)
-  const dated = timelineItemsFromArrivals(arrivals, weekOnly)
+  const dated = timelineItemsFromArrivals(arrivals, {weekOnly, todayOnly})
   const rows = document.getElementById('timeline-rows')
+  const titleEl = document.getElementById('timeline-title')
+  const subtitleEl = document.getElementById('timeline-subtitle')
+
+  if (titleEl) titleEl.textContent = todayOnly ? 'ARRIVAL SCHEDULE · TODAY' : 'ARRIVAL SCHEDULE'
+  if (subtitleEl) {
+    subtitleEl.style.display = todayOnly ? 'block' : 'none'
+    if (todayOnly) subtitleEl.textContent = `${fmtHeaderDate(new Date())} · 24h view`
+  }
+
+  if (todayOnly) {
+    if (!dated.length) {
+      renderTodayHourHeader()
+      rows.innerHTML =
+        '<p style="margin:12px 0 0 120px;font-size:12px;color:var(--text-3)">No arrivals or departures today — ready for new check-ins.</p>'
+      return
+    }
+    renderTodayTimeline(dated)
+    return
+  }
 
   if (!dated.length) {
     document.getElementById('tl-days').innerHTML = ''
@@ -1374,8 +1522,10 @@ function applyArrivalFilter() {
     if (arrivalFilter === 'groups') show = type === 'group'
     else if (arrivalFilter === 'individual') show = type === 'individual'
     else if (arrivalFilter === 'attention') show = hasAlerts
-    if (show && timeMode === 'today') show = !!checkIn && isImminentCheckIn(checkIn)
-    else if (show && timeMode === 'week') show = !!checkIn && isInNext7Days(checkIn)
+    if (show && timeMode === 'today') {
+      const arrival = cachedArrivals.find((a) => a.id === card.dataset.group)
+      show = arrival ? isRelevantToday(arrival) : false
+    } else if (show && timeMode === 'week') show = !!checkIn && isInNext7Days(checkIn)
     card.style.display = show ? '' : 'none'
     if (show) visible++
   })
@@ -1397,26 +1547,36 @@ function getTodayTaskRows() {
   )
 }
 
+function todayStatusTags(arrival) {
+  const tags = []
+  if (isCheckInToday(arrival.checkIn)) tags.push('Arrives today')
+  if (arrival.checkOut && isCheckOutToday(arrival.checkOut)) tags.push('Departs today')
+  if (!tags.length && isOnPropertyToday(arrival)) tags.push('Staying')
+  return tags
+}
+
 function renderTodayPanels(arrivals) {
-  const imminentArrivals = arrivals
-    .filter((a) => a.checkIn && isImminentCheckIn(a.checkIn))
-    .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))
-  const attentionArrivals = imminentArrivals.filter((a) => (a.alerts || []).length > 0)
+  const onProperty = arrivals
+    .filter(isOnPropertyToday)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+  const attentionArrivals = arrivals.filter((a) => isRelevantToday(a) && (a.alerts || []).length > 0)
   const todayTasks = getTodayTaskRows()
 
-  const checkinsEl = document.getElementById('today-checkins')
+  const onPropertyEl = document.getElementById('today-on-property')
   const tasksEl = document.getElementById('today-tasks')
   const attentionEl = document.getElementById('today-attention')
 
-  if (checkinsEl) {
-    checkinsEl.innerHTML = imminentArrivals.length
-      ? imminentArrivals
+  if (onPropertyEl) {
+    onPropertyEl.innerHTML = onProperty.length
+      ? onProperty
           .map((a) => {
-            const when = arrivesInLabel(a.checkIn)
-            return `<div class="today-panel-item"><strong>${escapeHtml(a.name)}</strong><br />${escapeHtml(fmtMonthDay(a.checkIn))} · ${escapeHtml(when)}<br />${escapeHtml(a.type === 'group' ? 'Group' : 'Individual')} · ${a.pax ?? a.totalGuests ?? a.adults ?? '—'} pax</div>`
+            const tags = todayStatusTags(a).map((t) => escapeHtml(t)).join(' · ')
+            const pax = a.pax ?? a.totalGuests ?? a.adults ?? '—'
+            const room = a.room ? `<br />${escapeHtml(a.room)}` : ''
+            return `<div class="today-panel-item"><strong>${escapeHtml(a.name)}</strong><br />${escapeHtml(a.type === 'group' ? 'Group' : 'Individual')} · ${pax} pax${room}<br />${tags}</div>`
           })
           .join('')
-      : '<p class="today-panel-empty">No check-ins in the next 3 days</p>'
+      : '<p class="today-panel-empty">No guests on property yet today</p>'
   }
 
   if (tasksEl) {
@@ -1446,7 +1606,7 @@ function renderTodayPanels(arrivals) {
               `<div class="today-panel-item"><strong>${escapeHtml(item.name)}</strong><br />${escapeHtml(item.alert)}</div>`
           )
           .join('')
-      : '<p class="today-panel-empty">Nothing needs attention in the next 3 days</p>'
+      : '<p class="today-panel-empty">Nothing needs attention today</p>'
   }
 }
 
@@ -1456,11 +1616,13 @@ function applyTimeMode() {
   const isMonth = timeMode === 'month'
 
   document.getElementById('today-panels').style.display = isToday ? 'grid' : 'none'
-  document.getElementById('timeline-section').style.display = isWeek || isMonth ? 'block' : 'none'
+  document.getElementById('timeline-section').style.display = 'block'
+  document.getElementById('arrivals-section').style.display = isToday ? 'none' : 'block'
   document.getElementById('inventory-section').style.display = isMonth ? 'block' : 'none'
   document.getElementById('tasks-section').style.display = isMonth ? 'block' : 'none'
 
   if (isToday) {
+    renderTimeline(cachedArrivals, {todayOnly: true})
     renderTodayPanels(cachedArrivals)
   } else if (isWeek) {
     renderTimeline(cachedArrivals, {weekOnly: true})
