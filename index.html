@@ -175,6 +175,19 @@ footer{
 </style>
 </head>
 <body>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // Handle identity redirects (invite, recovery tokens) on the homepage
+  if (window.netlifyIdentity) {
+    window.netlifyIdentity.on("init", user => {
+      if (!user) {
+        window.netlifyIdentity.on("login", () => {
+          document.location.href = "/ops";
+        });
+      }
+    });
+  }
+</script>
 <main>
   <section class="content">
     <img class="logo" src="rita-logo.svg" alt="RITA" />
