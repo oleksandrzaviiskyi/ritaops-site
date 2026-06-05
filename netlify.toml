@@ -27,9 +27,14 @@
   status = 301
 
 [[redirects]]
-  from = "/dashboard"
+  from = "/group-portal/lascanasbeachretreat"
   to = "/dashboard.html"
   status = 200
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/group-portal/lascanasbeachretreat"
+  status = 301
 
 [[redirects]]
   from = "/ops/group"
