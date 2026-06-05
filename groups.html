@@ -347,6 +347,37 @@ body {
 }
 .type-pill-group { background: var(--amber-bg); color: var(--amber); }
 .type-pill-individual { background: var(--blue-bg); color: var(--blue); }
+.time-mode-switcher { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.mode-btn {
+  font-size: 12px; padding: 8px 16px; border-radius: 20px;
+  border: none; background: var(--surface2); color: var(--text-2);
+  cursor: pointer; font-family: inherit;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: var(--text); color: var(--bg); }
+.today-panels {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  margin-bottom: 28px;
+}
+.today-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  min-height: 120px;
+}
+.today-panel h3 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3); margin: 0 0 12px; font-weight: 500;
+}
+.today-panel-item {
+  font-size: 12px; padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2); line-height: 1.4;
+}
+.today-panel-item:last-child { border-bottom: none; padding-bottom: 0; }
+.today-panel-item strong { color: var(--text); font-weight: 500; }
+.today-panel-empty { font-size: 12px; color: var(--text-3); margin: 0; }
 .prog-block {
   border-radius: 8px; padding: 10px 12px;
   border: 1px solid var(--border);
@@ -539,10 +570,32 @@ body {
     </div>
   </div>
 
+  <div class="time-mode-switcher" id="time-mode-switcher">
+    <button type="button" class="mode-btn active" data-mode="today">Today</button>
+    <button type="button" class="mode-btn" data-mode="week">This week</button>
+    <button type="button" class="mode-btn" data-mode="month">This month</button>
+  </div>
+
   <!-- Stats -->
   <div class="stats" id="stats-row"></div>
 
+  <div class="today-panels" id="today-panels">
+    <div class="today-panel">
+      <h3>Check-ins today</h3>
+      <div id="today-checkins"></div>
+    </div>
+    <div class="today-panel">
+      <h3>Tasks for today</h3>
+      <div id="today-tasks"></div>
+    </div>
+    <div class="today-panel">
+      <h3>Needs attention</h3>
+      <div id="today-attention"></div>
+    </div>
+  </div>
+
   <!-- Timeline -->
+  <div id="timeline-section" style="display:none">
   <div class="section-head">
     <div class="section-title">ARRIVAL SCHEDULE</div>
     <div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--text-3);">
@@ -555,6 +608,7 @@ body {
       <div id="tl-days" style="display:flex;flex:1;"></div>
     </div>
     <div id="timeline-rows"></div>
+  </div>
   </div>
 
   <!-- Arrival cards -->
@@ -570,6 +624,7 @@ body {
   <div class="groups-grid" id="groups-grid"></div>
 
   <!-- Inventory -->
+  <div id="inventory-section" style="display:none">
   <div id="inventory" class="section-head">
     <div class="section-title" id="inv-section-title">Inventory</div>
     <button type="button" class="btn" id="btnPurchaseOrder" style="font-size:12px;padding:6px 12px;">Generate purchase order</button>
@@ -635,43 +690,46 @@ body {
       </tbody>
     </table>
   </div>
+  </div>
 
   <!-- Tasks -->
+  <div id="tasks-section" style="display:none">
   <div id="tasks" class="section-head">
     <div class="section-title">Tasks</div>
     <button class="btn" style="font-size:12px;padding:6px 12px;">+ Task</button>
   </div>
-  <div class="tasks-wrap">
-    <div class="task-row">
+  <div class="tasks-wrap" id="tasks-wrap">
+    <div class="task-row" data-task-today="1">
       <div class="task-check done"></div>
       <div class="task-text done-text">Confirm menu for group test</div>
       <span class="task-group">test</span>
       <span class="task-due">3 Jun</span>
     </div>
-    <div class="task-row">
+    <div class="task-row" data-task-today="1">
       <div class="task-check"></div>
       <div class="task-text">Finalize test2 menu with head chef</div>
       <span class="task-group">test2</span>
       <span class="task-due overdue">today</span>
     </div>
-    <div class="task-row">
+    <div class="task-row" data-task-week="1">
       <div class="task-check"></div>
       <div class="task-text">Assign rooms for test2 in PMS</div>
       <span class="task-group">test2</span>
       <span class="task-due">6 Jun</span>
     </div>
-    <div class="task-row">
+    <div class="task-row" data-task-week="1">
       <div class="task-check"></div>
       <div class="task-text">Generate purchase order: chicken, salmon, beer</div>
       <span class="task-group">Inventory</span>
       <span class="task-due">7 Jun</span>
     </div>
-    <div class="task-row">
+    <div class="task-row" data-task-week="1">
       <div class="task-check"></div>
       <div class="task-text">Verify deposit from EF Tours in PMS</div>
       <span class="task-group">test2</span>
       <span class="task-due">8 Jun</span>
     </div>
+  </div>
   </div>
 
 </main>
@@ -751,6 +809,60 @@ function daysUntil(iso) {
 function monthKey(iso) {
   if (!iso || iso.length < 7) return ''
   return iso.slice(0, 7)
+}
+
+function getWeekBounds() {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const start = new Date(now)
+  start.setDate(now.getDate() - now.getDay())
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return {start, end}
+}
+
+function isInCurrentWeek(iso) {
+  const d = parseDate(iso)
+  if (!d) return false
+  d.setHours(0, 0, 0, 0)
+  const {start, end} = getWeekBounds()
+  return d >= start && d <= end
+}
+
+function isInCurrentMonth(iso) {
+  const d = parseDate(iso)
+  if (!d) return false
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
+function arrivalMatchesTimeMode(arrival) {
+  if (timeMode === 'month') return true
+  if (!arrival.checkIn) return false
+  if (timeMode === 'today') return daysUntil(arrival.checkIn) === 0
+  if (timeMode === 'week') return isInCurrentWeek(arrival.checkIn)
+  return true
+}
+
+function arrivesInLabel(checkIn) {
+  const d = daysUntil(checkIn)
+  if (d == null) return 'Dates not set'
+  if (d === 0) return 'Arrives today'
+  if (d === 1) return 'Arrives in 1 day'
+  if (d > 1) return `Arrives in ${d} days`
+  if (d === -1) return 'Checked in yesterday'
+  return `Checked in ${Math.abs(d)} days ago`
+}
+
+function formatArrivalDateLine(arrival) {
+  if (timeMode === 'week' && arrival.checkIn) return arrivesInLabel(arrival.checkIn)
+  if (arrival.type === 'individual') return individualDateLine(arrival)
+  const nights = nightsBetween(arrival.checkIn, arrival.checkOut)
+  if (arrival.checkIn && arrival.checkOut) {
+    return `${fmtShortDate(arrival.checkIn)} → ${fmtShortDate(arrival.checkOut)}${nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}`
+  }
+  if (arrival.checkIn) return fmtShortDate(arrival.checkIn)
+  return 'Dates not set'
 }
 
 function progBlockClass(pct) {
@@ -840,35 +952,61 @@ function renderStats(portals, property) {
     `${fmtHeaderDate(now)} · ${property || 'Las Canas Beach Retreat'}`
 }
 
-function renderTimeline(portals) {
+function timelineItemsFromArrivals(arrivals, weekOnly) {
+  return arrivals
+    .filter((a) => a.checkIn && (!weekOnly || isInCurrentWeek(a.checkIn)))
+    .map((a) => ({
+      groupName: a.name,
+      checkIn: a.checkIn,
+      checkOut: a.checkOut,
+      status: a.status,
+      totalGuests: a.pax ?? a.totalGuests,
+      slug: a.id
+    }))
+}
+
+function renderTimeline(arrivals, options = {}) {
+  const weekOnly = !!options.weekOnly
   const now = new Date()
   now.setHours(0, 0, 0, 0)
-  const dated = portals.filter((p) => p.checkIn)
+  const dated = timelineItemsFromArrivals(arrivals, weekOnly)
   const rows = document.getElementById('timeline-rows')
 
   if (!dated.length) {
     document.getElementById('tl-days').innerHTML = ''
     rows.innerHTML =
-      '<p style="margin:12px 0 0 120px;font-size:12px;color:var(--text-3)">No groups with check-in dates yet.</p>'
+      '<p style="margin:12px 0 0 120px;font-size:12px;color:var(--text-3)">No arrivals in this period.</p>'
     return
   }
 
-  let rangeStart = null
-  let rangeEnd = null
-  dated.forEach((p) => {
-    const s = parseDate(p.checkIn)
-    const e = parseDate(p.checkOut) || s
-    if (!s) return
-    if (!rangeStart || s < rangeStart) rangeStart = new Date(s)
-    if (!rangeEnd || e > rangeEnd) rangeEnd = new Date(e)
-  })
-  rangeStart.setHours(0, 0, 0, 0)
-  rangeEnd.setHours(0, 0, 0, 0)
-  const days = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1)
-  const todayIdx =
-    now >= rangeStart && now <= rangeEnd
-      ? Math.round((now - rangeStart) / 86400000) + 1
-      : null
+  let rangeStart
+  let rangeEnd
+  let days
+  let todayIdx = null
+
+  if (weekOnly) {
+    const bounds = getWeekBounds()
+    rangeStart = bounds.start
+    rangeEnd = bounds.end
+    days = 7
+    todayIdx = Math.round((now - rangeStart) / 86400000) + 1
+  } else {
+    rangeStart = null
+    rangeEnd = null
+    dated.forEach((p) => {
+      const s = parseDate(p.checkIn)
+      const e = parseDate(p.checkOut) || s
+      if (!s) return
+      if (!rangeStart || s < rangeStart) rangeStart = new Date(s)
+      if (!rangeEnd || e > rangeEnd) rangeEnd = new Date(e)
+    })
+    rangeStart.setHours(0, 0, 0, 0)
+    rangeEnd.setHours(0, 0, 0, 0)
+    days = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1)
+    if (now >= rangeStart && now <= rangeEnd) {
+      todayIdx = Math.round((now - rangeStart) / 86400000) + 1
+    }
+  }
 
   const dayIndex = (iso) => {
     const d = parseDate(iso)
@@ -883,16 +1021,18 @@ function renderTimeline(portals) {
     const cell = document.createElement('div')
     cell.style.cssText =
       'flex:1;font-family:"DM Mono",monospace;font-size:10px;color:var(--text-3);text-align:center;min-width:16px;'
-    const marks = [1, 5, 10, 15, 20, 25, days].filter((v, idx, arr) => arr.indexOf(v) === idx)
+    const marks = weekOnly
+      ? [1, 2, 3, 4, 5, 6, 7]
+      : [1, 5, 10, 15, 20, 25, days].filter((v, idx, arr) => arr.indexOf(v) === idx)
     if (marks.includes(i)) {
       const d = new Date(rangeStart)
       d.setDate(d.getDate() + i - 1)
-      cell.textContent = d.getDate()
+      cell.textContent = weekOnly ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()] : d.getDate()
     }
     if (todayIdx != null && i === todayIdx) {
       cell.style.color = 'var(--red)'
       cell.style.fontWeight = '500'
-      cell.textContent = now.getDate()
+      cell.textContent = weekOnly ? '•' : now.getDate()
     }
     tlDays.appendChild(cell)
   }
@@ -901,10 +1041,10 @@ function renderTimeline(portals) {
 
   rows.innerHTML = dated
     .map((p) => {
-      const startDay = dayIndex(p.checkIn)
-      const endDay = dayIndex(p.checkOut || p.checkIn) + 0.5
+      const startDay = Math.max(1, Math.min(days, dayIndex(p.checkIn)))
+      const endDay = Math.max(startDay + 0.5, Math.min(days + 0.5, dayIndex(p.checkOut || p.checkIn) + 0.5))
       const label = `${fmtMonthDay(p.checkIn)}${p.checkOut ? '–' + fmtMonthDay(p.checkOut) : ''} · ${p.totalGuests ?? '—'} guests`
-      const trackId = 'track-' + String(p.slug || p._id).replace(/[^a-zA-Z0-9-_]/g, '_')
+      const trackId = 'track-' + String(p.slug || 'item').replace(/[^a-zA-Z0-9-_]/g, '_')
       return `
     <div class="tl-row" style="position:relative;">
       <div class="tl-label">${escapeHtml(p.groupName)}</div>
@@ -1042,6 +1182,9 @@ const SAMPLE_INDIVIDUALS = [
 ]
 
 let arrivalFilter = 'all'
+let timeMode = 'today'
+let cachedPortals = []
+let cachedArrivals = []
 
 function blockHtml(label, cls, status) {
   return `
@@ -1118,16 +1261,9 @@ function arrivalCardHtml(arrival) {
   const pax = arrival.pax ?? arrival.totalGuests ?? arrival.adults ?? '—'
   const hasAlerts = (arrival.alerts || []).length > 0 ? '1' : '0'
 
-  let dateLine
+  const dateLine = formatArrivalDateLine(arrival)
   let metaHtml
   if (isGroup) {
-    const nights = nightsBetween(arrival.checkIn, arrival.checkOut)
-    dateLine =
-      arrival.checkIn && arrival.checkOut
-        ? `${fmtShortDate(arrival.checkIn)} → ${fmtShortDate(arrival.checkOut)}${nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}`
-        : arrival.checkIn
-          ? fmtShortDate(arrival.checkIn)
-          : 'Dates not set'
     const adultsLine =
       arrival.adults != null
         ? `${arrival.adults} adults${arrival.children ? ` · ${arrival.children} children` : ''}`
@@ -1138,7 +1274,6 @@ function arrivalCardHtml(arrival) {
           ${adultsLine ? `<div class="meta-item"><span class="meta-icon">👤</span> ${escapeHtml(adultsLine)}</div>` : ''}
           <div class="meta-item"><span class="meta-icon">🛏</span> ${rooms} rooms</div>`
   } else {
-    dateLine = individualDateLine(arrival)
     metaHtml = `
           <div class="meta-item"><span class="meta-icon">👤</span> ${arrival.adults} adults</div>
           <div class="meta-item"><span class="meta-icon">🛏</span> ${escapeHtml(arrival.room)}</div>`
@@ -1204,7 +1339,7 @@ function arrivalCardHtml(arrival) {
       </div>`
 
   return `
-    <div class="group-card${arrival.shell ? ' ' + arrival.shell : ''}" data-arrival-type="${arrival.type}" data-has-alerts="${hasAlerts}" data-group="${escapeHtml(arrival.id)}"${arrival.opsHref ? ` data-ops-href="${escapeHtml(arrival.opsHref)}"` : ''}>
+    <div class="group-card${arrival.shell ? ' ' + arrival.shell : ''}" data-arrival-type="${arrival.type}" data-has-alerts="${hasAlerts}" data-check-in="${escapeHtml(arrival.checkIn || '')}" data-check-out="${escapeHtml(arrival.checkOut || '')}" data-group="${escapeHtml(arrival.id)}"${arrival.opsHref ? ` data-ops-href="${escapeHtml(arrival.opsHref)}"` : ''}>
       <div class="card-header">
         <div class="card-top">
           <div>
@@ -1232,15 +1367,116 @@ function applyArrivalFilter() {
   cards.forEach((card) => {
     const type = card.dataset.arrivalType
     const hasAlerts = card.dataset.hasAlerts === '1'
+    const checkIn = card.dataset.checkIn
     let show = true
     if (arrivalFilter === 'groups') show = type === 'group'
     else if (arrivalFilter === 'individual') show = type === 'individual'
     else if (arrivalFilter === 'attention') show = hasAlerts
+    if (show && timeMode === 'today') show = !!checkIn && daysUntil(checkIn) === 0
+    else if (show && timeMode === 'week') show = !!checkIn && isInCurrentWeek(checkIn)
     card.style.display = show ? '' : 'none'
     if (show) visible++
   })
   const empty = document.getElementById('arrivals-filter-empty')
   if (empty) empty.style.display = cards.length && visible === 0 ? 'block' : 'none'
+}
+
+function updateArrivalDateLines() {
+  document.querySelectorAll('#groups-grid .group-card').forEach((card) => {
+    const arrival = cachedArrivals.find((a) => a.id === card.dataset.group)
+    const el = card.querySelector('.group-dates')
+    if (arrival && el) el.textContent = formatArrivalDateLine(arrival)
+  })
+}
+
+function getTodayTaskRows() {
+  return Array.from(document.querySelectorAll('#tasks-wrap .task-row')).filter(
+    (row) => row.dataset.taskToday === '1'
+  )
+}
+
+function renderTodayPanels(arrivals) {
+  const todayArrivals = arrivals.filter((a) => a.checkIn && daysUntil(a.checkIn) === 0)
+  const attentionArrivals = todayArrivals.filter((a) => (a.alerts || []).length > 0)
+  const todayTasks = getTodayTaskRows()
+
+  const checkinsEl = document.getElementById('today-checkins')
+  const tasksEl = document.getElementById('today-tasks')
+  const attentionEl = document.getElementById('today-attention')
+
+  if (checkinsEl) {
+    checkinsEl.innerHTML = todayArrivals.length
+      ? todayArrivals
+          .map(
+            (a) =>
+              `<div class="today-panel-item"><strong>${escapeHtml(a.name)}</strong><br />${escapeHtml(a.type === 'group' ? 'Group' : 'Individual')} · ${a.pax ?? a.totalGuests ?? a.adults ?? '—'} pax</div>`
+          )
+          .join('')
+      : '<p class="today-panel-empty">No check-ins today</p>'
+  }
+
+  if (tasksEl) {
+    tasksEl.innerHTML = todayTasks.length
+      ? todayTasks
+          .map((row) => {
+            const text = row.querySelector('.task-text')?.textContent?.trim() || ''
+            const group = row.querySelector('.task-group')?.textContent?.trim() || ''
+            const done = row.querySelector('.task-check')?.classList.contains('done')
+            return `<div class="today-panel-item"${done ? ' style="color:var(--text-3);text-decoration:line-through;"' : ''}><strong>${escapeHtml(group)}</strong><br />${escapeHtml(text)}</div>`
+          })
+          .join('')
+      : '<p class="today-panel-empty">No tasks due today</p>'
+  }
+
+  if (attentionEl) {
+    const attentionItems = []
+    attentionArrivals.forEach((a) => {
+      ;(a.alerts || []).forEach((alert) => {
+        attentionItems.push({name: a.name, alert})
+      })
+    })
+    attentionEl.innerHTML = attentionItems.length
+      ? attentionItems
+          .map(
+            (item) =>
+              `<div class="today-panel-item"><strong>${escapeHtml(item.name)}</strong><br />${escapeHtml(item.alert)}</div>`
+          )
+          .join('')
+      : '<p class="today-panel-empty">Nothing needs attention today</p>'
+  }
+}
+
+function applyTimeMode() {
+  const isToday = timeMode === 'today'
+  const isWeek = timeMode === 'week'
+  const isMonth = timeMode === 'month'
+
+  document.getElementById('today-panels').style.display = isToday ? 'grid' : 'none'
+  document.getElementById('timeline-section').style.display = isWeek || isMonth ? 'block' : 'none'
+  document.getElementById('inventory-section').style.display = isMonth ? 'block' : 'none'
+  document.getElementById('tasks-section').style.display = isMonth ? 'block' : 'none'
+
+  if (isToday) {
+    renderTodayPanels(cachedArrivals)
+  } else if (isWeek) {
+    renderTimeline(cachedArrivals, {weekOnly: true})
+  } else {
+    renderTimeline(cachedArrivals, {weekOnly: false})
+  }
+
+  updateArrivalDateLines()
+  applyArrivalFilter()
+}
+
+function bindTimeModeSwitcher() {
+  document.querySelectorAll('#time-mode-switcher .mode-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      timeMode = btn.dataset.mode
+      document.querySelectorAll('#time-mode-switcher .mode-btn').forEach((b) => b.classList.remove('active'))
+      btn.classList.add('active')
+      applyTimeMode()
+    })
+  })
 }
 
 function bindArrivalFilters() {
@@ -1276,9 +1512,11 @@ function renderGroupCards(portals) {
     arrivals.map((a) => arrivalCardHtml(a)).join('') +
     '<p id="arrivals-filter-empty" style="display:none;grid-column:1/-1;color:var(--text-3);padding:12px 0;">No arrivals match this filter.</p>'
 
+  cachedArrivals = arrivals
+
   bindGroupCards()
   bindArrivalFilters()
-  applyArrivalFilter()
+  applyTimeMode()
 }
 
 function bindGroupCards() {
@@ -1320,10 +1558,12 @@ async function load() {
   if (!res.ok) throw new Error(json.error || res.statusText)
 
   const portals = (json.portals || []).filter((p) => p.slug && p.groupName)
+  cachedPortals = portals
   renderStats(portals, json.property)
-  renderTimeline(portals)
   renderGroupCards(portals)
   updateInventoryHeader(portals)
+  bindTimeModeSwitcher()
+  applyTimeMode()
 }
 
 load().catch((err) => {
