@@ -568,6 +568,199 @@ html.auth-pending .shell { visibility: hidden; }
 
 /* Utility */
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* Rita AI panel */
+.rita-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #1C1A15;
+  color: #FDFCF9;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(28, 26, 21, 0.28);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.rita-fab:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(28, 26, 21, 0.34); }
+.rita-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  flex-shrink: 0;
+  animation: rita-pulse 2s ease-in-out infinite;
+}
+@keyframes rita-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(151, 196, 89, 0.5); }
+  50% { opacity: 0.85; box-shadow: 0 0 0 6px rgba(151, 196, 89, 0); }
+}
+.rita-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 68px;
+  z-index: 1000;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(28, 26, 21, 0.14);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rita-panel.open { display: flex; }
+.rita-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.rita-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+.rita-panel-live {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+.rita-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.rita-chip {
+  font-size: 10px;
+  color: var(--text-2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.rita-messages {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+}
+.rita-msg {
+  max-width: 92%;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.rita-msg.rita { align-self: flex-start; }
+.rita-msg.user { align-self: flex-end; }
+.rita-bubble {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.rita-msg.rita .rita-bubble {
+  background: var(--surface);
+  border-bottom-left-radius: 4px;
+}
+.rita-msg.user .rita-bubble {
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+  border-bottom-right-radius: 4px;
+}
+.rita-bubble p { margin: 0 0 8px; }
+.rita-bubble p:last-child { margin-bottom: 0; }
+.rita-data-card {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.rita-data-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rita-data-row:last-child { border-bottom: none; }
+.rita-data-row strong { font-family: 'DM Mono', monospace; color: var(--text); }
+.rita-alert-row { color: var(--amber); }
+.rita-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px 0;
+}
+.rita-suggestion {
+  font-size: 10px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.rita-suggestion:hover { background: var(--surface2); border-color: var(--border-strong); }
+.rita-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.rita-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+.rita-input:focus { outline: none; border-color: var(--border-strong); }
+.rita-send {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.rita-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.rita-typing {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 0 14px 8px;
+}
 </style>
 </head>
 <body>
@@ -780,6 +973,38 @@ if (window.netlifyIdentity) {
 </div>
 
 <div id="purchase-print-area" aria-hidden="true"></div>
+
+<div class="rita-panel" id="ritaPanel" aria-hidden="true">
+  <div class="rita-panel-header">
+    <div class="rita-panel-title">
+      <span class="rita-live-dot"></span>
+      <span>RITA</span>
+    </div>
+    <span class="rita-panel-live">live · Las Canas</span>
+  </div>
+  <div class="rita-context-chips">
+    <span class="rita-chip">Sanity</span>
+    <span class="rita-chip" id="ritaChipArrivals">0 arrivals</span>
+    <span class="rita-chip">Inventory</span>
+    <span class="rita-chip">Guest profiles</span>
+  </div>
+  <div class="rita-messages" id="ritaMessages"></div>
+  <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
+  <div class="rita-suggestions" id="ritaSuggestions">
+    <button type="button" class="rita-suggestion" data-prompt="What arrivals are coming this week?">This week</button>
+    <button type="button" class="rita-suggestion" data-prompt="Any groups missing menu plans?">Menu gaps</button>
+    <button type="button" class="rita-suggestion" data-prompt="Summarize inventory deficits and reminders.">Inventory alerts</button>
+    <button type="button" class="rita-suggestion" data-prompt="Give me a guest count summary for this month.">Guest summary</button>
+  </div>
+  <div class="rita-input-row">
+    <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
+    <button type="button" class="rita-send" id="ritaSend">Send</button>
+  </div>
+</div>
+<button type="button" class="rita-fab" id="ritaFab" aria-expanded="false" aria-controls="ritaPanel">
+  <span class="rita-live-dot"></span>
+  <span>RITA</span>
+</button>
 
 <script>
 const STATUS = {
@@ -2066,6 +2291,329 @@ document.getElementById('btnPurchaseOrder')?.addEventListener('click', () => {
     {once: true}
   )
   window.print()
+})
+
+/* Rita AI panel */
+const RITA_CONVERSATION_KEY = 'rita_conversation'
+let ritaPanelOpen = false
+let ritaBriefingLoaded = false
+let ritaLiveData = null
+
+function staffAuthHeaders() {
+  const user = window.netlifyIdentity?.currentUser?.()
+  if (user?.token?.access_token) {
+    return {Authorization: `Bearer ${user.token.access_token}`}
+  }
+  return {}
+}
+
+async function staffFetch(url, options = {}) {
+  const headers = {...staffAuthHeaders(), ...(options.headers || {})}
+  const opts = {...options, headers}
+  if (!headers.Authorization) {
+    const key = staffKey()
+    if (key) {
+      if (!options.method || options.method === 'GET') {
+        const u = new URL(url, location.origin)
+        if (!u.searchParams.has('key')) u.searchParams.set('key', key)
+        url = `${u.pathname}${u.search}`
+      } else if (options.body) {
+        const body = JSON.parse(options.body)
+        if (!body.staffKey) body.staffKey = key
+        opts.body = JSON.stringify(body)
+      }
+    }
+  }
+  return fetch(url, opts)
+}
+
+function loadRitaConversation() {
+  try {
+    const raw = sessionStorage.getItem(RITA_CONVERSATION_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed.messages) ? parsed.messages : []
+  } catch {
+    return []
+  }
+}
+
+function saveRitaConversation(messages) {
+  sessionStorage.setItem(RITA_CONVERSATION_KEY, JSON.stringify({messages}))
+}
+
+function buildRitaLiveData(portals) {
+  const now = new Date()
+  const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const active = (portals || []).filter((p) => p.status !== 'cancelled')
+  const inMonth = active.filter((p) => monthKey(p.checkIn) === mk)
+  const upcoming = active
+    .filter((p) => p.checkIn && daysUntil(p.checkIn) != null && daysUntil(p.checkIn) >= 0)
+    .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))[0]
+  const deficitGroups = active.filter((p) => (p.reminderCount || 0) > 0)
+  const menuGaps = active.filter((p) => {
+    const food = p.progressSections?.food ?? 0
+    return food < 50
+  })
+  const alerts = []
+  if (deficitGroups.length) {
+    alerts.push(`${deficitGroups.length} group(s) with open reminders`)
+  }
+  if (menuGaps.length) {
+    alerts.push(`${menuGaps.length} group(s) with incomplete menu`)
+  }
+  deficitGroups.forEach((p) => {
+    ;(p.reminders || []).forEach((r) => alerts.push(`${p.groupName}: ${r.text}`))
+  })
+  menuGaps.forEach((p) => alerts.push(`${p.groupName}: menu not confirmed`))
+
+  return {
+    property: 'Las Canas Beach Retreat',
+    date: now.toISOString().slice(0, 10),
+    arrivalsThisMonth: inMonth.length,
+    guestsThisMonth: inMonth.reduce((s, p) => s + (p.totalGuests || 0), 0),
+    nextCheckIn: upcoming
+      ? {
+          groupName: upcoming.groupName,
+          checkIn: upcoming.checkIn,
+          daysUntil: daysUntil(upcoming.checkIn),
+          guests: upcoming.totalGuests,
+          status: upcoming.status
+        }
+      : null,
+    alerts,
+    groups: active.map((p) => ({
+      name: p.groupName,
+      checkIn: p.checkIn,
+      checkOut: p.checkOut,
+      guests: p.totalGuests,
+      status: p.status,
+      reminders: p.reminderCount || 0
+    }))
+  }
+}
+
+function buildRitaBriefingHtml(data) {
+  const monthLabel = MONTH_NAMES[new Date().getMonth()]
+  const next = data.nextCheckIn
+  let nextLabel = 'No upcoming check-ins'
+  let nextValue = '—'
+  if (next) {
+    const d = next.daysUntil
+    nextValue = d === 0 ? 'Today' : d === 1 ? '1 day' : `${d} days`
+    nextLabel = `${next.groupName} · ${fmtMonthDay(next.checkIn)}`
+  }
+  const alertRows = (data.alerts || []).slice(0, 4)
+  const alertsHtml = alertRows.length
+    ? alertRows.map((a) => `<div class="rita-data-row rita-alert-row"><span>${escapeHtml(a)}</span></div>`).join('')
+    : '<div class="rita-data-row"><span>All clear — no open alerts</span><strong>✓</strong></div>'
+
+  return `
+    <p>Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'}. Here's your Las Canas briefing:</p>
+    <div class="rita-data-card">
+      <div class="rita-data-row"><span>Arrivals in ${monthLabel}</span><strong>${data.arrivalsThisMonth}</strong></div>
+      <div class="rita-data-row"><span>Guests this month</span><strong>${data.guestsThisMonth || '—'}</strong></div>
+      <div class="rita-data-row"><span>Next check-in</span><strong>${escapeHtml(nextValue)}</strong></div>
+      <div class="rita-data-row"><span>Next group</span><strong>${escapeHtml(nextLabel)}</strong></div>
+    </div>
+    <div class="rita-data-card">
+      <div class="rita-data-row"><span>Alerts</span><strong>${alertRows.length || 0}</strong></div>
+      ${alertsHtml}
+    </div>`
+}
+
+function formatRitaContent(text) {
+  const raw = String(text || '').trim()
+  if (!raw) return '<p>—</p>'
+  if (raw.includes('<div class="rita-data-card">')) return raw
+
+  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
+  let html = ''
+  let cardLines = []
+
+  function flushCard() {
+    if (!cardLines.length) return
+    html += `<div class="rita-data-card">${cardLines
+      .map((line) => {
+        const colon = line.indexOf(':')
+        if (colon > 0 && colon < line.length - 1) {
+          const label = line.slice(0, colon).trim()
+          const value = line.slice(colon + 1).trim()
+          return `<div class="rita-data-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`
+        }
+        return `<div class="rita-data-row"><span>${escapeHtml(line)}</span></div>`
+      })
+      .join('')}</div>`
+    cardLines = []
+  }
+
+  for (const line of lines) {
+    const isStructured =
+      /^\d/.test(line) ||
+      /^[^:]+:\s*.+/.test(line) ||
+      /\b(ready|pending|deficit|days?|guests?|arrival|menu|inventory|status)\b/i.test(line)
+    if (isStructured) cardLines.push(line)
+    else {
+      flushCard()
+      html += `<p>${escapeHtml(line)}</p>`
+    }
+  }
+  flushCard()
+  return html || `<p>${escapeHtml(raw)}</p>`
+}
+
+function renderRitaMessages(messages) {
+  const box = document.getElementById('ritaMessages')
+  if (!box) return
+  box.innerHTML = messages
+    .map((m) => {
+      const cls = m.role === 'user' ? 'user' : 'rita'
+      const content = m.html || formatRitaContent(m.content)
+      return `<div class="rita-msg ${cls}"><div class="rita-bubble">${content}</div></div>`
+    })
+    .join('')
+  box.scrollTop = box.scrollHeight
+}
+
+function updateRitaChips(data) {
+  const chip = document.getElementById('ritaChipArrivals')
+  if (chip && data) chip.textContent = `${data.arrivalsThisMonth} arrivals`
+}
+
+async function fetchRitaPortals() {
+  if (cachedPortals.length) return cachedPortals
+  const res = await staffFetch('/api/portals')
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || res.statusText)
+  return (json.portals || []).filter((p) => p.slug && p.groupName && p.status !== 'cancelled')
+}
+
+async function loadRitaBriefing() {
+  const portals = await fetchRitaPortals()
+  ritaLiveData = buildRitaLiveData(portals)
+  updateRitaChips(ritaLiveData)
+  const html = buildRitaBriefingHtml(ritaLiveData)
+  const messages = loadRitaConversation()
+  if (!messages.length) {
+    messages.push({role: 'rita', content: 'Daily briefing', html})
+    saveRitaConversation(messages)
+  } else if (!ritaBriefingLoaded && messages[0]?.role === 'rita' && !messages[0].html) {
+    messages[0] = {role: 'rita', content: 'Daily briefing', html}
+    saveRitaConversation(messages)
+  }
+  ritaBriefingLoaded = true
+  renderRitaMessages(messages)
+}
+
+async function toggleRitaPanel() {
+  const panel = document.getElementById('ritaPanel')
+  const fab = document.getElementById('ritaFab')
+  if (!panel || !fab) return
+  ritaPanelOpen = !ritaPanelOpen
+  panel.classList.toggle('open', ritaPanelOpen)
+  panel.setAttribute('aria-hidden', ritaPanelOpen ? 'false' : 'true')
+  fab.setAttribute('aria-expanded', ritaPanelOpen ? 'true' : 'false')
+  if (ritaPanelOpen) {
+    const messages = loadRitaConversation()
+    if (messages.length) {
+      renderRitaMessages(messages)
+      if (!ritaLiveData && cachedPortals.length) {
+        ritaLiveData = buildRitaLiveData(cachedPortals)
+        updateRitaChips(ritaLiveData)
+      }
+    }
+    if (!ritaBriefingLoaded) {
+      try {
+        await loadRitaBriefing()
+      } catch (err) {
+        const box = document.getElementById('ritaMessages')
+        if (box) {
+          box.innerHTML = `<div class="rita-msg rita"><div class="rita-bubble"><p style="color:var(--red)">Could not load briefing: ${escapeHtml(err.message)}</p></div></div>`
+        }
+      }
+    }
+    document.getElementById('ritaInput')?.focus()
+  }
+}
+
+async function sendRitaMessage(text) {
+  const input = document.getElementById('ritaInput')
+  const sendBtn = document.getElementById('ritaSend')
+  const typing = document.getElementById('ritaTyping')
+  const message = String(text || input?.value || '').trim()
+  if (!message) return
+
+  if (!ritaLiveData) {
+    try {
+      const portals = await fetchRitaPortals()
+      ritaLiveData = buildRitaLiveData(portals)
+      updateRitaChips(ritaLiveData)
+    } catch {
+      ritaLiveData = {property: 'Las Canas Beach Retreat', groups: []}
+    }
+  }
+
+  const messages = loadRitaConversation()
+  messages.push({role: 'user', content: message})
+  saveRitaConversation(messages)
+  renderRitaMessages(messages)
+  if (input) input.value = ''
+  if (sendBtn) sendBtn.disabled = true
+  if (typing) typing.hidden = false
+
+  try {
+    const history = messages
+      .filter((m) => m.role === 'user' || m.role === 'rita')
+      .slice(0, -1)
+      .map((m) => ({role: m.role, content: m.content}))
+    const payload = {
+      message,
+      history,
+      liveData: ritaLiveData
+    }
+    const key = staffKey()
+    if (key && !staffAuthHeaders().Authorization) payload.staffKey = key
+
+    const res = await staffFetch('/api/rita-chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+
+    messages.push({role: 'rita', content: json.reply})
+    saveRitaConversation(messages)
+    renderRitaMessages(messages)
+  } catch (err) {
+    messages.push({role: 'rita', content: `Sorry — ${err.message}`})
+    saveRitaConversation(messages)
+    renderRitaMessages(messages)
+  } finally {
+    if (sendBtn) sendBtn.disabled = false
+    if (typing) typing.hidden = true
+  }
+}
+
+document.getElementById('ritaFab')?.addEventListener('click', () => {
+  toggleRitaPanel()
+})
+
+document.getElementById('ritaSend')?.addEventListener('click', () => {
+  sendRitaMessage()
+})
+
+document.getElementById('ritaInput')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendRitaMessage()
+  }
+})
+
+document.getElementById('ritaSuggestions')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-prompt]')
+  if (!btn) return
+  sendRitaMessage(btn.getAttribute('data-prompt'))
 })
 </script>
 </body>

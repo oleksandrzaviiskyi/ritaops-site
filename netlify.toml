@@ -92,6 +92,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/rita-chat"
+  to = "/.netlify/functions/rita-chat"
+  status = 200
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200
