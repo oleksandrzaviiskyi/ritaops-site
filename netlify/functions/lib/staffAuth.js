@@ -13,9 +13,14 @@ function extractStaffKey(event, body) {
   return normalizeStaffKey(body?.staffKey || query.staffKey || query.key)
 }
 
-function staffAuthorized(event, body) {
+function identityAuthorized(context) {
+  return Boolean(context?.clientContext?.user)
+}
+
+function staffAuthorized(event, body, context) {
   const secret = dashboardSecret()
   if (!secret) return true
+  if (identityAuthorized(context)) return true
   const key = extractStaffKey(event, body)
   const ok = key === secret
   if (!ok) {
@@ -23,7 +28,8 @@ function staffAuthorized(event, body) {
       hasKey: Boolean(key),
       keyLength: key.length,
       secretSet: true,
-      secretLength: secret.length
+      secretLength: secret.length,
+      identityUser: Boolean(context?.clientContext?.user)
     })
   }
   return ok
@@ -33,5 +39,6 @@ module.exports = {
   dashboardSecret,
   normalizeStaffKey,
   extractStaffKey,
+  identityAuthorized,
   staffAuthorized
 }

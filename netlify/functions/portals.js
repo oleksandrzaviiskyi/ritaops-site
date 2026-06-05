@@ -18,7 +18,7 @@ const LIST_QUERY = `*[_type == "groupPortal"] | order(checkIn asc) {
   flights, menuPlan, activities, specialRequests, dietaryRestrictions, transferNeeded
 }`
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*'
@@ -26,7 +26,7 @@ exports.handler = async (event) => {
 
   try {
     const raw = await client.fetch(LIST_QUERY)
-    const staff = staffAuthorized(event)
+    const staff = staffAuthorized(event, null, context)
 
     const portals = raw
       .filter(isValidPortal)

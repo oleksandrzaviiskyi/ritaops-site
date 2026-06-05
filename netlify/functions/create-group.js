@@ -17,7 +17,7 @@ const cors = {
   'Access-Control-Allow-Origin': '*'
 }
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return {statusCode: 204, headers: cors}
   }
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}')
 
-    if (!staffAuthorized(event, body)) {
+    if (!staffAuthorized(event, body, context)) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff key required'})}
     }
 

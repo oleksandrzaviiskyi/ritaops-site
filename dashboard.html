@@ -7,6 +7,43 @@
     <link rel="stylesheet" href="/ritaops-dashboard.css" />
   </head>
   <body class="ops">
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+      document.documentElement.classList.add('auth-pending')
+
+      function setupDashboardAuth() {
+        if (!window.netlifyIdentity) return
+
+        netlifyIdentity.on('init', () => {
+          const user = netlifyIdentity.currentUser()
+          if (!user) {
+            window.location.replace('/login')
+            return
+          }
+          document.documentElement.classList.remove('auth-pending')
+          const label = document.getElementById('userLabel')
+          if (label) label.textContent = user.email || 'RitaOps · Staff'
+          if (typeof window.startDashboard === 'function') window.startDashboard()
+        })
+
+        netlifyIdentity.on('logout', () => {
+          window.location.replace('/login')
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.id === 'btnLogout') {
+            e.preventDefault()
+            netlifyIdentity.logout()
+          }
+        })
+      }
+
+      if (window.netlifyIdentity) {
+        setupDashboardAuth()
+      } else {
+        window.addEventListener('load', setupDashboardAuth)
+      }
+    </script>
     <div class="ops-layout">
       <aside class="ops-sidebar">
         <div class="ops-brand">
@@ -36,6 +73,7 @@
           <div class="ops-topbar-right">
             <button type="button" class="ops-toolbar-btn" id="btnNewGroup">＋ New Group</button>
             <span id="userLabel" style="font-size: 0.85rem; color: var(--muted)">RitaOps · Staff</span>
+            <button type="button" class="ops-toolbar-btn" id="btnLogout">Log out</button>
           </div>
         </header>
 
@@ -131,6 +169,10 @@
 
       const STAFF_KEY_STORAGE = 'ritaops_staff_key'
 
+      function identityUser() {
+        return window.netlifyIdentity?.currentUser?.() || null
+      }
+
       function staffKey() {
         const params = new URLSearchParams(location.search)
         const fromUrl = (params.get('key') || '').trim()
@@ -141,10 +183,42 @@
         return (sessionStorage.getItem(STAFF_KEY_STORAGE) || '').trim()
       }
 
+      function staffAuthHeaders() {
+        const user = identityUser()
+        if (user?.token?.access_token) {
+          return {Authorization: `Bearer ${user.token.access_token}`}
+        }
+        return {}
+      }
+
+      async function staffFetch(url, options = {}) {
+        const headers = {...staffAuthHeaders(), ...(options.headers || {})}
+        const opts = {...options, headers}
+
+        if (!headers.Authorization) {
+          const key = staffKey()
+          if (key) {
+            if (!options.method || options.method === 'GET') {
+              const u = new URL(url, location.origin)
+              if (!u.searchParams.has('key')) u.searchParams.set('key', key)
+              url = `${u.pathname}${u.search}`
+            } else if (options.body) {
+              const body = JSON.parse(options.body)
+              if (!body.staffKey) body.staffKey = key
+              opts.body = JSON.stringify(body)
+            }
+          }
+        }
+
+        return fetch(url, opts)
+      }
+
       function opsGroupHref(slug) {
-        const key = staffKey()
         const qs = new URLSearchParams({slug})
-        if (key) qs.set('key', key)
+        if (!identityUser()) {
+          const key = staffKey()
+          if (key) qs.set('key', key)
+        }
         return `/ops/group?${qs}`
       }
 
@@ -187,9 +261,7 @@
       }
 
       async function load() {
-        const key = staffKey()
-        const qs = key ? `?key=${encodeURIComponent(key)}` : ''
-        const res = await fetch(`/api/portals${qs}`)
+        const res = await staffFetch('/api/portals')
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || res.statusText)
 
@@ -256,7 +328,6 @@
         btn.disabled = true
 
         const payload = {
-          staffKey: staffKey(),
           groupName: newGroupForm.groupName.value.trim(),
           checkIn: newGroupForm.checkIn.value || null,
           checkOut: newGroupForm.checkOut.value || null,
@@ -268,8 +339,13 @@
           organizerEmail: newGroupForm.organizerEmail.value.trim() || null
         }
 
+        if (!identityUser()) {
+          const key = staffKey()
+          if (key) payload.staffKey = key
+        }
+
         try {
-          const res = await fetch('/api/create-group', {
+          const res = await staffFetch('/api/create-group', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
@@ -300,11 +376,21 @@
         location.href = opsGroupHref(slug)
       })
 
-      staffKey()
+      let dashboardStarted = false
 
-      load().catch((e) => {
-        document.getElementById('intro').textContent = 'Error: ' + e.message
-      })
+      function startDashboard() {
+        if (dashboardStarted) return
+        dashboardStarted = true
+        staffKey()
+        load().catch((e) => {
+          document.getElementById('intro').textContent = 'Error: ' + e.message
+        })
+      }
+
+      window.startDashboard = startDashboard
+      if (!document.documentElement.classList.contains('auth-pending')) {
+        startDashboard()
+      }
     </script>
   </body>
 </html>

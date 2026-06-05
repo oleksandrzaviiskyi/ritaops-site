@@ -20,7 +20,7 @@ const PORTAL_QUERY = `*[_type == "groupPortal" && portalSlug.current == $slug][0
   portalAccessToken
 }`
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*'
@@ -34,7 +34,7 @@ exports.handler = async (event) => {
     return {statusCode: 405, headers, body: JSON.stringify({error: 'Method not allowed'})}
   }
 
-  if (!staffAuthorized(event)) {
+  if (!staffAuthorized(event, null, context)) {
     return {statusCode: 401, headers, body: JSON.stringify({error: 'Требуется ключ staff (?key=)'})}
   }
 
@@ -71,7 +71,7 @@ exports.handler = async (event) => {
     const host = event.headers.host || 'ritaops.com'
     const proto = event.headers['x-forwarded-proto'] || 'https'
     const base = `${proto}://${host}`
-    const staff = staffAuthorized(event)
+    const staff = staffAuthorized(event, null, context)
 
     let organizerJoinUrl = null
     let organizerPortalUrl = null
