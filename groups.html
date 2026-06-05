@@ -438,6 +438,12 @@ body {
   font-size: 11px; color: var(--text-3);
   font-family: 'DM Mono', monospace; margin-top: 2px;
 }
+.inv-demand-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
 .inv-table { width: 100%; border-collapse: collapse; }
 .inv-table th {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
@@ -520,6 +526,7 @@ body {
 .task-group { font-size: 10px; color: var(--text-3); background: var(--surface2); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 .task-due { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-3); white-space: nowrap; }
 .task-due.overdue { color: var(--red); font-weight: 500; }
+.task-due.urgent-tomorrow { color: var(--amber); font-weight: 500; }
 
 /* Utility */
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
@@ -637,9 +644,12 @@ body {
   </div>
 
   <!-- Inventory -->
-  <div id="inventory-section" style="display:none">
+  <div id="inventory-section">
   <div id="inventory" class="section-head">
-    <div class="section-title" id="inv-section-title">Inventory</div>
+    <div>
+      <div class="section-title" id="inv-section-title">Inventory</div>
+      <div class="inv-demand-header" id="inv-demand-header">Loading demand…</div>
+    </div>
     <button type="button" class="btn" id="btnPurchaseOrder" style="font-size:12px;padding:6px 12px;">Generate purchase order</button>
   </div>
   <div class="inventory-wrap">
@@ -706,43 +716,12 @@ body {
   </div>
 
   <!-- Tasks -->
-  <div id="tasks-section" style="display:none">
+  <div id="tasks-section">
   <div id="tasks" class="section-head">
     <div class="section-title">Tasks</div>
     <button class="btn" style="font-size:12px;padding:6px 12px;">+ Task</button>
   </div>
-  <div class="tasks-wrap" id="tasks-wrap">
-    <div class="task-row" data-task-today="1">
-      <div class="task-check done"></div>
-      <div class="task-text done-text">Confirm menu for group test</div>
-      <span class="task-group">test</span>
-      <span class="task-due">3 Jun</span>
-    </div>
-    <div class="task-row" data-task-today="1">
-      <div class="task-check"></div>
-      <div class="task-text">Finalize test2 menu with head chef</div>
-      <span class="task-group">test2</span>
-      <span class="task-due overdue">today</span>
-    </div>
-    <div class="task-row" data-task-week="1">
-      <div class="task-check"></div>
-      <div class="task-text">Assign rooms for test2 in PMS</div>
-      <span class="task-group">test2</span>
-      <span class="task-due">6 Jun</span>
-    </div>
-    <div class="task-row" data-task-week="1">
-      <div class="task-check"></div>
-      <div class="task-text">Generate purchase order: chicken, salmon, beer</div>
-      <span class="task-group">Inventory</span>
-      <span class="task-due">7 Jun</span>
-    </div>
-    <div class="task-row" data-task-week="1">
-      <div class="task-check"></div>
-      <div class="task-text">Verify deposit from EF Tours in PMS</div>
-      <span class="task-group">test2</span>
-      <span class="task-due">8 Jun</span>
-    </div>
-  </div>
+  <div class="tasks-wrap" id="tasks-wrap"></div>
   </div>
 
 </main>
@@ -1331,6 +1310,14 @@ const SAMPLE_INDIVIDUALS = [
   }
 ]
 
+const STATIC_TASKS = [
+  {id: 't1', text: 'Confirm menu for group test', group: 'test', due: null, done: true},
+  {id: 't2', text: 'Finalize test2 menu with head chef', group: 'test2', due: null},
+  {id: 't3', text: 'Assign rooms for test2 in PMS', group: 'test2', due: null},
+  {id: 't4', text: 'Generate purchase order: chicken, salmon, beer', group: 'Inventory', due: null},
+  {id: 't5', text: 'Verify deposit from EF Tours in PMS', group: 'test2', due: null}
+]
+
 let arrivalFilter = 'all'
 let timeMode = 'today'
 let cachedPortals = []
@@ -1541,10 +1528,111 @@ function updateArrivalDateLines() {
   })
 }
 
-function getTodayTaskRows() {
-  return Array.from(document.querySelectorAll('#tasks-wrap .task-row')).filter(
-    (row) => row.dataset.taskToday === '1'
+function getUpcomingArrivals() {
+  return cachedArrivals
+    .filter((a) => a.checkIn && daysUntil(a.checkIn) != null && daysUntil(a.checkIn) >= 0)
+    .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))
+}
+
+function getInventoryScopeArrivals() {
+  const upcoming = getUpcomingArrivals()
+  if (timeMode === 'today') return upcoming.slice(0, 1)
+  if (timeMode === 'week') return upcoming.filter((a) => isInNext7Days(a.checkIn))
+  if (timeMode === 'month') return upcoming.filter((a) => isInCurrentMonth(a.checkIn))
+  return upcoming
+}
+
+function findArrivalForTask(group) {
+  if (!group) return null
+  if (group === 'Inventory') return getUpcomingArrivals()[0] || null
+  const g = group.toLowerCase()
+  return (
+    cachedArrivals.find(
+      (a) =>
+        a.id === group ||
+        a.name === group ||
+        a.name?.toLowerCase() === g ||
+        a.name?.toLowerCase().startsWith(g)
+    ) || null
   )
+}
+
+function getTaskProximityDays(task) {
+  const days = []
+  if (task.due) {
+    const d = daysUntil(task.due)
+    if (d != null) days.push(d)
+  }
+  const arrival = findArrivalForTask(task.group)
+  if (arrival?.checkIn) {
+    const d = daysUntil(arrival.checkIn)
+    if (d != null) days.push(d)
+  }
+  return days.length ? Math.min(...days) : null
+}
+
+function taskUrgencyLabel(task) {
+  const d = getTaskProximityDays(task)
+  if (d == null) return {label: '—', cls: ''}
+  if (d < 0) return {label: 'overdue', cls: 'overdue'}
+  if (d === 0) return {label: 'today', cls: 'overdue'}
+  if (d === 1) return {label: 'tomorrow', cls: 'urgent-tomorrow'}
+  const arrival = findArrivalForTask(task.group)
+  const ref = arrival?.checkIn || task.due
+  return {label: ref ? fmtMonthDay(ref) : `in ${d} days`, cls: ''}
+}
+
+function sortTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    const aDays = getTaskProximityDays(a)
+    const bDays = getTaskProximityDays(b)
+    const aOver = !a.done && aDays != null && aDays < 0
+    const bOver = !b.done && bDays != null && bDays < 0
+    if (aOver !== bOver) return aOver ? -1 : 1
+    const aKey = aDays ?? 9999
+    const bKey = bDays ?? 9999
+    return aKey - bKey
+  })
+}
+
+function getTodayTasks() {
+  return sortTasks(STATIC_TASKS).filter((t) => !t.done && getTaskProximityDays(t) === 0)
+}
+
+function renderTasks() {
+  const wrap = document.getElementById('tasks-wrap')
+  if (!wrap) return
+  wrap.innerHTML = sortTasks(STATIC_TASKS)
+    .map((task) => {
+      const urg = taskUrgencyLabel(task)
+      const doneCls = task.done ? 'done' : ''
+      const textCls = task.done ? 'done-text' : ''
+      return `
+    <div class="task-row" data-task-id="${escapeHtml(task.id)}">
+      <div class="task-check ${doneCls}"></div>
+      <div class="task-text ${textCls}">${escapeHtml(task.text)}</div>
+      <span class="task-group">${escapeHtml(task.group)}</span>
+      <span class="task-due ${urg.cls}">${escapeHtml(urg.label)}</span>
+    </div>`
+    })
+    .join('')
+  bindTaskRows()
+}
+
+function bindTaskRows() {
+  document.querySelectorAll('#tasks-wrap .task-row').forEach((row) => {
+    const check = row.querySelector('.task-check')
+    const text = row.querySelector('.task-text')
+    const taskId = row.dataset.taskId
+    if (!check || !text) return
+    check.addEventListener('click', (e) => {
+      e.stopPropagation()
+      check.classList.toggle('done')
+      text.classList.toggle('done-text', check.classList.contains('done'))
+      const task = STATIC_TASKS.find((t) => t.id === taskId)
+      if (task) task.done = check.classList.contains('done')
+    })
+  })
 }
 
 function todayStatusTags(arrival) {
@@ -1560,7 +1648,7 @@ function renderTodayPanels(arrivals) {
     .filter(isOnPropertyToday)
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
   const attentionArrivals = arrivals.filter((a) => isRelevantToday(a) && (a.alerts || []).length > 0)
-  const todayTasks = getTodayTaskRows()
+  const todayTasks = getTodayTasks()
 
   const onPropertyEl = document.getElementById('today-on-property')
   const tasksEl = document.getElementById('today-tasks')
@@ -1582,11 +1670,9 @@ function renderTodayPanels(arrivals) {
   if (tasksEl) {
     tasksEl.innerHTML = todayTasks.length
       ? todayTasks
-          .map((row) => {
-            const text = row.querySelector('.task-text')?.textContent?.trim() || ''
-            const group = row.querySelector('.task-group')?.textContent?.trim() || ''
-            const done = row.querySelector('.task-check')?.classList.contains('done')
-            return `<div class="today-panel-item"${done ? ' style="color:var(--text-3);text-decoration:line-through;"' : ''}><strong>${escapeHtml(group)}</strong><br />${escapeHtml(text)}</div>`
+          .map((task) => {
+            const urg = taskUrgencyLabel(task)
+            return `<div class="today-panel-item"><strong>${escapeHtml(task.group)}</strong><br />${escapeHtml(task.text)}<br /><span class="task-due ${urg.cls}" style="font-size:10px;">${escapeHtml(urg.label)}</span></div>`
           })
           .join('')
       : '<p class="today-panel-empty">No tasks due today</p>'
@@ -1618,8 +1704,6 @@ function applyTimeMode() {
   document.getElementById('today-panels').style.display = isToday ? 'grid' : 'none'
   document.getElementById('timeline-section').style.display = 'block'
   document.getElementById('arrivals-section').style.display = isToday ? 'none' : 'block'
-  document.getElementById('inventory-section').style.display = isMonth ? 'block' : 'none'
-  document.getElementById('tasks-section').style.display = isMonth ? 'block' : 'none'
 
   if (isToday) {
     renderTimeline(cachedArrivals, {todayOnly: true})
@@ -1630,6 +1714,8 @@ function applyTimeMode() {
     renderTimeline(cachedArrivals, {weekOnly: false})
   }
 
+  updateInventoryHeader()
+  renderTasks()
   updateArrivalDateLines()
   applyArrivalFilter()
 }
@@ -1700,20 +1786,47 @@ function bindGroupCards() {
   })
 }
 
-function updateInventoryHeader(portals) {
-  const focus =
-    portals
-      .filter((p) => p.checkIn && daysUntil(p.checkIn) != null && daysUntil(p.checkIn) >= 0)
-      .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))[0] || portals[0]
-  const title = document.getElementById('inv-section-title')
+function formatDemandWhen(checkIn) {
+  const d = daysUntil(checkIn)
+  if (d == null) return ''
+  if (d === 0) return 'today'
+  if (d === 1) return 'tomorrow'
+  return `in ${d} days`
+}
+
+function updateInventoryHeader() {
+  const scoped = getInventoryScopeArrivals()
+  const focus = scoped[0] || null
+  const demandEl = document.getElementById('inv-demand-header')
   const label = document.querySelector('.inv-group-label')
+
   if (!focus) {
-    if (title) title.textContent = 'Inventory'
-    if (label) label.textContent = 'No group selected'
+    if (demandEl) {
+      demandEl.textContent =
+        timeMode === 'month'
+          ? 'No upcoming arrivals this month'
+          : timeMode === 'week'
+            ? 'No upcoming arrivals this week'
+            : 'No upcoming arrivals — stock baseline'
+    }
+    if (label) label.textContent = 'Stock baseline · order when next group is confirmed'
     return
   }
-  if (title) title.textContent = `Inventory — needs for ${focus.groupName}`
-  if (label) label.textContent = `Stock · for ${focus.groupName} · ${fmtMonthDay(focus.checkIn)}`
+
+  const name = focus.name || focus.groupName
+  const when = formatDemandWhen(focus.checkIn)
+  const scopeNote =
+    scoped.length > 1
+      ? ` · +${scoped.length - 1} more ${timeMode === 'month' ? 'this month' : 'this week'}`
+      : ''
+
+  if (demandEl) {
+    demandEl.textContent = `Needs for ${name} · ${fmtMonthDay(focus.checkIn)} · ${when}${scopeNote}`
+  }
+  if (label) {
+    const pax = focus.pax ?? focus.totalGuests ?? focus.adults ?? '—'
+    label.textContent = `Stock · for ${name} · ${pax} guests · ${fmtMonthDay(focus.checkIn)}`
+  }
 }
 
 async function load() {
@@ -1727,7 +1840,6 @@ async function load() {
   cachedPortals = portals
   renderStats(portals, json.property)
   renderGroupCards(portals)
-  updateInventoryHeader(portals)
   bindTimeModeSwitcher()
   applyTimeMode()
 }
@@ -1737,18 +1849,6 @@ load().catch((err) => {
   document.getElementById('stats-row').innerHTML = ''
   document.getElementById('groups-grid').innerHTML =
     `<p style="color:var(--red);">${escapeHtml(err.message)}</p>`
-})
-
-/* Task checkboxes */
-document.querySelectorAll('.tasks-wrap .task-row').forEach((row) => {
-  const check = row.querySelector('.task-check')
-  const text = row.querySelector('.task-text')
-  if (!check || !text) return
-  check.addEventListener('click', (e) => {
-    e.stopPropagation()
-    check.classList.toggle('done')
-    text.classList.toggle('done-text', check.classList.contains('done'))
-  })
 })
 
 /* Inventory — select shortfalls & print purchase order */
