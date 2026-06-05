@@ -101,10 +101,11 @@ body {
 const REDIRECT_KEY = 'ritaops_redirect_after_login'
 
 function redirectAfterLogin() {
-  const dest = sessionStorage.getItem(REDIRECT_KEY)
-  if (dest) {
+  const redirect = sessionStorage.getItem(REDIRECT_KEY)
+  console.log('[ritaops] redirect after login:', redirect)
+  if (redirect) {
     sessionStorage.removeItem(REDIRECT_KEY)
-    window.location.replace(dest)
+    window.location.replace(redirect)
     return
   }
   window.location.replace('/ops')

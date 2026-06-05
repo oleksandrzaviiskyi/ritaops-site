@@ -11,16 +11,14 @@
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
       const REDIRECT_KEY = 'ritaops_redirect_after_login'
-
-      function redirectToLogin() {
-        sessionStorage.setItem(REDIRECT_KEY, window.location.pathname + window.location.search)
-        window.location.href = '/login'
-      }
+      const PAGE_RETURN_URL = window.location.pathname + window.location.search
 
       netlifyIdentity.on('init', () => {
         const user = netlifyIdentity.currentUser()
         if (!user) {
-          redirectToLogin()
+          sessionStorage.setItem(REDIRECT_KEY, PAGE_RETURN_URL)
+          console.log('[ritaops] saving redirect:', window.location.pathname)
+          window.location.href = '/login'
           return
         }
         document.body.style.display = 'block'
