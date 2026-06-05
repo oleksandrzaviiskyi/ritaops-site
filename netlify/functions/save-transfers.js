@@ -1,4 +1,5 @@
 const {createClient} = require('@sanity/client')
+const {staffAuthorized} = require('./lib/staffAuth')
 
 const client = createClient({
   projectId: '0po0panc',
@@ -13,13 +14,6 @@ const cors = {
   'Access-Control-Allow-Origin': '*'
 }
 
-function staffAuthorized(body, query) {
-  const secret = process.env.DASHBOARD_SECRET
-  if (!secret) return true
-  const key = body?.staffKey || query?.key
-  return key === secret
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {statusCode: 204, headers: cors}
@@ -32,7 +26,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}')
 
-    if (!staffAuthorized(body, event.queryStringParameters)) {
+    if (!staffAuthorized(event, body)) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff key required'})}
     }
 

@@ -656,14 +656,44 @@
       ]
 
       const PORTAL_HOME = '/group-portal/lascanasbeachretreat'
+      const STAFF_KEY_STORAGE = 'ritaops_staff_key'
+      const STAFF_KEY_EXPECTED = 'rita2026'
 
       function staffKey() {
-        const fromUrl = new URLSearchParams(location.search).get('key')
+        const params = new URLSearchParams(location.search)
+        const fromUrl = (params.get('key') || '').trim()
         if (fromUrl) {
-          sessionStorage.setItem('ritaops_staff_key', fromUrl)
+          sessionStorage.setItem(STAFF_KEY_STORAGE, fromUrl)
           return fromUrl
         }
-        return sessionStorage.getItem('ritaops_staff_key') || ''
+        return (sessionStorage.getItem(STAFF_KEY_STORAGE) || '').trim()
+      }
+
+      function logStaffKeyDebug(context) {
+        const params = new URLSearchParams(location.search)
+        const urlKey = (params.get('key') || '').trim()
+        const sessionKey = (sessionStorage.getItem(STAFF_KEY_STORAGE) || '').trim()
+        const effectiveKey = staffKey()
+        console.log(`[ritaops] staff key (${context})`, {
+          locationSearch: location.search || '(empty)',
+          urlKey: urlKey || '(none)',
+          sessionKey: sessionKey || '(none)',
+          effectiveKey: effectiveKey || '(none)',
+          expectedKey: STAFF_KEY_EXPECTED,
+          matchesExpected: effectiveKey === STAFF_KEY_EXPECTED,
+          note: 'API compares effectiveKey to server DASHBOARD_SECRET env var'
+        })
+        return effectiveKey
+      }
+
+      function syncStaffKeyToUrl() {
+        const key = staffKey()
+        if (!key) return
+        const params = new URLSearchParams(location.search)
+        if (params.get('key') === key) return
+        params.set('key', key)
+        const qs = params.toString()
+        history.replaceState(null, '', qs ? `${location.pathname}?${qs}` : location.pathname)
       }
 
       function escapeHtml(s) {
@@ -1403,15 +1433,23 @@
             '<p>Add slug to the URL: /ops/group?slug=…</p>'
           return
         }
-        const key = staffKey()
+        syncStaffKeyToUrl()
+        const key = logStaffKeyDebug('ops-group load')
         const qs = new URLSearchParams({slug})
         if (key) qs.set('key', key)
-        const res = await fetch(`/api/ops-portal?${qs}`)
+        const apiUrl = `/api/ops-portal?${qs}`
+        console.log('[ritaops] ops-portal fetch', apiUrl)
+        const res = await fetch(apiUrl)
         const json = await res.json()
-        if (!res.ok) throw new Error(json.error || res.statusText)
+        if (!res.ok) {
+          console.error('[ritaops] ops-portal error', res.status, json)
+          throw new Error(json.error || res.statusText)
+        }
         window.portalData = json.portal
         render(json.portal, json.guests, json.transfers)
       }
+
+      staffKey()
 
       load().catch((e) => {
         document.getElementById('content').innerHTML = `<p style="color:var(--warn)">${escapeHtml(e.message)}</p>`

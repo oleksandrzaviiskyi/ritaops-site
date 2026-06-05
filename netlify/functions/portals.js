@@ -1,5 +1,6 @@
 const {createClient} = require('@sanity/client')
 const {enrichPortal, isValidPortal} = require('./lib/progress')
+const {staffAuthorized} = require('./lib/staffAuth')
 
 const client = createClient({
   projectId: '0po0panc',
@@ -16,13 +17,6 @@ const LIST_QUERY = `*[_type == "groupPortal"] | order(checkIn asc) {
   portalAccessToken,
   flights, menuPlan, activities, specialRequests, dietaryRestrictions, transferNeeded
 }`
-
-function staffAuthorized(event) {
-  const secret = process.env.DASHBOARD_SECRET
-  if (!secret) return true
-  const key = (event.queryStringParameters || {}).key
-  return key === secret
-}
 
 exports.handler = async (event) => {
   const headers = {
