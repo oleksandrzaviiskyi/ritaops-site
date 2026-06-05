@@ -573,20 +573,27 @@ html.auth-pending .shell { visibility: hidden; }
 <body>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
+const REDIRECT_KEY = 'ritaops_redirect_after_login'
+
+function redirectToLogin() {
+  sessionStorage.setItem(REDIRECT_KEY, window.location.pathname + window.location.search)
+  window.location.replace('/login')
+}
+
 function setupOpsAuth() {
   if (!window.netlifyIdentity) return
 
   netlifyIdentity.on('init', () => {
     const user = netlifyIdentity.currentUser()
     if (!user) {
-      window.location.replace('/login')
+      redirectToLogin()
       return
     }
     document.documentElement.classList.remove('auth-pending')
   })
 
   netlifyIdentity.on('logout', () => {
-    window.location.replace('/login')
+    redirectToLogin()
   })
 
   document.addEventListener('click', (e) => {

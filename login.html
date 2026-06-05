@@ -98,7 +98,15 @@ body {
 </div>
 
 <script>
-function goToOps() {
+const REDIRECT_KEY = 'ritaops_redirect_after_login'
+
+function redirectAfterLogin() {
+  const dest = sessionStorage.getItem(REDIRECT_KEY)
+  if (dest) {
+    sessionStorage.removeItem(REDIRECT_KEY)
+    window.location.replace(dest)
+    return
+  }
   window.location.replace('/ops')
 }
 
@@ -107,7 +115,7 @@ function setupLogin() {
 
   netlifyIdentity.on('init', (user) => {
     if (user) {
-      goToOps()
+      redirectAfterLogin()
       return
     }
     if (window.location.hash.includes('invite_token')) {
@@ -115,8 +123,8 @@ function setupLogin() {
     }
   })
 
-  netlifyIdentity.on('login', goToOps)
-  netlifyIdentity.on('signup', goToOps)
+  netlifyIdentity.on('login', redirectAfterLogin)
+  netlifyIdentity.on('signup', redirectAfterLogin)
 
   document.getElementById('btnLogin').addEventListener('click', () => {
     netlifyIdentity.open('login')

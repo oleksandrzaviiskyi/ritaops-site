@@ -10,10 +10,17 @@
     </style>
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
+      const REDIRECT_KEY = 'ritaops_redirect_after_login'
+
+      function redirectToLogin() {
+        sessionStorage.setItem(REDIRECT_KEY, window.location.pathname + window.location.search)
+        window.location.href = '/login'
+      }
+
       netlifyIdentity.on('init', () => {
         const user = netlifyIdentity.currentUser()
         if (!user) {
-          window.location.href = '/login'
+          redirectToLogin()
           return
         }
         document.body.style.display = 'block'
@@ -23,7 +30,7 @@
       })
 
       netlifyIdentity.on('logout', () => {
-        window.location.href = '/login'
+        redirectToLogin()
       })
 
       document.addEventListener('click', (e) => {
