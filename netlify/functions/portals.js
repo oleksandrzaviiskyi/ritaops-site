@@ -53,7 +53,10 @@ exports.handler = async (event) => {
           slug: enriched.slug,
           property: 'Las Canas Beach Retreat',
           lastPortalSaveAt: enriched.lastPortalSaveAt,
-          reminderCount: (enriched.reminders || []).length
+          reminderCount: (enriched.reminders || []).length,
+          reminders: enriched.reminders || [],
+          menuPlan: enriched.menuPlan || [],
+          activities: enriched.activities || []
         }
         if (staff && doc.portalAccessToken) {
           base.organizerPortalUrl = `https://ritaops.com/portal/${doc.slug}?token=${doc.portalAccessToken}`

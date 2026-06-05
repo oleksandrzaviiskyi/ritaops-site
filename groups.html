@@ -513,7 +513,7 @@ body {
   <div class="page-header">
     <div>
       <div class="page-title">Group <span>stays</span></div>
-      <div class="page-date">Thu 4 Jun 2026 · Las Canas Beach Retreat</div>
+      <div class="page-date" id="page-date">Loading…</div>
     </div>
     <div style="display:flex;gap:8px;">
       <button class="btn">Export</button>
@@ -522,28 +522,7 @@ body {
   </div>
 
   <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-label">GROUPS IN JUNE</div>
-      <div class="stat-value">2</div>
-      <div class="stat-meta">70 guests total</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">NEXT CHECK-IN</div>
-      <div class="stat-value">4 days</div>
-      <div class="stat-meta">test2 · 8 Jun</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">PAYMENT PENDING</div>
-      <div class="stat-value">$4 200</div>
-      <div class="stat-meta">test2 · deposit</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">INVENTORY DEFICIT</div>
-      <div class="stat-value alert">2</div>
-      <div class="stat-meta">purchase needed</div>
-    </div>
-  </div>
+  <div class="stats" id="stats-row"></div>
 
   <!-- Timeline -->
   <div class="section-head">
@@ -557,187 +536,18 @@ body {
     <div style="display:flex;margin-left:120px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:4px;">
       <div id="tl-days" style="display:flex;flex:1;"></div>
     </div>
-    <div class="tl-row" style="position:relative;">
-      <div class="tl-label">test</div>
-      <div class="tl-track" id="track-test"></div>
-    </div>
-    <div class="tl-row" style="position:relative;">
-      <div class="tl-label">test2</div>
-      <div class="tl-track" id="track-test2"></div>
-    </div>
+    <div id="timeline-rows"></div>
   </div>
 
   <!-- Group cards -->
   <div class="section-head">
     <div class="section-title">GROUP DETAILS</div>
   </div>
-  <div class="groups-grid">
-
-    <!-- test: READY -->
-    <div class="group-card ready" data-group="test">
-      <div class="card-header">
-        <div class="card-top">
-          <div>
-            <div class="group-name">test</div>
-            <div class="group-dates">08.06 → 09.06 · 1 night</div>
-          </div>
-          <span class="badge badge-ready">Ready</span>
-        </div>
-        <div class="card-meta">
-          <div class="meta-item"><span class="meta-icon">👥</span> 20 guests</div>
-          <div class="meta-item"><span class="meta-icon">👤</span> 12 adults · 8 children</div>
-          <div class="meta-item"><span class="meta-icon">🛏</span> 10 rooms</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="progress-blocks">
-          <div class="prog-block done">
-            <div class="prog-block-label">MENU</div>
-            <div class="prog-block-status">Confirmed</div>
-          </div>
-          <div class="prog-block done">
-            <div class="prog-block-label">ROOMS</div>
-            <div class="prog-block-status">Assigned</div>
-          </div>
-          <div class="prog-block done">
-            <div class="prog-block-label">ACTIVITIES</div>
-            <div class="prog-block-status">Done</div>
-          </div>
-        </div>
-        <div class="payment-row">
-          <div>
-            <div class="payment-label">PMS INVOICE</div>
-            <div class="payment-amount">$3 600</div>
-          </div>
-          <span class="payment-status paid">Paid</span>
-        </div>
-      </div>
-      <div class="card-detail">
-        <div class="detail-grid">
-          <div class="detail-panel">
-            <h4>Menu</h4>
-            <table class="detail-table">
-              <thead><tr><th>Meal</th><th>Items</th></tr></thead>
-              <tbody>
-                <tr><td>Breakfast</td><td>Fresh fruit, eggs, coffee</td></tr>
-                <tr><td>Lunch</td><td>Grilled chicken, rice, salad</td></tr>
-                <tr><td>Dinner</td><td>Fish of the day, vegetables</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Room assignments</h4>
-            <table class="detail-table">
-              <thead><tr><th>Room</th><th>Guests</th></tr></thead>
-              <tbody>
-                <tr><td>Casa 1 · 101</td><td>Smith family (4)</td></tr>
-                <tr><td>Casa 1 · 102</td><td>Johnson (2)</td></tr>
-                <tr><td>Casa 2 · 201</td><td>Group block (14)</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Activities</h4>
-            <table class="detail-table">
-              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
-              <tbody>
-                <tr><td>Welcome dinner</td><td>Jun 8</td><td>20</td></tr>
-                <tr><td>Beach yoga</td><td>Jun 9 AM</td><td>12</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- test2: IN PROGRESS -->
-    <div class="group-card urgent" data-group="test2">
-      <div class="card-header">
-        <div class="card-top">
-          <div>
-            <div class="group-name">test2</div>
-            <div class="group-dates">14.06 → 15.06 · 1 night</div>
-          </div>
-          <span class="badge badge-progress">In progress</span>
-        </div>
-        <div class="card-meta">
-          <div class="meta-item"><span class="meta-icon">👥</span> 50 guests</div>
-          <div class="meta-item"><span class="meta-icon">👤</span> 50 adults</div>
-          <div class="meta-item"><span class="meta-icon">🛏</span> 25 rooms</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="progress-blocks">
-          <div class="prog-block partial">
-            <div class="prog-block-label">MENU</div>
-            <div class="prog-block-status">Draft</div>
-          </div>
-          <div class="prog-block empty">
-            <div class="prog-block-label">ROOMS</div>
-            <div class="prog-block-status">Not started</div>
-          </div>
-          <div class="prog-block empty">
-            <div class="prog-block-label">ACTIVITIES</div>
-            <div class="prog-block-status">Not started</div>
-          </div>
-        </div>
-        <div class="payment-row">
-          <div>
-            <div class="payment-label">PMS INVOICE · ESTIMATED</div>
-            <div class="payment-amount">$8 400 <span style="font-size:10px;color:var(--text-3);font-family:'DM Sans',sans-serif;">est.</span></div>
-          </div>
-          <span class="payment-status partial-paid">Awaiting deposit</span>
-        </div>
-        <div class="alerts">
-          <span class="alert-chip">⚠ Menu not finalized</span>
-          <span class="alert-chip">⚠ Rooms not assigned</span>
-          <span class="alert-chip">⚠ Inventory deficit</span>
-        </div>
-      </div>
-      <div class="card-detail">
-        <div class="detail-grid">
-          <div class="detail-panel">
-            <h4>Menu</h4>
-            <table class="detail-table">
-              <thead><tr><th>Meal</th><th>Items</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td>Breakfast</td><td>Continental buffet</td><td>Draft</td></tr>
-                <tr><td>Lunch</td><td>Chicken / vegetarian option</td><td>To confirm</td></tr>
-                <tr><td>Dinner</td><td>BBQ on the beach</td><td>To confirm</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Room assignments</h4>
-            <table class="detail-table">
-              <thead><tr><th>Room</th><th>Guests</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td>Casa 1 · 101–105</td><td>Block A (10)</td><td>Unassigned</td></tr>
-                <tr><td>Casa 2 · 201–210</td><td>Block B (15)</td><td>Unassigned</td></tr>
-                <tr><td>Casa 3 · 301–305</td><td>Staff + overflow</td><td>Hold</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="detail-panel">
-            <h4>Activities</h4>
-            <table class="detail-table">
-              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
-              <tbody>
-                <tr><td>Laguna Gri Gri</td><td>Jun 14</td><td>30</td></tr>
-                <tr><td>Massage</td><td>Jun 14–15</td><td>8</td></tr>
-                <tr><td>Transfer POP</td><td>Jun 14 / 15</td><td>50</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  <div class="groups-grid" id="groups-grid"></div>
 
   <!-- Inventory -->
   <div id="inventory" class="section-head">
-    <div class="section-title">Inventory — needs for test2</div>
+    <div class="section-title" id="inv-section-title">Inventory</div>
     <button type="button" class="btn" id="btnPurchaseOrder" style="font-size:12px;padding:6px 12px;">Generate purchase order</button>
   </div>
   <div class="inventory-wrap">
@@ -846,46 +656,473 @@ body {
 <div id="purchase-print-area" aria-hidden="true"></div>
 
 <script>
-const days = 30;
-const today = 4;
-
-const tlDays = document.getElementById('tl-days');
-for (let i = 1; i <= days; i++) {
-  const d = document.createElement('div');
-  d.style.cssText = 'flex:1;font-family:"DM Mono",monospace;font-size:10px;color:var(--text-3);text-align:center;min-width:16px;';
-  if ([1,5,10,15,20,25,30].includes(i)) d.textContent = i;
-  if (i === today) { d.style.color = 'var(--red)'; d.style.fontWeight = '500'; d.textContent = i; }
-  tlDays.appendChild(d);
+const STATUS = {
+  new: 'New',
+  in_progress: 'In progress',
+  menu_done: 'Menu',
+  flights_done: 'Flights',
+  ready: 'Ready'
 }
 
-function buildBar(trackId, startDay, endDay, cls, label) {
-  const track = document.getElementById(trackId);
-  const pct = (d) => ((d - 1) / days * 100) + '%';
-  const bar = document.createElement('div');
-  bar.className = 'tl-bar ' + cls;
-  bar.style.left = pct(startDay);
-  bar.style.width = ((endDay - startDay) / days * 100) + '%';
-  bar.textContent = label;
-  track.style.position = 'relative';
-  track.appendChild(bar);
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-  const line = document.createElement('div');
-  line.className = 'tl-today-line';
-  line.style.left = pct(today);
-  track.appendChild(line);
+function staffKey() {
+  const fromUrl = new URLSearchParams(location.search).get('key')
+  if (fromUrl) {
+    sessionStorage.setItem('ritaops_staff_key', fromUrl)
+    return fromUrl
+  }
+  return sessionStorage.getItem('ritaops_staff_key') || ''
 }
 
-buildBar('track-test', 8, 9.5, 'ready', '8–9 Jun · 20 guests');
-buildBar('track-test2', 14, 15.5, 'progress', '14–15 Jun · 50 guests');
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
-/* Group cards — expand inline detail */
-document.querySelectorAll('.group-card').forEach((card) => {
-  card.addEventListener('click', (e) => {
-    if (e.target.closest('input, button, select, textarea, a, label')) return
-    const isExpanded = card.classList.contains('expanded')
-    document.querySelectorAll('.group-card.expanded').forEach((c) => c.classList.remove('expanded'))
-    if (!isExpanded) card.classList.add('expanded')
+function parseDate(iso) {
+  if (!iso) return null
+  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function fmtShortDate(iso) {
+  const d = parseDate(iso)
+  if (!d) return '—'
+  const day = String(d.getDate()).padStart(2, '0')
+  const mon = String(d.getMonth() + 1).padStart(2, '0')
+  return `${day}.${mon}`
+}
+
+function fmtHeaderDate(d) {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  return `${days[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
+}
+
+function fmtMonthDay(iso) {
+  const d = parseDate(iso)
+  if (!d) return '—'
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`
+}
+
+function nightsBetween(a, b) {
+  const d1 = parseDate(a)
+  const d2 = parseDate(b)
+  if (!d1 || !d2) return null
+  const n = Math.round((d2 - d1) / 86400000)
+  return n > 0 ? n : null
+}
+
+function daysUntil(iso) {
+  const d = parseDate(iso)
+  if (!d) return null
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  d.setHours(0, 0, 0, 0)
+  return Math.round((d - now) / 86400000)
+}
+
+function monthKey(iso) {
+  if (!iso || iso.length < 7) return ''
+  return iso.slice(0, 7)
+}
+
+function progBlockClass(pct) {
+  if (pct >= 80) return 'done'
+  if (pct > 0) return 'partial'
+  return 'empty'
+}
+
+function progStatusLabel(pct, doneLabel, partialLabel) {
+  if (pct >= 80) return doneLabel
+  if (pct > 0) return partialLabel
+  return 'Not started'
+}
+
+function cardShellClass(p) {
+  if (p.status === 'ready') return 'ready'
+  const days = daysUntil(p.checkIn)
+  if (days != null && days >= 0 && days <= 7 && p.status !== 'ready') return 'urgent'
+  return ''
+}
+
+function badgeClass(status) {
+  if (status === 'ready') return 'badge-ready'
+  if (status === 'new') return 'badge-new'
+  return 'badge-progress'
+}
+
+function timelineBarClass(status) {
+  return status === 'ready' ? 'ready' : 'progress'
+}
+
+function renderStats(portals, property) {
+  const now = new Date()
+  const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const inMonth = portals.filter((p) => monthKey(p.checkIn) === mk)
+  const guestSum = inMonth.reduce((s, p) => s + (p.totalGuests || 0), 0)
+  const monthLabel = MONTH_NAMES[now.getMonth()].toUpperCase()
+
+  const upcoming = portals
+    .filter((p) => p.checkIn && daysUntil(p.checkIn) != null && daysUntil(p.checkIn) >= 0)
+    .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))[0]
+
+  const pending = portals.filter((p) => p.status !== 'ready')
+  const pendingGuestSum = pending.reduce((s, p) => s + (p.totalGuests || 0), 0)
+  const deficitCount = portals.reduce((s, p) => s + (p.reminderCount || 0), 0)
+  const deficitGroups = portals.filter((p) => (p.reminderCount || 0) > 0).length
+
+  let nextVal = '—'
+  let nextMeta = 'No upcoming check-ins'
+  if (upcoming) {
+    const d = daysUntil(upcoming.checkIn)
+    nextVal = d === 0 ? 'Today' : d === 1 ? '1 day' : `${d} days`
+    nextMeta = `${upcoming.groupName} · ${fmtMonthDay(upcoming.checkIn)}`
+  }
+
+  const payVal = pending.length ? String(pending.length) : '0'
+  const payMeta =
+    pending.length === 0
+      ? 'All groups ready'
+      : pending.length === 1
+        ? `${pending[0].groupName} · ${pendingGuestSum} guests`
+        : `${pending.length} groups · ${pendingGuestSum} guests`
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat">
+      <div class="stat-label">GROUPS IN ${monthLabel}</div>
+      <div class="stat-value">${inMonth.length}</div>
+      <div class="stat-meta">${guestSum ? `${guestSum} guests total` : 'No guests set'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">NEXT CHECK-IN</div>
+      <div class="stat-value">${escapeHtml(nextVal)}</div>
+      <div class="stat-meta">${escapeHtml(nextMeta)}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">PAYMENT PENDING</div>
+      <div class="stat-value">${escapeHtml(payVal)}</div>
+      <div class="stat-meta">${escapeHtml(payMeta)}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">INVENTORY DEFICIT</div>
+      <div class="stat-value${deficitCount ? ' alert' : ''}">${deficitCount}</div>
+      <div class="stat-meta">${deficitCount ? (deficitGroups === 1 ? 'reminders open' : `${deficitGroups} groups · reminders open`) : 'No open reminders'}</div>
+    </div>`
+
+  document.getElementById('page-date').textContent =
+    `${fmtHeaderDate(now)} · ${property || 'Las Canas Beach Retreat'}`
+}
+
+function renderTimeline(portals) {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const dated = portals.filter((p) => p.checkIn)
+  const rows = document.getElementById('timeline-rows')
+
+  if (!dated.length) {
+    document.getElementById('tl-days').innerHTML = ''
+    rows.innerHTML =
+      '<p style="margin:12px 0 0 120px;font-size:12px;color:var(--text-3)">No groups with check-in dates yet.</p>'
+    return
+  }
+
+  let rangeStart = null
+  let rangeEnd = null
+  dated.forEach((p) => {
+    const s = parseDate(p.checkIn)
+    const e = parseDate(p.checkOut) || s
+    if (!s) return
+    if (!rangeStart || s < rangeStart) rangeStart = new Date(s)
+    if (!rangeEnd || e > rangeEnd) rangeEnd = new Date(e)
   })
+  rangeStart.setHours(0, 0, 0, 0)
+  rangeEnd.setHours(0, 0, 0, 0)
+  const days = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1)
+  const todayIdx =
+    now >= rangeStart && now <= rangeEnd
+      ? Math.round((now - rangeStart) / 86400000) + 1
+      : null
+
+  const dayIndex = (iso) => {
+    const d = parseDate(iso)
+    if (!d) return 1
+    d.setHours(0, 0, 0, 0)
+    return Math.round((d - rangeStart) / 86400000) + 1
+  }
+
+  const tlDays = document.getElementById('tl-days')
+  tlDays.innerHTML = ''
+  for (let i = 1; i <= days; i++) {
+    const cell = document.createElement('div')
+    cell.style.cssText =
+      'flex:1;font-family:"DM Mono",monospace;font-size:10px;color:var(--text-3);text-align:center;min-width:16px;'
+    const marks = [1, 5, 10, 15, 20, 25, days].filter((v, idx, arr) => arr.indexOf(v) === idx)
+    if (marks.includes(i)) {
+      const d = new Date(rangeStart)
+      d.setDate(d.getDate() + i - 1)
+      cell.textContent = d.getDate()
+    }
+    if (todayIdx != null && i === todayIdx) {
+      cell.style.color = 'var(--red)'
+      cell.style.fontWeight = '500'
+      cell.textContent = now.getDate()
+    }
+    tlDays.appendChild(cell)
+  }
+
+  const pct = (day) => ((day - 1) / days) * 100 + '%'
+
+  rows.innerHTML = dated
+    .map((p) => {
+      const startDay = dayIndex(p.checkIn)
+      const endDay = dayIndex(p.checkOut || p.checkIn) + 0.5
+      const label = `${fmtMonthDay(p.checkIn)}${p.checkOut ? '–' + fmtMonthDay(p.checkOut) : ''} · ${p.totalGuests ?? '—'} guests`
+      const trackId = 'track-' + String(p.slug || p._id).replace(/[^a-zA-Z0-9-_]/g, '_')
+      return `
+    <div class="tl-row" style="position:relative;">
+      <div class="tl-label">${escapeHtml(p.groupName)}</div>
+      <div class="tl-track" id="${trackId}" data-start="${startDay}" data-end="${endDay}" data-cls="${timelineBarClass(p.status)}" data-label="${escapeHtml(label)}"></div>
+    </div>`
+    })
+    .join('')
+
+  rows.querySelectorAll('.tl-track').forEach((track) => {
+    const startDay = Number(track.dataset.start)
+    const endDay = Number(track.dataset.end)
+    const bar = document.createElement('div')
+    bar.className = 'tl-bar ' + track.dataset.cls
+    bar.style.left = pct(startDay)
+    bar.style.width = ((endDay - startDay) / days) * 100 + '%'
+    bar.textContent = track.dataset.label
+    track.style.position = 'relative'
+    track.appendChild(bar)
+    if (todayIdx != null) {
+      const line = document.createElement('div')
+      line.className = 'tl-today-line'
+      line.style.left = pct(todayIdx)
+      track.appendChild(line)
+    }
+  })
+}
+
+function menuDetailRows(menuPlan) {
+  const days = Array.isArray(menuPlan) ? menuPlan : []
+  const rows = []
+  days.forEach((day, i) => {
+    const label = day?.date ? fmtMonthDay(day.date) : `Day ${i + 1}`
+    ;[
+      ['Breakfast', day?.breakfast],
+      ['Lunch', day?.lunch],
+      ['Dinner', day?.dinner]
+    ].forEach(([meal, text]) => {
+      if (text && String(text).trim()) rows.push({meal: `${meal} (${label})`, items: text})
+    })
+  })
+  if (!rows.length) return '<tr><td colspan="2">No menu entered yet</td></tr>'
+  return rows.map((r) => `<tr><td>${escapeHtml(r.meal)}</td><td>${escapeHtml(r.items)}</td></tr>`).join('')
+}
+
+function activitiesDetailRows(activities) {
+  const list = Array.isArray(activities) ? activities : []
+  if (!list.length) return '<tr><td colspan="3">No activities yet</td></tr>'
+  return list
+    .map(
+      (a) =>
+        `<tr><td>${escapeHtml(a.activity || '—')}</td><td>${escapeHtml(a.date ? fmtMonthDay(a.date) : '—')}</td><td>${escapeHtml(a.pax ?? a.guests ?? '—')}</td></tr>`
+    )
+    .join('')
+}
+
+function roomsDetailRow(p, corePct) {
+  const rooms = p.totalGuests ? Math.ceil(p.totalGuests / 2) : '—'
+  const status =
+    corePct >= 80 ? 'Guest list complete' : corePct > 0 ? 'In progress' : 'Assign in PMS'
+  return `<tr><td>~${rooms} rooms est.</td><td>${escapeHtml(p.totalGuests ?? '—')} guests</td><td>${escapeHtml(status)}</td></tr>`
+}
+
+function paymentHtml(p) {
+  if (p.status === 'ready') {
+    return `
+        <div class="payment-row">
+          <div>
+            <div class="payment-label">PMS INVOICE</div>
+            <div class="payment-amount">${p.progressPercent ?? 0}% complete</div>
+          </div>
+          <span class="payment-status paid">Paid</span>
+        </div>`
+  }
+  const est = (p.progressPercent ?? 0) < 85
+  return `
+        <div class="payment-row">
+          <div>
+            <div class="payment-label">${est ? 'PMS INVOICE · ESTIMATED' : 'PMS INVOICE'}</div>
+            <div class="payment-amount">${p.progressPercent ?? 0}% <span style="font-size:10px;color:var(--text-3);font-family:'DM Sans',sans-serif;">${est ? 'est.' : 'complete'}</span></div>
+          </div>
+          <span class="payment-status ${est ? 'partial-paid' : 'unpaid'}">${est ? 'Awaiting deposit' : 'In PMS'}</span>
+        </div>`
+}
+
+function alertsHtml(p) {
+  const reminders = Array.isArray(p.reminders) ? p.reminders : []
+  if (!reminders.length) return ''
+  return `<div class="alerts">${reminders
+    .slice(0, 3)
+    .map((r) => `<span class="alert-chip">⚠ ${escapeHtml(r.text)}</span>`)
+    .join('')}</div>`
+}
+
+function renderGroupCards(portals) {
+  const grid = document.getElementById('groups-grid')
+  const key = staffKey()
+  const keyQs = key ? `&key=${encodeURIComponent(key)}` : ''
+
+  if (!portals.length) {
+    grid.innerHTML =
+      '<p style="grid-column:1/-1;color:var(--text-3);padding:24px 0;">No groups yet. <a href="/dashboard">Create one in the dashboard</a>.</p>'
+    return
+  }
+
+  grid.innerHTML = portals
+    .map((p) => {
+      const sec = p.progressSections || {}
+      const food = sec.food ?? 0
+      const core = sec.core ?? 0
+      const program = sec.program ?? 0
+      const nights = nightsBetween(p.checkIn, p.checkOut)
+      const dateLine =
+        p.checkIn && p.checkOut
+          ? `${fmtShortDate(p.checkIn)} → ${fmtShortDate(p.checkOut)}${nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}`
+          : p.checkIn
+            ? fmtShortDate(p.checkIn)
+            : 'Dates not set'
+      const adultsLine =
+        p.adults != null
+          ? `${p.adults} adults${p.children ? ` · ${p.children} children` : ''}`
+          : ''
+      const rooms = p.totalGuests ? Math.ceil(p.totalGuests / 2) : '—'
+      const shell = cardShellClass(p)
+      const opsHref = `/ops/group?slug=${encodeURIComponent(p.slug)}${keyQs}`
+
+      return `
+    <div class="group-card${shell ? ' ' + shell : ''}" data-group="${escapeHtml(p.slug)}" data-ops-href="${escapeHtml(opsHref)}">
+      <div class="card-header">
+        <div class="card-top">
+          <div>
+            <div class="group-name">${escapeHtml(p.groupName)}</div>
+            <div class="group-dates">${escapeHtml(dateLine)}</div>
+          </div>
+          <span class="badge ${badgeClass(p.status)}">${escapeHtml(STATUS[p.status] || p.status)}</span>
+        </div>
+        <div class="card-meta">
+          <div class="meta-item"><span class="meta-icon">👥</span> ${p.totalGuests ?? '—'} guests</div>
+          ${adultsLine ? `<div class="meta-item"><span class="meta-icon">👤</span> ${escapeHtml(adultsLine)}</div>` : ''}
+          <div class="meta-item"><span class="meta-icon">🛏</span> ${rooms} rooms</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="progress-blocks">
+          <div class="prog-block ${progBlockClass(food)}">
+            <div class="prog-block-label">MENU</div>
+            <div class="prog-block-status">${escapeHtml(progStatusLabel(food, 'Confirmed', 'Draft'))}</div>
+          </div>
+          <div class="prog-block ${progBlockClass(core)}">
+            <div class="prog-block-label">ROOMS</div>
+            <div class="prog-block-status">${escapeHtml(progStatusLabel(core, 'Assigned', 'In progress'))}</div>
+          </div>
+          <div class="prog-block ${progBlockClass(program)}">
+            <div class="prog-block-label">ACTIVITIES</div>
+            <div class="prog-block-status">${escapeHtml(progStatusLabel(program, 'Done', 'Draft'))}</div>
+          </div>
+        </div>
+        ${paymentHtml(p)}
+        ${alertsHtml(p)}
+      </div>
+      <div class="card-detail">
+        <div class="detail-grid">
+          <div class="detail-panel">
+            <h4>Menu</h4>
+            <table class="detail-table">
+              <thead><tr><th>Meal</th><th>Items</th></tr></thead>
+              <tbody>${menuDetailRows(p.menuPlan)}</tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Room assignments</h4>
+            <table class="detail-table">
+              <thead><tr><th>Room</th><th>Guests</th><th>Status</th></tr></thead>
+              <tbody>${roomsDetailRow(p, core)}</tbody>
+            </table>
+          </div>
+          <div class="detail-panel">
+            <h4>Activities</h4>
+            <table class="detail-table">
+              <thead><tr><th>Activity</th><th>When</th><th>Pax</th></tr></thead>
+              <tbody>${activitiesDetailRows(p.activities)}</tbody>
+            </table>
+          </div>
+        </div>
+        <p style="margin:12px 0 0;font-size:11px;"><a href="${escapeHtml(opsHref)}" style="color:var(--green);">Open full ops view →</a></p>
+      </div>
+    </div>`
+    })
+    .join('')
+
+  bindGroupCards()
+}
+
+function bindGroupCards() {
+  document.querySelectorAll('.group-card').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('input, button, select, textarea, a, label')) return
+      if (e.detail === 2 && card.dataset.opsHref) {
+        window.location.href = card.dataset.opsHref
+        return
+      }
+      const isExpanded = card.classList.contains('expanded')
+      document.querySelectorAll('.group-card.expanded').forEach((c) => c.classList.remove('expanded'))
+      if (!isExpanded) card.classList.add('expanded')
+    })
+  })
+}
+
+function updateInventoryHeader(portals) {
+  const focus =
+    portals
+      .filter((p) => p.checkIn && daysUntil(p.checkIn) != null && daysUntil(p.checkIn) >= 0)
+      .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))[0] || portals[0]
+  const title = document.getElementById('inv-section-title')
+  const label = document.querySelector('.inv-group-label')
+  if (!focus) {
+    if (title) title.textContent = 'Inventory'
+    if (label) label.textContent = 'No group selected'
+    return
+  }
+  if (title) title.textContent = `Inventory — needs for ${focus.groupName}`
+  if (label) label.textContent = `Stock · for ${focus.groupName} · ${fmtMonthDay(focus.checkIn)}`
+}
+
+async function load() {
+  const key = staffKey()
+  const qs = key ? `?key=${encodeURIComponent(key)}` : ''
+  const res = await fetch(`/api/portals${qs}`)
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || res.statusText)
+
+  const portals = (json.portals || []).filter((p) => p.slug && p.groupName)
+  renderStats(portals, json.property)
+  renderTimeline(portals)
+  renderGroupCards(portals)
+  updateInventoryHeader(portals)
+}
+
+load().catch((err) => {
+  document.getElementById('page-date').textContent = 'Error: ' + err.message
+  document.getElementById('stats-row').innerHTML = ''
+  document.getElementById('groups-grid').innerHTML =
+    `<p style="color:var(--red);">${escapeHtml(err.message)}</p>`
 })
 
 /* Task checkboxes */
