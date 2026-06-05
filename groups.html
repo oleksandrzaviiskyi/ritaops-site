@@ -581,7 +581,7 @@ body {
 
   <div class="today-panels" id="today-panels">
     <div class="today-panel">
-      <h3>Check-ins today</h3>
+      <h3>Check-ins · next 3 days</h3>
       <div id="today-checkins"></div>
     </div>
     <div class="today-panel">
@@ -811,22 +811,22 @@ function monthKey(iso) {
   return iso.slice(0, 7)
 }
 
-function getWeekBounds() {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  const start = new Date(now)
-  start.setDate(now.getDate() - now.getDay())
+function getNext7DayBounds() {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
   const end = new Date(start)
-  end.setDate(start.getDate() + 6)
+  end.setDate(start.getDate() + 7)
   return {start, end}
 }
 
-function isInCurrentWeek(iso) {
-  const d = parseDate(iso)
-  if (!d) return false
-  d.setHours(0, 0, 0, 0)
-  const {start, end} = getWeekBounds()
-  return d >= start && d <= end
+function isInNext7Days(iso) {
+  const d = daysUntil(iso)
+  return d != null && d >= 0 && d <= 7
+}
+
+function isImminentCheckIn(iso) {
+  const d = daysUntil(iso)
+  return d != null && d >= 0 && d <= 3
 }
 
 function isInCurrentMonth(iso) {
@@ -839,8 +839,8 @@ function isInCurrentMonth(iso) {
 function arrivalMatchesTimeMode(arrival) {
   if (timeMode === 'month') return true
   if (!arrival.checkIn) return false
-  if (timeMode === 'today') return daysUntil(arrival.checkIn) === 0
-  if (timeMode === 'week') return isInCurrentWeek(arrival.checkIn)
+  if (timeMode === 'today') return isImminentCheckIn(arrival.checkIn)
+  if (timeMode === 'week') return isInNext7Days(arrival.checkIn)
   return true
 }
 
@@ -954,7 +954,7 @@ function renderStats(portals, property) {
 
 function timelineItemsFromArrivals(arrivals, weekOnly) {
   return arrivals
-    .filter((a) => a.checkIn && (!weekOnly || isInCurrentWeek(a.checkIn)))
+    .filter((a) => a.checkIn && (!weekOnly || isInNext7Days(a.checkIn)))
     .map((a) => ({
       groupName: a.name,
       checkIn: a.checkIn,
@@ -985,11 +985,11 @@ function renderTimeline(arrivals, options = {}) {
   let todayIdx = null
 
   if (weekOnly) {
-    const bounds = getWeekBounds()
+    const bounds = getNext7DayBounds()
     rangeStart = bounds.start
     rangeEnd = bounds.end
-    days = 7
-    todayIdx = Math.round((now - rangeStart) / 86400000) + 1
+    days = Math.round((rangeEnd - rangeStart) / 86400000) + 1
+    todayIdx = 1
   } else {
     rangeStart = null
     rangeEnd = null
@@ -1022,17 +1022,19 @@ function renderTimeline(arrivals, options = {}) {
     cell.style.cssText =
       'flex:1;font-family:"DM Mono",monospace;font-size:10px;color:var(--text-3);text-align:center;min-width:16px;'
     const marks = weekOnly
-      ? [1, 2, 3, 4, 5, 6, 7]
+      ? Array.from({length: days}, (_, idx) => idx + 1)
       : [1, 5, 10, 15, 20, 25, days].filter((v, idx, arr) => arr.indexOf(v) === idx)
-    if (marks.includes(i)) {
+    if (weekOnly || marks.includes(i)) {
       const d = new Date(rangeStart)
       d.setDate(d.getDate() + i - 1)
-      cell.textContent = weekOnly ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()] : d.getDate()
+      cell.textContent = d.getDate()
     }
     if (todayIdx != null && i === todayIdx) {
       cell.style.color = 'var(--red)'
       cell.style.fontWeight = '500'
-      cell.textContent = weekOnly ? '•' : now.getDate()
+      const todayCell = new Date(rangeStart)
+      todayCell.setDate(rangeStart.getDate() + i - 1)
+      cell.textContent = todayCell.getDate()
     }
     tlDays.appendChild(cell)
   }
@@ -1372,8 +1374,8 @@ function applyArrivalFilter() {
     if (arrivalFilter === 'groups') show = type === 'group'
     else if (arrivalFilter === 'individual') show = type === 'individual'
     else if (arrivalFilter === 'attention') show = hasAlerts
-    if (show && timeMode === 'today') show = !!checkIn && daysUntil(checkIn) === 0
-    else if (show && timeMode === 'week') show = !!checkIn && isInCurrentWeek(checkIn)
+    if (show && timeMode === 'today') show = !!checkIn && isImminentCheckIn(checkIn)
+    else if (show && timeMode === 'week') show = !!checkIn && isInNext7Days(checkIn)
     card.style.display = show ? '' : 'none'
     if (show) visible++
   })
@@ -1396,8 +1398,10 @@ function getTodayTaskRows() {
 }
 
 function renderTodayPanels(arrivals) {
-  const todayArrivals = arrivals.filter((a) => a.checkIn && daysUntil(a.checkIn) === 0)
-  const attentionArrivals = todayArrivals.filter((a) => (a.alerts || []).length > 0)
+  const imminentArrivals = arrivals
+    .filter((a) => a.checkIn && isImminentCheckIn(a.checkIn))
+    .sort((a, b) => daysUntil(a.checkIn) - daysUntil(b.checkIn))
+  const attentionArrivals = imminentArrivals.filter((a) => (a.alerts || []).length > 0)
   const todayTasks = getTodayTaskRows()
 
   const checkinsEl = document.getElementById('today-checkins')
@@ -1405,14 +1409,14 @@ function renderTodayPanels(arrivals) {
   const attentionEl = document.getElementById('today-attention')
 
   if (checkinsEl) {
-    checkinsEl.innerHTML = todayArrivals.length
-      ? todayArrivals
-          .map(
-            (a) =>
-              `<div class="today-panel-item"><strong>${escapeHtml(a.name)}</strong><br />${escapeHtml(a.type === 'group' ? 'Group' : 'Individual')} · ${a.pax ?? a.totalGuests ?? a.adults ?? '—'} pax</div>`
-          )
+    checkinsEl.innerHTML = imminentArrivals.length
+      ? imminentArrivals
+          .map((a) => {
+            const when = arrivesInLabel(a.checkIn)
+            return `<div class="today-panel-item"><strong>${escapeHtml(a.name)}</strong><br />${escapeHtml(fmtMonthDay(a.checkIn))} · ${escapeHtml(when)}<br />${escapeHtml(a.type === 'group' ? 'Group' : 'Individual')} · ${a.pax ?? a.totalGuests ?? a.adults ?? '—'} pax</div>`
+          })
           .join('')
-      : '<p class="today-panel-empty">No check-ins today</p>'
+      : '<p class="today-panel-empty">No check-ins in the next 3 days</p>'
   }
 
   if (tasksEl) {
@@ -1442,7 +1446,7 @@ function renderTodayPanels(arrivals) {
               `<div class="today-panel-item"><strong>${escapeHtml(item.name)}</strong><br />${escapeHtml(item.alert)}</div>`
           )
           .join('')
-      : '<p class="today-panel-empty">Nothing needs attention today</p>'
+      : '<p class="today-panel-empty">Nothing needs attention in the next 3 days</p>'
   }
 }
 
