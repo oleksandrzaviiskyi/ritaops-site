@@ -87,6 +87,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/cancel-group"
+  to = "/.netlify/functions/cancel-group"
+  status = 200
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200

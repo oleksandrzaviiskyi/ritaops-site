@@ -58,6 +58,22 @@
 
     <div id="print-area" aria-hidden="true"></div>
 
+    <div class="ops-modal-backdrop" id="cancelModalBackdrop" hidden>
+      <div class="ops-modal" role="dialog" aria-labelledby="cancelModalTitle">
+        <h2 id="cancelModalTitle">Cancel this group?</h2>
+        <p style="margin:0 0 1.25rem;color:var(--muted);line-height:1.5">
+          This will mark the group as cancelled. It will be hidden from all operations views. This
+          cannot be undone.
+        </p>
+        <div class="ops-modal-actions">
+          <button type="button" class="ops-btn ops-btn-print" id="btnKeepGroup">Keep group</button>
+          <button type="button" class="ops-btn ops-btn-danger" id="btnConfirmCancelGroup">
+            Yes, cancel group
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       function getPortalData() {
         return window.portalData || null
@@ -696,6 +712,54 @@
         history.replaceState(null, '', qs ? `${location.pathname}?${qs}` : location.pathname)
       }
 
+      function hasStaffKeyInUrl() {
+        return Boolean((new URLSearchParams(location.search).get('key') || '').trim())
+      }
+
+      function portalHomeHref() {
+        const key = staffKey()
+        return key ? `${PORTAL_HOME}?key=${encodeURIComponent(key)}` : PORTAL_HOME
+      }
+
+      function openCancelModal() {
+        document.getElementById('cancelModalBackdrop').hidden = false
+      }
+
+      function closeCancelModal() {
+        document.getElementById('cancelModalBackdrop').hidden = true
+      }
+
+      async function confirmCancelGroup() {
+        const portal = getPortalData()
+        const slug =
+          portal?.groupSlug ||
+          portal?.slug ||
+          new URLSearchParams(location.search).get('slug')
+        if (!slug) {
+          alert('Group slug missing')
+          return
+        }
+        const btn = document.getElementById('btnConfirmCancelGroup')
+        if (btn) btn.disabled = true
+        try {
+          const res = await fetch('/api/cancel-group', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              staffKey: staffKey(),
+              groupSlug: slug
+            })
+          })
+          const json = await res.json()
+          if (!res.ok) throw new Error(json.error || res.statusText)
+          location.href = portalHomeHref()
+        } catch (err) {
+          alert(err.message)
+        } finally {
+          if (btn) btn.disabled = false
+        }
+      }
+
       function escapeHtml(s) {
         return String(s ?? '')
           .replace(/&/g, '&amp;')
@@ -1321,7 +1385,15 @@
 
           ${renderGroupRevenueSummary(p, guestList, savedTransfers)}
 
-          ${renderGuestSubmissions(guests)}`
+          ${renderGuestSubmissions(guests)}
+
+          ${
+            hasStaffKeyInUrl() && p.status !== 'cancelled'
+              ? `<div class="ops-cancel-footer">
+            <button type="button" class="ops-btn ops-btn-danger" id="btnCancelGroup">Cancel group</button>
+          </div>`
+              : ''
+          }`
 
       }
 
@@ -1394,7 +1466,19 @@
         if (row) row.driver = input.value
       })
 
+      document.getElementById('btnKeepGroup')?.addEventListener('click', closeCancelModal)
+      document.getElementById('btnConfirmCancelGroup')?.addEventListener('click', confirmCancelGroup)
+      document.getElementById('cancelModalBackdrop')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeCancelModal()
+      })
+
       document.addEventListener('click', (e) => {
+        if (e.target.closest('#btnCancelGroup')) {
+          e.preventDefault()
+          openCancelModal()
+          return
+        }
+
         if (e.target.closest('#btnSaveTransfers')) {
           e.preventDefault()
           saveTransfersToSanity()

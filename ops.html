@@ -1966,7 +1966,9 @@ async function load() {
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || res.statusText)
 
-  const portals = (json.portals || []).filter((p) => p.slug && p.groupName)
+  const portals = (json.portals || []).filter(
+    (p) => p.slug && p.groupName && p.status !== 'cancelled'
+  )
   cachedPortals = portals
   renderStats(portals, json.property)
   renderGroupCards(portals)

@@ -126,7 +126,7 @@ function buildReminders(doc) {
 
 function enrichPortal(doc) {
   const {percent, sections} = computePortalProgress(doc)
-  const status = derivePortalStatus(doc, percent)
+  const status = doc.status === 'cancelled' ? 'cancelled' : derivePortalStatus(doc, percent)
   return {
     ...doc,
     progressPercent: percent,
