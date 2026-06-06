@@ -1,8 +1,21 @@
+const Anthropic = require('@anthropic-ai/sdk')
 const {resolveStaffAuth, dashboardSecret} = require('./lib/staffAuth')
 
 const cors = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*'
+}
+
+function anthropicErrorReply(error) {
+  console.log('ANTHROPIC ERROR', error)
+  const message = error?.message || String(error)
+  return {
+    statusCode: 200,
+    headers: cors,
+    body: JSON.stringify({
+      reply: 'Sorry, something went wrong: ' + message
+    })
+  }
 }
 
 exports.handler = async (event, context) => {
@@ -61,7 +74,7 @@ exports.handler = async (event, context) => {
 
     const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
     if (!apiKey) {
-      return {statusCode: 500, headers: cors, body: JSON.stringify({error: 'ANTHROPIC_API_KEY not configured'})}
+      return anthropicErrorReply(new Error('ANTHROPIC_API_KEY not configured'))
     }
 
     const liveData = parsedBody.liveData || {}
@@ -80,37 +93,29 @@ Answer concisely for hotel operations staff. Use clear labels and numbers when c
       }))
     messages.push({role: 'user', content: message})
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+    const anthropic = new Anthropic({apiKey})
+
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
         system: systemPrompt,
         messages
       })
-    })
 
-    const json = await res.json()
-    if (!res.ok) {
-      const errMsg = json.error?.message || json.error || res.statusText
-      return {statusCode: res.status, headers: cors, body: JSON.stringify({error: errMsg})}
-    }
+      const reply =
+        response.content?.find((block) => block.type === 'text')?.text?.trim() ||
+        'Sorry, I could not generate a response.'
 
-    const reply =
-      json.content?.find((block) => block.type === 'text')?.text?.trim() ||
-      'Sorry, I could not generate a response.'
-
-    return {
-      statusCode: 200,
-      headers: cors,
-      body: JSON.stringify({reply})
+      return {
+        statusCode: 200,
+        headers: cors,
+        body: JSON.stringify({reply})
+      }
+    } catch (error) {
+      return anthropicErrorReply(error)
     }
   } catch (err) {
-    return {statusCode: 500, headers: cors, body: JSON.stringify({error: err.message})}
+    return anthropicErrorReply(err)
   }
 }
