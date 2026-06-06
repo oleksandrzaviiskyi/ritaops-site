@@ -9,23 +9,6 @@ const client = createClient({
   useCdn: false
 })
 
-const STAFF_QUERY = `*[_type == "staffMember"] {
-  name,
-  role,
-  department,
-  phone,
-  email,
-  notes
-}`
-
-const SHIFTS_QUERY = `*[_type == "staffShift" && date == $today] {
-  staffMember,
-  role,
-  shiftStart,
-  shiftEnd,
-  isRestDay
-}`
-
 exports.handler = async (event, context) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -45,13 +28,30 @@ exports.handler = async (event, context) => {
       return {statusCode: 401, headers, body: JSON.stringify({error: 'Staff auth required'})}
     }
 
-    const today =
-      event.queryStringParameters?.today || new Date().toISOString().slice(0, 10)
+    const today = new Date().toISOString().split('T')[0]
 
-    const [staff, shiftsToday] = await Promise.all([
-      client.fetch(STAFF_QUERY),
-      client.fetch(SHIFTS_QUERY, {today})
-    ])
+    const staff = await client.fetch(`
+      *[_type == "lcbr-people-staff" && category == "staff"] {
+        "name": name,
+        "department": department->title,
+        "position": position->title,
+        email,
+        "phone": phone
+      }
+    `)
+
+    const shiftsToday = await client.fetch(
+      `
+      *[_type == "staffShift" && date == $today] {
+        staffMember,
+        role,
+        shiftStart,
+        shiftEnd,
+        isRestDay
+      }
+    `,
+      {today}
+    )
 
     return {
       statusCode: 200,
