@@ -184,8 +184,8 @@ exports.handler = async (event, context) => {
     const systemPrompt = buildSystemPrompt(liveData, message)
 
     const messages = history
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .slice(-12)
+      .filter((m) => m.role === 'user' || m.role === 'assistant' || m.role === 'rita')
+      .slice(-6)
       .map((m) => ({
         role: m.role === 'rita' ? 'assistant' : m.role,
         content: String(m.content || '')

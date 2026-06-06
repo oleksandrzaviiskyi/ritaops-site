@@ -2342,6 +2342,28 @@ function saveRitaConversation(messages) {
   sessionStorage.setItem(RITA_CONVERSATION_KEY, JSON.stringify({messages}))
 }
 
+function ritaPaymentStatus(p) {
+  if (p.status === 'ready') return 'Paid'
+  const est = (p.progressPercent ?? 0) < 85
+  return est ? 'Awaiting deposit' : 'In PMS'
+}
+
+function ritaTasksForGroup(p) {
+  const name = (p.groupName || '').toLowerCase()
+  const slug = (p.slug || '').toLowerCase()
+  const staticTasks = STATIC_TASKS.filter((t) => {
+    if (t.done) return false
+    const g = (t.group || '').toLowerCase()
+    return g === slug || g === name || name.includes(g) || slug.includes(g)
+  }).map((t) => ({text: t.text, due: t.due || null, source: 'ops'}))
+  const reminders = (p.reminders || []).map((r) => ({
+    text: r.text,
+    priority: r.priority || null,
+    source: 'reminder'
+  }))
+  return [...staticTasks, ...reminders]
+}
+
 function buildRitaLiveData(portals) {
   const now = new Date()
   const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -2367,6 +2389,21 @@ function buildRitaLiveData(portals) {
   })
   menuGaps.forEach((p) => alerts.push(`${p.groupName}: menu not confirmed`))
 
+  const groups = active.map((p) => ({
+    groupName: p.groupName,
+    name: p.groupName,
+    slug: p.slug,
+    checkIn: p.checkIn,
+    checkOut: p.checkOut,
+    guestCount: p.totalGuests,
+    guests: p.totalGuests,
+    paymentStatus: ritaPaymentStatus(p),
+    progressPercent: p.progressPercent,
+    status: p.status,
+    tasks: ritaTasksForGroup(p)
+  }))
+  console.log('GROUP DATA', JSON.stringify(groups).slice(0, 500))
+
   return {
     property: 'Las Canas Beach Retreat',
     date: now.toISOString().slice(0, 10),
@@ -2382,14 +2419,8 @@ function buildRitaLiveData(portals) {
         }
       : null,
     alerts,
-    groups: active.map((p) => ({
-      name: p.groupName,
-      checkIn: p.checkIn,
-      checkOut: p.checkOut,
-      guests: p.totalGuests,
-      status: p.status,
-      reminders: p.reminderCount || 0
-    }))
+    groups,
+    bookings: groups
   }
 }
 
@@ -2579,10 +2610,11 @@ async function sendRitaMessage(text) {
       liveData = {property: 'Las Canas Beach Retreat', groups: []}
     }
 
-    const history = messages
+    const conversationHistory = messages
       .filter((m) => m.role === 'user' || m.role === 'rita')
       .slice(0, -1)
       .map((m) => ({role: m.role, content: m.content}))
+    const recentHistory = conversationHistory.slice(-6)
     const user = netlifyIdentity.currentUser()
     const token = user?.token?.access_token || ''
     const staffKeyValue = sessionStorage.getItem('staffKey') || 'rita2026'
@@ -2609,7 +2641,7 @@ async function sendRitaMessage(text) {
       headers,
       body: JSON.stringify({
         message,
-        history,
+        history: recentHistory,
         liveData,
         staffKey: staffKeyValue
       })
