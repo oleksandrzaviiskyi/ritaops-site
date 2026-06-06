@@ -37,6 +37,7 @@ async function verifyIdentityToken(event, context) {
     const res = await fetch(`${proto}://${host}/.netlify/identity/user`, {
       headers: {Authorization: `Bearer ${token}`}
     })
+    console.log('[ritaops] identity verify', {ok: res.ok, status: res.status, host})
     return res.ok
   } catch (err) {
     console.log('[ritaops] identity verify failed', err.message)
