@@ -642,22 +642,6 @@ html.auth-pending .shell { visibility: hidden; }
   color: var(--text-3);
   letter-spacing: 0.04em;
 }
-.rita-context-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.rita-chip {
-  font-size: 10px;
-  color: var(--text-2);
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px 10px;
-  white-space: nowrap;
-}
 .rita-messages {
   max-height: 260px;
   overflow-y: auto;
@@ -709,23 +693,6 @@ html.auth-pending .shell { visibility: hidden; }
 .rita-data-row:last-child { border-bottom: none; }
 .rita-data-row strong { font-family: 'DM Mono', monospace; color: var(--text); }
 .rita-alert-row { color: var(--amber); }
-.rita-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 14px 0;
-}
-.rita-suggestion {
-  font-size: 10px;
-  color: var(--text-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.rita-suggestion:hover { background: var(--surface2); border-color: var(--border-strong); }
 .rita-input-row {
   display: flex;
   gap: 8px;
@@ -986,20 +953,8 @@ if (window.netlifyIdentity) {
     </div>
     <span class="rita-panel-live">live · Las Canas</span>
   </div>
-  <div class="rita-context-chips">
-    <span class="rita-chip">Sanity</span>
-    <span class="rita-chip" id="ritaChipArrivals">0 arrivals</span>
-    <span class="rita-chip">Inventory</span>
-    <span class="rita-chip">Guest profiles</span>
-  </div>
   <div class="rita-messages" id="ritaMessages"></div>
   <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
-  <div class="rita-suggestions" id="ritaSuggestions">
-    <button type="button" class="rita-suggestion" data-prompt="What arrivals are coming this week?">This week</button>
-    <button type="button" class="rita-suggestion" data-prompt="Any groups missing menu plans?">Menu gaps</button>
-    <button type="button" class="rita-suggestion" data-prompt="Summarize inventory deficits and reminders.">Inventory alerts</button>
-    <button type="button" class="rita-suggestion" data-prompt="Give me a guest count summary for this month.">Guest summary</button>
-  </div>
   <div class="rita-input-row">
     <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
     <button type="button" class="rita-send" id="ritaSend">Send</button>
@@ -2526,11 +2481,6 @@ function renderRitaMessages(messages) {
   box.scrollTop = box.scrollHeight
 }
 
-function updateRitaChips(data) {
-  const chip = document.getElementById('ritaChipArrivals')
-  if (chip && data) chip.textContent = `${data.arrivalsThisMonth} arrivals`
-}
-
 async function fetchRitaPortals() {
   if (cachedPortals.length) return cachedPortals
   const res = await staffFetch('/api/portals')
@@ -2555,14 +2505,12 @@ async function ensureRitaLiveData() {
     await fetchRitaPortals()
   }
   ritaLiveData = await buildRitaLiveData(cachedPortals)
-  updateRitaChips(ritaLiveData)
   return ritaLiveData
 }
 
 async function loadRitaBriefing() {
   const portals = await fetchRitaPortals()
   ritaLiveData = await buildRitaLiveData(portals)
-  updateRitaChips(ritaLiveData)
   const html = buildRitaBriefingHtml(ritaLiveData)
   const messages = loadRitaConversation()
   if (!messages.length) {
@@ -2590,7 +2538,6 @@ async function toggleRitaPanel() {
       renderRitaMessages(messages)
       if (!ritaLiveData && cachedPortals.length) {
         ritaLiveData = await buildRitaLiveData(cachedPortals)
-        updateRitaChips(ritaLiveData)
       }
     }
     if (!ritaBriefingLoaded) {
@@ -2697,11 +2644,6 @@ document.getElementById('ritaInput')?.addEventListener('keydown', (e) => {
   }
 })
 
-document.getElementById('ritaSuggestions')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-prompt]')
-  if (!btn) return
-  sendRitaMessage(btn.getAttribute('data-prompt'))
-})
 </script>
 </body>
 </html>
