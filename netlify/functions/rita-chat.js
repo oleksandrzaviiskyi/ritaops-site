@@ -36,14 +36,58 @@ When asked about arrivals, check-ins, or bookings for upcoming days — answer d
 If the data shows no arrivals, say so simply:
 "No check-ins in the next 3 days. Next arrival is [date] — [group name]."`
 
+const OPERATIONAL_KEYWORDS = [
+  'заезд',
+  'заезды',
+  'сегодня',
+  'today',
+  'check-in',
+  'checkin',
+  'arrivals',
+  'arrival',
+  'прибытие',
+  'ближайш',
+  'следующ',
+  'next',
+  'this week',
+  'эта неделя',
+  'check-out',
+  'checkout',
+  'booking',
+  'bookings',
+  'group',
+  'groups',
+  'guest',
+  'guests',
+  'inventory',
+  'stock',
+  'menu',
+  'transfer',
+  'task',
+  'tasks',
+  'reminder',
+  'deficit',
+  'occupancy',
+  'reservation',
+  'operations',
+  'schedule',
+  'timeline',
+  'pax',
+  'room',
+  'rooms',
+  'arriving',
+  'departing',
+  'how many',
+  "what's coming",
+  'what is coming',
+  'when does',
+  'when is',
+  'needs attention'
+]
+
 function needsPropertyContext(text) {
   const q = String(text || '').toLowerCase()
-  return /\b(arrival|arrivals|check-?in|check-?out|booking|bookings|group|groups|guest|guests|inventory|stock|menu|transfer|task|tasks|reminder|deficit|occupancy|reservation|property|operations?|schedule|timeline|pax|rooms?|arriving|departing|заезд|заезды|прибытие|ближайшие|следующие)\b/.test(
-      q
-    ) ||
-    /\b(how many|who is|who's|what's coming|what is coming|when does|when is|next group|next few days|this week|this month|any alerts?|needs attention)\b/.test(
-      q
-    )
+  return OPERATIONAL_KEYWORDS.some((kw) => q.includes(kw))
 }
 
 function buildSystemPrompt(liveData, message) {
@@ -51,6 +95,8 @@ function buildSystemPrompt(liveData, message) {
   const data = liveData && Object.keys(liveData).length ? liveData : null
   if (!data) return BASE_SYSTEM_PROMPT
   return `${BASE_SYSTEM_PROMPT}
+
+When you have property data available, answer operational questions directly and concisely. Do not ask clarifying questions — just give the relevant data from what you have.
 
 Live property data for this question:
 ${JSON.stringify(data)}`
@@ -129,6 +175,9 @@ exports.handler = async (event, context) => {
 
     const liveData = parsedBody.liveData || {}
     const history = Array.isArray(parsedBody.history) ? parsedBody.history : []
+
+    console.log('LIVE DATA', JSON.stringify(liveData).slice(0, 200))
+    console.log('[ritaops] inject property context', needsPropertyContext(message))
 
     const systemPrompt = buildSystemPrompt(liveData, message)
 
