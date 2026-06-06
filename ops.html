@@ -2571,12 +2571,27 @@ async function sendRitaMessage(text) {
       history,
       liveData: ritaLiveData
     }
+    const user = netlifyIdentity.currentUser()
     const key = staffKey()
-    if (key && !staffAuthHeaders().Authorization) payload.staffKey = key
+    const tokenPresent = Boolean(user?.token?.access_token)
 
-    const res = await staffFetch('/api/rita-chat', {
+    console.log('[ritaops] rita-chat request', {
+      currentUser: user?.email || null,
+      tokenPresent,
+      staffKey: key || '(none)'
+    })
+
+    let url = '/api/rita-chat'
+    const headers = {'Content-Type': 'application/json'}
+    if (user?.token?.access_token) {
+      headers.Authorization = 'Bearer ' + user.token.access_token
+    } else if (key) {
+      url = '/api/rita-chat?key=' + encodeURIComponent(key)
+    }
+
+    const res = await fetch(url, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers,
       body: JSON.stringify(payload)
     })
     const json = await res.json()
