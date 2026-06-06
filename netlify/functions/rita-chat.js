@@ -23,7 +23,11 @@ You have full access to the property database (Sanity CMS) which contains: staff
 
 When asked about staff, guests, inventory, or any operational matter — answer directly from the data available. If specific data is not in your current context, say what you know and ask Rita to pull more data.
 
-Tone: professional, direct, like an experienced hotel manager.`
+Tone: professional, direct, like an experienced hotel manager.
+
+IMPORTANT: Answer only what was asked. Do not volunteer information about unrelated topics at the end of your response.
+Do not suggest next steps unless the user asks for them.
+Do not mention pending groups, tasks, or alerts unless directly relevant to the question.`
 
 const OPERATIONAL_KEYWORDS = [
   'заезд',
