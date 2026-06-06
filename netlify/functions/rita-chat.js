@@ -1,4 +1,4 @@
-const {staffAuthorized} = require('./lib/staffAuth')
+const {resolveStaffAuth} = require('./lib/staffAuth')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -16,8 +16,20 @@ exports.handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body || '{}')
+    const auth = await resolveStaffAuth(event, body, context)
+    const anthropicKeyPresent = Boolean((process.env.ANTHROPIC_API_KEY || '').trim())
 
-    if (!staffAuthorized(event, body, context)) {
+    console.log('[ritaops] rita-chat auth', {
+      method: auth.method || 'none',
+      authorized: auth.authorized,
+      anthropicKeyPresent,
+      hasBearer: Boolean(
+        (event.headers?.authorization || event.headers?.Authorization || '').match(/^Bearer\s+/i)
+      ),
+      hasStaffKey: Boolean(body?.staffKey || event.queryStringParameters?.key)
+    })
+
+    if (!auth.authorized) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
     }
 
@@ -26,7 +38,7 @@ exports.handler = async (event, context) => {
       return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'message required'})}
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
     if (!apiKey) {
       return {statusCode: 500, headers: cors, body: JSON.stringify({error: 'ANTHROPIC_API_KEY not configured'})}
     }
