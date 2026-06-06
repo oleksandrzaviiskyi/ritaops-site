@@ -132,6 +132,8 @@ exports.handler = async (event, context) => {
   try {
     const parsedBody = JSON.parse(event.body || '{}')
 
+    console.log('BODY RECEIVED', JSON.stringify(parsedBody).slice(0, 400))
+
     console.log('AUTH CHECK', {
       authHeader: event.headers.authorization || event.headers.Authorization || 'MISSING',
       keyParam: event.queryStringParameters?.key || 'MISSING',

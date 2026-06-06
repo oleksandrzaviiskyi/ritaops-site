@@ -2485,7 +2485,27 @@ async function fetchRitaPortals() {
   const res = await staffFetch('/api/portals')
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || res.statusText)
-  return (json.portals || []).filter((p) => p.slug && p.groupName && p.status !== 'cancelled')
+  cachedPortals = (json.portals || []).filter(
+    (p) => p.slug && p.groupName && p.status !== 'cancelled'
+  )
+  return cachedPortals
+}
+
+async function ensureRitaLiveData() {
+  console.log('[ritaops] cachedPortals at send', {
+    count: cachedPortals.length,
+    sample: cachedPortals.slice(0, 5).map((p) => ({
+      name: p.groupName,
+      checkIn: p.checkIn,
+      status: p.status
+    }))
+  })
+  if (!cachedPortals.length) {
+    await fetchRitaPortals()
+  }
+  ritaLiveData = buildRitaLiveData(cachedPortals)
+  updateRitaChips(ritaLiveData)
+  return ritaLiveData
 }
 
 async function loadRitaBriefing() {
@@ -2543,16 +2563,6 @@ async function sendRitaMessage(text) {
   const message = String(text || input?.value || '').trim()
   if (!message) return
 
-  if (!ritaLiveData) {
-    try {
-      const portals = await fetchRitaPortals()
-      ritaLiveData = buildRitaLiveData(portals)
-      updateRitaChips(ritaLiveData)
-    } catch {
-      ritaLiveData = {property: 'Las Canas Beach Retreat', groups: []}
-    }
-  }
-
   const messages = loadRitaConversation()
   messages.push({role: 'user', content: message})
   saveRitaConversation(messages)
@@ -2562,6 +2572,13 @@ async function sendRitaMessage(text) {
   if (typing) typing.hidden = false
 
   try {
+    let liveData
+    try {
+      liveData = await ensureRitaLiveData()
+    } catch {
+      liveData = {property: 'Las Canas Beach Retreat', groups: []}
+    }
+
     const history = messages
       .filter((m) => m.role === 'user' || m.role === 'rita')
       .slice(0, -1)
@@ -2576,6 +2593,12 @@ async function sendRitaMessage(text) {
       staffKey: staffKeyValue
     })
 
+    console.log('RITA SEND', {
+      message,
+      liveDataKeys: Object.keys(liveData || {}),
+      liveDataSample: JSON.stringify(liveData).slice(0, 300)
+    })
+
     const headers = {'Content-Type': 'application/json'}
     if (token) {
       headers.Authorization = 'Bearer ' + token
@@ -2587,7 +2610,7 @@ async function sendRitaMessage(text) {
       body: JSON.stringify({
         message,
         history,
-        liveData: ritaLiveData,
+        liveData,
         staffKey: staffKeyValue
       })
     })
