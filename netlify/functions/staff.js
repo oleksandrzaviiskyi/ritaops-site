@@ -31,8 +31,8 @@ exports.handler = async (event, context) => {
     const today = new Date().toISOString().split('T')[0]
 
     const staff = await client.fetch(`
-      *[_type == "lcbr-people-staff" && category == "staff"] {
-        "name": name,
+      *[_type == "people" && personCategory == "staff"] {
+        "name": fullName,
         "department": department->title,
         "position": position->title,
         email,
