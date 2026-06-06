@@ -90,16 +90,11 @@ function needsPropertyContext(text) {
   return OPERATIONAL_KEYWORDS.some((kw) => q.includes(kw))
 }
 
-function buildSystemPrompt(liveData, message) {
+function buildSystemPrompt(message) {
   if (!needsPropertyContext(message)) return BASE_SYSTEM_PROMPT
-  const data = liveData && Object.keys(liveData).length ? liveData : null
-  if (!data) return BASE_SYSTEM_PROMPT
   return `${BASE_SYSTEM_PROMPT}
 
-When you have property data available, answer operational questions directly and concisely. Do not ask clarifying questions — just give the relevant data from what you have.
-
-Live property data for this question:
-${JSON.stringify(data)}`
+When you have property data available, answer operational questions directly and concisely. Do not ask clarifying questions — just give the relevant data from what you have.`
 }
 
 function anthropicErrorReply(error) {
@@ -181,7 +176,10 @@ exports.handler = async (event, context) => {
     console.log('LIVE DATA', JSON.stringify(liveData).slice(0, 200))
     console.log('[ritaops] inject property context', needsPropertyContext(message))
 
-    const systemPrompt = buildSystemPrompt(liveData, message)
+    let systemPrompt = buildSystemPrompt(message)
+    if (liveData && Object.keys(liveData).length) {
+      systemPrompt += '\n\nCURRENT PROPERTY DATA:\n' + JSON.stringify(liveData, null, 2)
+    }
 
     const messages = history
       .filter((m) => m.role === 'user' || m.role === 'assistant' || m.role === 'rita')
@@ -193,6 +191,13 @@ exports.handler = async (event, context) => {
     messages.push({role: 'user', content: message})
 
     const anthropic = new Anthropic({apiKey})
+
+    console.log('CONTEXT SENT TO AI', JSON.stringify({
+      systemPromptLength: systemPrompt.length,
+      liveDataInPrompt: systemPrompt.includes('Liranzo') ||
+                        JSON.stringify(liveData).includes('Liranzo'),
+      liveDataKeys: Object.keys(liveData || {})
+    }))
 
     try {
       const response = await anthropic.messages.create({
