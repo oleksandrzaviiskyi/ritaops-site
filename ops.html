@@ -2368,9 +2368,23 @@ function ritaTasksForGroup(p) {
   return [...staticTasks, ...reminders]
 }
 
-function buildRitaLiveData(portals) {
+async function buildRitaLiveData(portals) {
   const now = new Date()
   const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  let staff = []
+  let shiftsToday = []
+  try {
+    const res = await staffFetch('/api/staff')
+    const json = await res.json()
+    if (res.ok) {
+      staff = json.staff || []
+      shiftsToday = json.shiftsToday || []
+    }
+  } catch (err) {
+    console.warn('[ritaops] staff fetch failed', err.message)
+  }
+  console.log('STAFF DATA', JSON.stringify(staff))
   const active = (portals || []).filter((p) => p.status !== 'cancelled')
   const inMonth = active.filter((p) => monthKey(p.checkIn) === mk)
   const upcoming = active
@@ -2424,7 +2438,9 @@ function buildRitaLiveData(portals) {
       : null,
     alerts,
     groups,
-    bookings: groups
+    bookings: groups,
+    staff,
+    shiftsToday
   }
 }
 
@@ -2538,14 +2554,14 @@ async function ensureRitaLiveData() {
   if (!cachedPortals.length) {
     await fetchRitaPortals()
   }
-  ritaLiveData = buildRitaLiveData(cachedPortals)
+  ritaLiveData = await buildRitaLiveData(cachedPortals)
   updateRitaChips(ritaLiveData)
   return ritaLiveData
 }
 
 async function loadRitaBriefing() {
   const portals = await fetchRitaPortals()
-  ritaLiveData = buildRitaLiveData(portals)
+  ritaLiveData = await buildRitaLiveData(portals)
   updateRitaChips(ritaLiveData)
   const html = buildRitaBriefingHtml(ritaLiveData)
   const messages = loadRitaConversation()
@@ -2573,7 +2589,7 @@ async function toggleRitaPanel() {
     if (messages.length) {
       renderRitaMessages(messages)
       if (!ritaLiveData && cachedPortals.length) {
-        ritaLiveData = buildRitaLiveData(cachedPortals)
+        ritaLiveData = await buildRitaLiveData(cachedPortals)
         updateRitaChips(ritaLiveData)
       }
     }
