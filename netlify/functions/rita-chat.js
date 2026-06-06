@@ -35,7 +35,7 @@ exports.handler = async (event, context) => {
       console.warn('[ritaops] DASHBOARD_SECRET not set — allowing request through (temporary bypass)')
       auth = {authorized: true, method: 'open'}
     } else {
-      auth = await resolveStaffAuth(event, parsedBody, context)
+      auth = resolveStaffAuth(event, parsedBody, context)
     }
 
     const anthropicKeyPresent = Boolean((process.env.ANTHROPIC_API_KEY || '').trim())

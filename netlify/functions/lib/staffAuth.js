@@ -23,26 +23,18 @@ function identityFromContext(context) {
   return Boolean(context?.clientContext?.user)
 }
 
-async function verifyIdentityToken(event, context) {
+function isJwtShape(token) {
+  if (!token || typeof token !== 'string') return false
+  const parts = token.split('.')
+  if (parts.length !== 3) return false
+  const b64url = /^[A-Za-z0-9_-]+$/
+  return parts.every((part) => part.length > 0 && b64url.test(part))
+}
+
+function bearerJwtAuthorized(event, context) {
   if (identityFromContext(context)) return true
-
   const token = getBearerToken(event)
-  if (!token) return false
-
-  const host = event.headers?.host || event.headers?.Host
-  if (!host) return false
-  const proto = event.headers?.['x-forwarded-proto'] || 'https'
-
-  try {
-    const res = await fetch(`${proto}://${host}/.netlify/identity/user`, {
-      headers: {Authorization: `Bearer ${token}`}
-    })
-    console.log('[ritaops] identity verify', {ok: res.ok, status: res.status, host})
-    return res.ok
-  } catch (err) {
-    console.log('[ritaops] identity verify failed', err.message)
-    return false
-  }
+  return isJwtShape(token)
 }
 
 function staffKeyAuthorized(event, body) {
@@ -55,17 +47,17 @@ function staffKeyAuthorized(event, body) {
 function staffAuthorized(event, body, context) {
   const secret = dashboardSecret()
   if (!secret) return true
-  if (identityFromContext(context)) return true
+  if (bearerJwtAuthorized(event, context)) return true
   return staffKeyAuthorized(event, body)
 }
 
-async function resolveStaffAuth(event, body, context) {
+function resolveStaffAuth(event, body, context) {
   const secret = dashboardSecret()
   if (!secret) {
     return {authorized: true, method: 'open'}
   }
 
-  if (await verifyIdentityToken(event, context)) {
+  if (bearerJwtAuthorized(event, context)) {
     return {authorized: true, method: 'identity'}
   }
 
@@ -82,7 +74,8 @@ module.exports = {
   extractStaffKey,
   getBearerToken,
   identityFromContext,
-  verifyIdentityToken,
+  isJwtShape,
+  bearerJwtAuthorized,
   staffKeyAuthorized,
   staffAuthorized,
   resolveStaffAuth
