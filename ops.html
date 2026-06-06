@@ -606,13 +606,12 @@ html.auth-pending .shell { visibility: hidden; }
 }
 .rita-panel {
   position: fixed;
-  right: 20px;
-  bottom: 68px;
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
   z-index: 1000;
   width: 480px;
-  height: 600px;
   max-width: calc(100vw - 2rem);
-  max-height: calc(100vh - 6rem);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -623,6 +622,7 @@ html.auth-pending .shell { visibility: hidden; }
 }
 .rita-panel.open { display: flex; }
 .rita-panel-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -645,7 +645,8 @@ html.auth-pending .shell { visibility: hidden; }
   letter-spacing: 0.04em;
 }
 .rita-messages {
-  max-height: 260px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 14px;
   display: flex;
@@ -695,11 +696,32 @@ html.auth-pending .shell { visibility: hidden; }
 .rita-data-row:last-child { border-bottom: none; }
 .rita-data-row strong { font-family: 'DM Mono', monospace; color: var(--text); }
 .rita-alert-row { color: var(--amber); }
+.rita-table-wrap { overflow-x: auto; margin: 8px 0; }
+.rita-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.rita-table th,
+.rita-table td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.rita-table th {
+  background: var(--surface2);
+  font-weight: 500;
+}
+.rita-panel-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
 .rita-input-row {
   display: flex;
   gap: 8px;
   padding: 12px 14px 14px;
-  border-top: 1px solid var(--border);
   background: var(--surface);
 }
 .rita-input {
@@ -728,7 +750,7 @@ html.auth-pending .shell { visibility: hidden; }
 .rita-typing {
   font-size: 11px;
   color: var(--text-3);
-  padding: 0 14px 8px;
+  padding: 8px 14px 0;
 }
 </style>
 </head>
@@ -956,10 +978,12 @@ if (window.netlifyIdentity) {
     <span class="rita-panel-live">live · Las Canas</span>
   </div>
   <div class="rita-messages" id="ritaMessages"></div>
-  <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
-  <div class="rita-input-row">
-    <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
-    <button type="button" class="rita-send" id="ritaSend">Send</button>
+  <div class="rita-panel-footer">
+    <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
+    <div class="rita-input-row">
+      <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
+      <button type="button" class="rita-send" id="ritaSend">Send</button>
+    </div>
   </div>
 </div>
 <button type="button" class="rita-fab" id="ritaFab" aria-expanded="false" aria-controls="ritaPanel">
@@ -2430,12 +2454,74 @@ function buildRitaBriefingHtml(data) {
     </div>`
 }
 
-function formatRitaContent(text) {
-  const raw = String(text || '').trim()
-  if (!raw) return '<p>—</p>'
-  if (raw.includes('<div class="rita-data-card">')) return raw
+function isRitaTableRow(line) {
+  return /^\|.+\|$/.test(String(line || '').trim())
+}
 
-  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
+function isRitaTableSeparator(line) {
+  return /^\|[\s:|-]+\|$/.test(String(line || '').trim())
+}
+
+function parseRitaTableRows(lines) {
+  return lines
+    .filter((line) => !isRitaTableSeparator(line))
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
+        .split('|')
+        .map((cell) => cell.trim())
+    )
+}
+
+function renderRitaMarkdownTable(lines) {
+  const rows = parseRitaTableRows(lines)
+  if (!rows.length) return ''
+  const [head, ...body] = rows
+  const headHtml = head.map((cell) => `<th>${escapeHtml(cell)}</th>`).join('')
+  const bodyHtml = body
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
+    .join('')
+  return `<div class="rita-table-wrap"><table class="rita-table"><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`
+}
+
+function splitRitaContentBlocks(raw) {
+  const blocks = []
+  const lines = String(raw || '').split('\n')
+  let textLines = []
+  let tableLines = []
+
+  function flushText() {
+    const text = textLines.join('\n').trim()
+    if (text) blocks.push({type: 'text', text})
+    textLines = []
+  }
+
+  function flushTable() {
+    if (tableLines.length) blocks.push({type: 'table', lines: [...tableLines]})
+    tableLines = []
+  }
+
+  for (const line of lines) {
+    if (isRitaTableRow(line)) {
+      flushText()
+      tableLines.push(line)
+    } else {
+      flushTable()
+      textLines.push(line)
+    }
+  }
+  flushTable()
+  flushText()
+  return blocks
+}
+
+function formatRitaPlainText(text) {
+  const lines = String(text || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
   let html = ''
   let cardLines = []
 
@@ -2467,6 +2553,22 @@ function formatRitaContent(text) {
     }
   }
   flushCard()
+  return html
+}
+
+function formatRitaContent(text) {
+  const raw = String(text || '').trim()
+  if (!raw) return '<p>—</p>'
+  if (raw.includes('<div class="rita-data-card">')) return raw
+
+  const html = splitRitaContentBlocks(raw)
+    .map((block) =>
+      block.type === 'table'
+        ? renderRitaMarkdownTable(block.lines)
+        : formatRitaPlainText(block.text)
+    )
+    .join('')
+
   return html || `<p>${escapeHtml(raw)}</p>`
 }
 

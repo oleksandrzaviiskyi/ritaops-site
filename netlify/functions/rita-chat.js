@@ -27,7 +27,11 @@ Tone: professional, direct, like an experienced hotel manager.
 
 IMPORTANT: Answer only what was asked. Do not volunteer information about unrelated topics at the end of your response.
 Do not suggest next steps unless the user asks for them.
-Do not mention pending groups, tasks, or alerts unless directly relevant to the question.`
+Do not mention pending groups, tasks, or alerts unless directly relevant to the question.
+
+Never use markdown tables. For lists of people or data, use plain text format like:
+Charina — Kitchen — Chef
+Suleimi — Restaurant — Coordinator`
 
 const OPERATIONAL_KEYWORDS = [
   'заезд',
