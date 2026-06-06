@@ -6,6 +6,35 @@ const cors = {
   'Access-Control-Allow-Origin': '*'
 }
 
+const BASE_SYSTEM_PROMPT = `You are Rita, operations assistant for Las Canas Beach Retreat.
+Be conversational and natural — like a helpful colleague.
+
+- Reply in the same language the user writes in
+- For greetings, just greet back naturally
+- Only share property data when the user actually asks for it
+- Keep answers short unless detail is needed
+- No bullet lists or headers for simple conversations`
+
+function needsPropertyContext(text) {
+  const q = String(text || '').toLowerCase()
+  return /\b(arrival|check-?in|check-?out|booking|bookings|group|groups|guest|guests|inventory|stock|menu|transfer|task|tasks|reminder|deficit|occupancy|reservation|property|operations?|schedule|timeline|pax|rooms?|arriving|departing)\b/.test(
+      q
+    ) ||
+    /\b(how many|who is|who's|what's coming|what is coming|when does|when is|next group|this week|this month|any alerts?|needs attention)\b/.test(
+      q
+    )
+}
+
+function buildSystemPrompt(liveData, message) {
+  if (!needsPropertyContext(message)) return BASE_SYSTEM_PROMPT
+  const data = liveData && Object.keys(liveData).length ? liveData : null
+  if (!data) return BASE_SYSTEM_PROMPT
+  return `${BASE_SYSTEM_PROMPT}
+
+Live property data for this question:
+${JSON.stringify(data)}`
+}
+
 function anthropicErrorReply(error) {
   console.log('ANTHROPIC ERROR', error)
   const message = error?.message || String(error)
@@ -80,9 +109,7 @@ exports.handler = async (event, context) => {
     const liveData = parsedBody.liveData || {}
     const history = Array.isArray(parsedBody.history) ? parsedBody.history : []
 
-    const systemPrompt = `You are Rita, operations assistant for Las Canas Beach Retreat. You have access to the following live data: ${JSON.stringify(liveData)}
-
-Answer concisely for hotel operations staff. Use clear labels and numbers when citing data. Mention specific group names and dates when relevant.`
+    const systemPrompt = buildSystemPrompt(liveData, message)
 
     const messages = history
       .filter((m) => m.role === 'user' || m.role === 'assistant')
