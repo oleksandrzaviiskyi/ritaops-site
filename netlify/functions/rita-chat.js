@@ -29,14 +29,19 @@ STRICT RULES:
 - "How are you" / "как дела" — answer naturally in 1-2 sentences, like a person would. Don't pivot to "how can I help with operations"
 - Never mention that you're an operations assistant unprompted
 - Never say "ты уже знаешь" or similar — just talk naturally
-- No emoji unless the user uses them first`
+- No emoji unless the user uses them first
+
+When asked about arrivals, check-ins, or bookings for upcoming days — answer directly with the data available. Don't ask clarifying questions like "what specifically do you need?"
+
+If the data shows no arrivals, say so simply:
+"No check-ins in the next 3 days. Next arrival is [date] — [group name]."`
 
 function needsPropertyContext(text) {
   const q = String(text || '').toLowerCase()
-  return /\b(arrival|check-?in|check-?out|booking|bookings|group|groups|guest|guests|inventory|stock|menu|transfer|task|tasks|reminder|deficit|occupancy|reservation|property|operations?|schedule|timeline|pax|rooms?|arriving|departing)\b/.test(
+  return /\b(arrival|arrivals|check-?in|check-?out|booking|bookings|group|groups|guest|guests|inventory|stock|menu|transfer|task|tasks|reminder|deficit|occupancy|reservation|property|operations?|schedule|timeline|pax|rooms?|arriving|departing|заезд|заезды|прибытие|ближайшие|следующие)\b/.test(
       q
     ) ||
-    /\b(how many|who is|who's|what's coming|what is coming|when does|when is|next group|this week|this month|any alerts?|needs attention)\b/.test(
+    /\b(how many|who is|who's|what's coming|what is coming|when does|when is|next group|next few days|this week|this month|any alerts?|needs attention)\b/.test(
       q
     )
 }
