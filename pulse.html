@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse · RitaOps</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a1a; display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar { width: 190px; flex-shrink: 0; background: #fff; border-right: 0.5px solid #e5e3de; padding: 1.5rem 0; display: flex; flex-direction: column; }
+    .sidebar-brand { padding: 0 1.25rem 1.5rem; }
+    .sidebar-brand .name { font-size: 13px; font-weight: 600; letter-spacing: .02em; color: #1a1a1a; }
+    .sidebar-brand .sub { font-size: 11px; color: #999; margin-top: 1px; }
+    .sidebar-section { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #bbb; padding: 0 1.25rem; margin: 1rem 0 .4rem; }
+    .sidebar-item { display: flex; align-items: center; gap: 8px; padding: 6px 1.25rem; font-size: 13px; color: #555; text-decoration: none; cursor: pointer; }
+    .sidebar-item:hover { background: #f5f4f0; color: #1a1a1a; }
+    .sidebar-item.active { color: #1a1a1a; font-weight: 500; }
+    .sidebar-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .sidebar-dot.green { background: #5a9e3a; }
+    .sidebar-dot.pulse-dot { background: #5DCAA5; animation: pulsedot 2s ease-in-out infinite; }
+    @keyframes pulsedot { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    .sidebar-footer { margin-top: auto; padding: 1rem 1.25rem; border-top: 0.5px solid #e5e3de; }
+    .sidebar-tag { display: inline-block; font-size: 11px; background: #f0ede8; color: #888; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+    .sidebar-logout { font-size: 12px; color: #999; cursor: pointer; }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { background: #fff; border-bottom: 0.5px solid #e5e3de; padding: .875rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    .topbar-left .title { font-size: 22px; font-weight: 400; color: #1a1a1a; }
+    .topbar-left .title strong { font-weight: 600; }
+    .topbar-left .meta { font-size: 12px; color: #999; margin-top: 2px; }
+    .topbar-right { display: flex; gap: 10px; align-items: center; }
+    .btn { font-size: 13px; padding: 6px 16px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #333; cursor: pointer; font-family: inherit; }
+    .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 2rem; }
+
+    /* Pulse header */
+    .pulse-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
+    .pulse-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #999; margin-bottom: 4px; }
+    .pulse-title { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+    .pulse-sub { font-size: 13px; color: #888; margin-top: 3px; }
+    .pulse-score { text-align: right; }
+    .pulse-score .big { font-size: 40px; font-weight: 500; line-height: 1; color: #4a8a2a; }
+    .pulse-score .big span { font-size: 18px; font-weight: 400; color: #bbb; }
+    .pulse-score .status { font-size: 12px; color: #4a8a2a; display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 3px; }
+
+    /* Wave field */
+    .wave-field { background: #f7f6f1; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; }
+    canvas#pw { display: block; width: 100%; height: 160px; }
+
+    /* Two col */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+    .half-card { border-radius: 12px; padding: 1.25rem; }
+    .half-card.guests { background: #E6F1FB; }
+    .half-card.staff  { background: #EAF3DE; }
+    .hc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .hc-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; }
+    .hc-label.g { color: #185FA5; } .hc-label.s { color: #3B6D11; }
+    .hc-score { font-size: 18px; font-weight: 500; }
+    .hc-score.g { color: #185FA5; } .hc-score.s { color: #3B6D11; }
+    .hc-bar { height: 4px; border-radius: 2px; margin-bottom: 12px; }
+    .hc-bar.g { background: #378ADD; } .hc-bar.s { background: #639922; }
+    .factor { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-top: 0.5px solid rgba(0,0,0,.07); gap: 8px; }
+    .factor-left { display: flex; align-items: flex-start; gap: 6px; }
+    .factor-icon { font-size: 13px; margin-top: 1px; flex-shrink: 0; }
+    .factor-name { font-size: 12px; color: #1a1a1a; line-height: 1.3; }
+    .factor-owner { font-size: 11px; color: #aaa; margin-top: 1px; }
+    .factor-pts { font-size: 12px; font-weight: 500; flex-shrink: 0; }
+
+    /* Section label */
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: #888; margin-bottom: 10px; }
+
+    /* Staff grid */
+    .staff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .staff-card { background: #fff; border: 0.5px solid #e5e3de; border-radius: 8px; padding: .75rem; }
+    .staff-dept { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #aaa; margin-bottom: 4px; }
+    .staff-count { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .staff-count span { font-size: 12px; font-weight: 400; color: #bbb; }
+    .staff-status { font-size: 11px; color: #888; }
+    .staff-bar { height: 3px; border-radius: 2px; margin-top: 6px; }
+
+    /* Timeline */
+    .timeline-card { background: #fff; border: 0.5px solid #e5e3de; border-radius: 12px; padding: 1.25rem; }
+    .tl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .tl-title { font-size: 13px; font-weight: 500; }
+    .tl-now-label { font-size: 11px; color: #aaa; }
+    .tl-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .tl-time { font-size: 12px; color: #888; width: 42px; flex-shrink: 0; padding-top: 2px; }
+    .tl-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .tl-vline { width: 1px; background: #e5e3de; flex: 1; min-height: 28px; margin-top: 2px; }
+    .tl-content { flex: 1; }
+    .tl-event { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 2px; }
+    .tl-sub { font-size: 12px; color: #888; }
+    .tl-badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; margin-left: 6px; }
+    .bdg { background: #EAF3DE; color: #3B6D11; }
+    .bda { background: #FAEEDA; color: #854F0B; }
+    .bdb { background: #E6F1FB; color: #185FA5; }
+    .now-pill { display: inline-flex; align-items: center; font-size: 11px; background: #f5f4f0; color: #888; padding: 2px 10px; border-radius: 99px; border: 0.5px solid #e0ddd8; margin: 2px 0 12px 54px; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="name">RITAOPS</div>
+    <div class="sub">Operations platform</div>
+  </div>
+
+  <a class="sidebar-item active" href="pulse.html">
+    <span class="sidebar-dot pulse-dot"></span> Pulse
+  </a>
+
+  <div class="sidebar-section">Guests</div>
+  <a class="sidebar-item" href="ops.html"><span class="sidebar-dot green"></span> Arrivals</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Transfers</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Kitchen · Restaurant · Bar</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Activities</a>
+
+  <div class="sidebar-section">Staff</div>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Inventory & Purchases</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Housekeeping</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Maintenance</a>
+  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Improvements</a>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-tag">Las Canas Beach</div>
+    <div class="sidebar-logout">Log out</div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="title">Operations <strong>center</strong></div>
+      <div class="meta">Sat 6 Jun 2026 · Las Canas Beach Retreat</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="window.location='pulse.html'">Pulse</button>
+      <button class="btn" onclick="window.location='ops.html'">Group Portal</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="pulse-header">
+      <div>
+        <div class="pulse-eyebrow">⬤ Pulse · Las Canas Beach Retreat</div>
+        <div class="pulse-title">Today, June 6 2026</div>
+        <div class="pulse-sub">On property: 0 guests · next arrival in 27 days</div>
+      </div>
+      <div class="pulse-score">
+        <div class="big">178<span>/200</span></div>
+        <div class="status">✓ All clear</div>
+      </div>
+    </div>
+
+    <div class="wave-field">
+      <canvas id="pw" height="160"></canvas>
+    </div>
+
+    <div class="two-col">
+      <div class="half-card guests">
+        <div class="hc-head"><span class="hc-label g">Guests</span><span class="hc-score g">88/100</span></div>
+        <div class="hc-bar g" style="width:88%;"></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Guests on property</div><div class="factor-owner">0 of 46 checked in</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Next arrival confirmed</div><div class="factor-owner">Liranzo Wendy · July 3</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Transfers confirmed</div><div class="factor-owner">Drivers · Coordinator</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon" style="color:#BA7517;">△</span><div><div class="factor-name">Menu not confirmed</div><div class="factor-owner">Kitchen · Head chef</div></div></div><span class="factor-pts" style="color:#BA7517;">13</span></div>
+      </div>
+      <div class="half-card staff">
+        <div class="hc-head"><span class="hc-label s">Staff</span><span class="hc-score s">90/100</span></div>
+        <div class="hc-bar s" style="width:90%;"></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Team on shift</div><div class="factor-owner">11 of 15 today</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Daily tasks completed</div><div class="factor-owner">8 of 9 closed</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon">✓</span><div><div class="factor-name">Inventory checked</div><div class="factor-owner">Purchasing · Manager</div></div></div><span class="factor-pts" style="color:#4a8a2a;">25</span></div>
+        <div class="factor"><div class="factor-left"><span class="factor-icon" style="color:#BA7517;">△</span><div><div class="factor-name">Purchase order pending</div><div class="factor-owner">Purchasing · Manager</div></div></div><span class="factor-pts" style="color:#BA7517;">15</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">Staff today</div>
+    <div class="staff-grid">
+      <div class="staff-card"><div class="staff-dept">Kitchen</div><div class="staff-count">3<span> / 3</span></div><div class="staff-status">all on shift</div><div class="staff-bar" style="background:#639922;width:100%;"></div></div>
+      <div class="staff-card"><div class="staff-dept">Housekeeping</div><div class="staff-count">2<span> / 3</span></div><div class="staff-status">1 day off</div><div class="staff-bar" style="background:#BA7517;width:66%;"></div></div>
+      <div class="staff-card"><div class="staff-dept">Reception</div><div class="staff-count">2<span> / 2</span></div><div class="staff-status">all on shift</div><div class="staff-bar" style="background:#639922;width:100%;"></div></div>
+      <div class="staff-card"><div class="staff-dept">Bar</div><div class="staff-count">2<span> / 2</span></div><div class="staff-status">all on shift</div><div class="staff-bar" style="background:#639922;width:100%;"></div></div>
+      <div class="staff-card"><div class="staff-dept">Drivers</div><div class="staff-count">2<span> / 3</span></div><div class="staff-status">1 day off</div><div class="staff-bar" style="background:#BA7517;width:66%;"></div></div>
+      <div class="staff-card"><div class="staff-dept">Purchasing</div><div class="staff-count">1<span> / 1</span></div><div class="staff-status">on shift</div><div class="staff-bar" style="background:#639922;width:100%;"></div></div>
+    </div>
+
+    <div class="section-label">Day timeline</div>
+    <div class="timeline-card">
+      <div class="tl-head"><span class="tl-title">June 6, 2026</span><span class="tl-now-label">Now 12:05</span></div>
+      <div class="tl-row"><span class="tl-time">08:00</span><div class="tl-line"><div class="tl-dot" style="background:#639922;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Shift start — kitchen, reception, bar <span class="tl-badge bdg">✓ done</span></div><div class="tl-sub">11 staff members on duty</div></div></div>
+      <div class="tl-row"><span class="tl-time">09:30</span><div class="tl-line"><div class="tl-dot" style="background:#639922;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Inventory check <span class="tl-badge bdg">✓ done</span></div><div class="tl-sub">Purchasing · no deficits found</div></div></div>
+      <div class="tl-row"><span class="tl-time">13:00</span><div class="tl-line"><div class="tl-dot" style="background:#378ADD;border:2px solid #185FA5;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Lunch · restaurant <span class="tl-badge bdb">now</span></div><div class="tl-sub">Individual guests · 0 reservations today</div></div></div>
+      <div class="now-pill">▸ Now 12:05</div>
+      <div class="tl-row"><span class="tl-time">15:00</span><div class="tl-line"><div class="tl-dot" style="background:#ccc;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Room cleaning · scheduled</div><div class="tl-sub">Housekeeping · 2 of 3 on shift</div></div></div>
+      <div class="tl-row"><span class="tl-time">17:00</span><div class="tl-line"><div class="tl-dot" style="background:#BA7517;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Purchase order deadline <span class="tl-badge bda">△ pending</span></div><div class="tl-sub">Purchasing · must be placed before end of day</div></div></div>
+      <div class="tl-row"><span class="tl-time">19:00</span><div class="tl-line"><div class="tl-dot" style="background:#ccc;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Dinner · restaurant</div><div class="tl-sub">Open to outside guests · no reservations received</div></div></div>
+      <div class="tl-row"><span class="tl-time">22:00</span><div class="tl-line"><div class="tl-dot" style="background:#ccc;"></div></div><div class="tl-content"><div class="tl-event">End of shift</div><div class="tl-sub">Bar and reception close</div></div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('pw');
+const ctx = canvas.getContext('2d');
+
+// Rita calculates LOAD from live data
+// guests on property / max capacity * 0.6 + staff on shift / total staff * 0.4
+const guestsOnProperty = 0;
+const staffOnShift = 11;
+const LOAD = Math.min(1, (guestsOnProperty / 50) * 0.6 + (staffOnShift / 15) * 0.4);
+
+const WD = [
+  {color:'#5DCAA5', phaseOff:0,   freqMult:1.0},
+  {color:'#E9A23B', phaseOff:1.3, freqMult:1.3},
+  {color:'#AFA9EC', phaseOff:2.5, freqMult:.85},
+  {color:'#85B7EB', phaseOff:3.8, freqMult:1.1},
+  {color:'#F0997B', phaseOff:0.7, freqMult:.95},
+  {color:'#97C459', phaseOff:4.5, freqMult:1.2},
+];
+
+let t = 0;
+
+function resize() {
+  canvas.width  = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 160 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function draw() {
+  const W = canvas.offsetWidth, H = 160, mid = H / 2;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f7f6f1';
+  ctx.fillRect(0, 0, W, H);
+
+  const vis = Math.max(1, Math.round(1 + LOAD * (WD.length - 1)));
+  const breathSpeed = 0.2 + Math.pow(LOAD, 1.4) * 4.5;
+  const maxAmp = 8 + LOAD * 62;
+  const spatialFreq = 0.5 + LOAD * 1.8;
+
+  for (let wi = 0; wi < vis; wi++) {
+    const w = WD[wi];
+    const breathe = (Math.sin(t * breathSpeed + w.phaseOff) + 1) / 2;
+    const amp = maxAmp * (0.12 + 0.88 * breathe);
+    const alpha = (0.12 + LOAD * 0.18) * (0.4 + 0.6 * breathe);
+    const freq = spatialFreq * w.freqMult;
+    ctx.save();
+    ctx.globalAlpha = alpha * 2.6;
+    ctx.fillStyle = w.color;
+    ctx.beginPath(); ctx.moveTo(0, mid);
+    for (let x = 0; x <= W; x += 2) {
+      const nx = x / W;
+      const env = Math.sin(nx * Math.PI);
+      ctx.lineTo(x, mid - Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env);
+    }
+    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, mid);
+    for (let x = 0; x <= W; x += 2) {
+      const nx = x / W;
+      const env = Math.sin(nx * Math.PI);
+      ctx.lineTo(x, mid + Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env);
+    }
+    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.beginPath();
+  ctx.strokeStyle = `rgba(0,0,0,${0.06 - LOAD * 0.05})`;
+  ctx.lineWidth = 1;
+  ctx.moveTo(0, mid); ctx.lineTo(W, mid);
+  ctx.stroke();
+
+  t += 0.014;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
