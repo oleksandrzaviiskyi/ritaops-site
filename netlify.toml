@@ -95,6 +95,7 @@
   from = "/api/rita-chat"
   to = "/.netlify/functions/rita-chat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/api/request-edit"

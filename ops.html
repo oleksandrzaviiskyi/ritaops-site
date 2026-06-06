@@ -2566,31 +2566,30 @@ async function sendRitaMessage(text) {
       .filter((m) => m.role === 'user' || m.role === 'rita')
       .slice(0, -1)
       .map((m) => ({role: m.role, content: m.content}))
-    const payload = {
-      message,
-      history,
-      liveData: ritaLiveData
-    }
     const user = netlifyIdentity.currentUser()
     const token = user?.token?.access_token || ''
-    const key = staffKey() || sessionStorage.getItem('staffKey') || ''
+    const staffKeyValue = sessionStorage.getItem('staffKey') || 'rita2026'
 
     console.log('[ritaops] rita-chat request', {
       currentUser: user?.email || null,
       tokenPresent: Boolean(token),
-      staffKey: key || '(none)'
+      staffKey: staffKeyValue
     })
 
-    const url = '/api/rita-chat?key=' + encodeURIComponent(key)
     const headers = {'Content-Type': 'application/json'}
     if (token) {
       headers.Authorization = 'Bearer ' + token
     }
 
-    const res = await fetch(url, {
+    const res = await fetch('/api/rita-chat', {
       method: 'POST',
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        message,
+        history,
+        liveData: ritaLiveData,
+        staffKey: staffKeyValue
+      })
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || res.statusText)
