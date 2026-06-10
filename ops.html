@@ -2349,9 +2349,34 @@ function ritaTasksForGroup(p) {
   return [...staticTasks, ...reminders]
 }
 
+const ALEX_CONTEXT_KEY = 'alexContext'
+const ALEX_CONTEXT_TTL_MS = 24 * 60 * 60 * 1000
+
+async function fetchAlexContext() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(ALEX_CONTEXT_KEY) || 'null')
+    if (cached && cached.fetchedAt && Date.now() - cached.fetchedAt < ALEX_CONTEXT_TTL_MS) {
+      return cached.data
+    }
+  } catch {}
+
+  try {
+    const res = await staffFetch('/api/alex-context')
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+    sessionStorage.setItem(ALEX_CONTEXT_KEY, JSON.stringify({fetchedAt: Date.now(), data: json}))
+    return json
+  } catch (err) {
+    console.warn('[ritaops] alex-context fetch failed', err.message)
+    return null
+  }
+}
+
 async function buildRitaLiveData(portals) {
   const now = new Date()
   const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const alexContext = await fetchAlexContext()
 
   let sanityAll = {}
   try {
@@ -2402,6 +2427,7 @@ async function buildRitaLiveData(portals) {
 
   return {
     ...sanityAll,
+    alexContext,
     property: 'Las Canas Beach Retreat',
     date: now.toISOString().slice(0, 10),
     arrivalsThisMonth: inMonth.length,
