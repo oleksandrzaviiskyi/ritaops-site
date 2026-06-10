@@ -31,7 +31,10 @@ Do not mention pending groups, tasks, or alerts unless directly relevant to the 
 
 Never use markdown tables. For lists of people or data, use plain text format like:
 Charina — Kitchen — Chef
-Suleimi — Restaurant — Coordinator`
+Suleimi — Restaurant — Coordinator
+
+Never add suggestions, next steps, or relate the answer to upcoming groups or bookings unless explicitly asked.
+Answer only what was asked. Nothing more.`
 
 const OPERATIONAL_KEYWORDS = [
   'заезд',
