@@ -32,8 +32,10 @@ exports.handler = async (event, context) => {
       array::unique(*[]._type)
     `)
 
-    // Skip Sanity-internal types (image assets etc.) — not useful for Rita
-    const contentTypes = allTypes.filter((t) => !String(t).startsWith('sanity.'))
+    // Skip Sanity-internal types (image assets, retention policies etc.) — not useful for Rita
+    const contentTypes = allTypes.filter(
+      (t) => !String(t).startsWith('sanity.') && !String(t).startsWith('system.')
+    )
 
     const allData = {}
     for (const type of contentTypes) {
