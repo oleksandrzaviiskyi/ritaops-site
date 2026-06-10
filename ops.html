@@ -2353,19 +2353,16 @@ async function buildRitaLiveData(portals) {
   const now = new Date()
   const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  let staff = []
-  let shiftsToday = []
+  let sanityAll = {}
   try {
-    const res = await staffFetch('/api/staff')
+    const res = await staffFetch('/api/sanity-all')
     const json = await res.json()
-    if (res.ok) {
-      staff = json.staff || []
-      shiftsToday = json.shiftsToday || []
-    }
+    if (res.ok) sanityAll = json
   } catch (err) {
-    console.warn('[ritaops] staff fetch failed', err.message)
+    console.warn('[ritaops] sanity-all fetch failed', err.message)
   }
-  console.log('STAFF DATA', JSON.stringify(staff))
+  console.log('SANITY ALL types', Object.keys(sanityAll))
+  console.log('SANITY ALL sample', JSON.stringify(sanityAll).slice(0, 500))
   const active = (portals || []).filter((p) => p.status !== 'cancelled')
   const inMonth = active.filter((p) => monthKey(p.checkIn) === mk)
   const upcoming = active
@@ -2404,6 +2401,7 @@ async function buildRitaLiveData(portals) {
   console.log('GROUP DATA', JSON.stringify(groups).slice(0, 500))
 
   return {
+    ...sanityAll,
     property: 'Las Canas Beach Retreat',
     date: now.toISOString().slice(0, 10),
     arrivalsThisMonth: inMonth.length,
@@ -2419,9 +2417,7 @@ async function buildRitaLiveData(portals) {
       : null,
     alerts,
     groups,
-    bookings: groups,
-    staff,
-    shiftsToday
+    bookings: groups
   }
 }
 

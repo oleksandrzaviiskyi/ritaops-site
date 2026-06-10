@@ -99,6 +99,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/sanity-all"
+  to = "/.netlify/functions/sanity-all"
+  status = 200
+
+[[redirects]]
   from = "/api/rita-chat"
   to = "/.netlify/functions/rita-chat"
   status = 200
