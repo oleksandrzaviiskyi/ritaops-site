@@ -121,6 +121,18 @@
   force = true
 
 [[redirects]]
+  from = "/api/rita-questions"
+  to = "/.netlify/functions/rita-questions"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/rita-answer"
+  to = "/.netlify/functions/rita-answer"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200

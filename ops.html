@@ -91,6 +91,20 @@ body {
 .nav-dot.green { background: var(--green-mid); }
 .nav-dot.amber { background: var(--amber-mid); }
 .nav-dot.red { background: #E24B4A; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 9px;
+  text-align: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
 .nav-section {
   font-size: 10px; font-weight: 500; letter-spacing: 0.1em;
   color: var(--text-3); padding: 16px 20px 6px;
@@ -713,6 +727,71 @@ html.auth-pending .shell { visibility: hidden; }
   background: var(--surface2);
   font-weight: 500;
 }
+
+/* Rita questions queue */
+.rita-q-list { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.rita-q-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+.rita-q-context {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.rita-q-observation {
+  border-left: 3px solid var(--green-mid);
+  padding: 10px 14px;
+  background: var(--green-bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+.rita-q-observation-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 4px;
+}
+.rita-q-question {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+.rita-q-answer-row { display: flex; flex-direction: column; gap: 10px; }
+.rita-q-textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+.rita-q-textarea:focus {
+  outline: none;
+  border-color: var(--border-strong);
+}
+.rita-q-empty,
+.rita-q-loading {
+  color: var(--text-3);
+  font-size: 13px;
+  padding: 24px 0;
+}
+
 .rita-panel-footer {
   flex-shrink: 0;
   border-top: 1px solid var(--border);
@@ -810,7 +889,7 @@ if (window.netlifyIdentity) {
   </a>
 
   <div class="nav-section">Guests</div>
-  <a class="nav-item active" href="/ops">
+  <a class="nav-item active" href="#" id="navArrivals" data-view="ops">
     <span class="nav-dot green"></span> Arrivals
   </a>
   <a class="nav-item" href="#">
@@ -837,6 +916,12 @@ if (window.netlifyIdentity) {
     <span class="nav-dot"></span> Improvements
   </a>
 
+  <div class="nav-section">Rita</div>
+  <a class="nav-item" href="#" id="navRitaQuestions" data-view="rita-questions">
+    <span class="nav-dot red"></span> Вопросы Rita
+    <span class="nav-badge" id="ritaQuestionsBadge" hidden>0</span>
+  </a>
+
   <a class="sidebar-messages-btn" href="/messages">💬 Messages &amp; Contacts</a>
 
   <div class="sidebar-footer">
@@ -848,6 +933,8 @@ if (window.netlifyIdentity) {
 
 <!-- MAIN -->
 <main class="main">
+
+  <div id="ops-main-view">
 
   <!-- Header -->
   <div class="page-header">
@@ -962,6 +1049,20 @@ if (window.netlifyIdentity) {
     <button class="btn" style="font-size:12px;padding:6px 12px;">+ Task</button>
   </div>
   <div class="tasks-wrap" id="tasks-wrap"></div>
+  </div>
+
+  </div><!-- /ops-main-view -->
+
+  <div id="rita-questions-section" style="display:none">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Вопросы <span>Rita</span></div>
+        <div class="page-date">Вопросы, на которые Rita ждёт ответа менеджера</div>
+      </div>
+    </div>
+    <div class="rita-q-list" id="ritaQuestionsList">
+      <p class="rita-q-loading">Загрузка…</p>
+    </div>
   </div>
 
 </main>
@@ -2311,6 +2412,165 @@ async function staffFetch(url, options = {}) {
   }
   return fetch(url, opts)
 }
+
+/* Rita questions queue */
+let ritaQuestionsCount = 0
+
+function updateRitaQuestionsBadge() {
+  const badge = document.getElementById('ritaQuestionsBadge')
+  if (!badge) return
+  if (ritaQuestionsCount > 0) {
+    badge.textContent = String(ritaQuestionsCount)
+    badge.hidden = false
+  } else {
+    badge.hidden = true
+  }
+}
+
+function ritaQuestionCardHtml(q) {
+  const ev = (q.events || []).find(Boolean) || {}
+  const eventDesc = ev.description || q.context || '—'
+  const eventType = ev.eventType || ''
+  const eventDate = ev.timestamp ? fmtShortDate(String(ev.timestamp).slice(0, 10)) : ''
+  const meta = [eventType, eventDate].filter(Boolean).join(' · ')
+  const observation = ev.ritaNotes || ''
+
+  return `
+    <div class="rita-q-card" data-question-id="${escapeHtml(q._id)}">
+      <div class="rita-q-context">
+        ${meta ? `<div>${escapeHtml(meta)}</div>` : ''}
+        <div>${escapeHtml(eventDesc)}</div>
+      </div>
+      ${
+        observation
+          ? `<div class="rita-q-observation">
+              <div class="rita-q-observation-label">Rita</div>
+              ${escapeHtml(observation)}
+            </div>`
+          : ''
+      }
+      <div class="rita-q-question">${escapeHtml(q.question)}</div>
+      <div class="rita-q-answer-row">
+        <textarea class="rita-q-textarea" placeholder="Ваш ответ…"></textarea>
+        <button type="button" class="btn btn-primary rita-q-submit">Ответить</button>
+      </div>
+    </div>
+  `
+}
+
+function bindRitaQuestionCards() {
+  document.querySelectorAll('.rita-q-card').forEach((card) => {
+    const btn = card.querySelector('.rita-q-submit')
+    const textarea = card.querySelector('.rita-q-textarea')
+    if (!btn || btn.dataset.bound) return
+    btn.dataset.bound = '1'
+    btn.addEventListener('click', () => {
+      const answer = textarea?.value?.trim()
+      if (!answer) {
+        alert('Введите ответ')
+        return
+      }
+      submitRitaAnswer(card.dataset.questionId, answer, card)
+    })
+  })
+}
+
+function renderRitaQuestions(questions) {
+  const list = document.getElementById('ritaQuestionsList')
+  if (!list) return
+  if (!questions.length) {
+    list.innerHTML = '<p class="rita-q-empty">Пока нет открытых вопросов</p>'
+    return
+  }
+  list.innerHTML = questions.map((q) => ritaQuestionCardHtml(q)).join('')
+  bindRitaQuestionCards()
+}
+
+async function loadRitaQuestionsSection() {
+  const list = document.getElementById('ritaQuestionsList')
+  if (!list) return
+  list.innerHTML = '<p class="rita-q-loading">Загрузка…</p>'
+  try {
+    const res = await staffFetch('/api/rita-questions')
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+    ritaQuestionsCount = json.count || 0
+    updateRitaQuestionsBadge()
+    renderRitaQuestions(json.questions || [])
+  } catch (err) {
+    list.innerHTML = `<p style="color:var(--red);">${escapeHtml(err.message)}</p>`
+  }
+}
+
+async function loadRitaQuestionsCount() {
+  try {
+    const res = await staffFetch('/api/rita-questions')
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+    ritaQuestionsCount = json.count || 0
+    updateRitaQuestionsBadge()
+  } catch (err) {
+    console.warn('[ritaops] rita-questions count failed', err.message)
+  }
+}
+
+async function submitRitaAnswer(questionId, answer, cardEl) {
+  const btn = cardEl.querySelector('.rita-q-submit')
+  if (btn) btn.disabled = true
+  try {
+    const res = await staffFetch('/api/rita-answer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({questionId, answer})
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+
+    cardEl.remove()
+    ritaQuestionsCount = Math.max(0, ritaQuestionsCount - 1)
+    updateRitaQuestionsBadge()
+
+    const list = document.getElementById('ritaQuestionsList')
+    if (list && !list.querySelector('.rita-q-card')) {
+      list.innerHTML = '<p class="rita-q-empty">Пока нет открытых вопросов</p>'
+    }
+  } catch (err) {
+    alert(err.message)
+    if (btn) btn.disabled = false
+  }
+}
+
+function switchDashboardView(view) {
+  const opsView = document.getElementById('ops-main-view')
+  const ritaView = document.getElementById('rita-questions-section')
+  const navArrivals = document.getElementById('navArrivals')
+  const navRita = document.getElementById('navRitaQuestions')
+
+  if (view === 'rita-questions') {
+    if (opsView) opsView.style.display = 'none'
+    if (ritaView) ritaView.style.display = 'block'
+    navArrivals?.classList.remove('active')
+    navRita?.classList.add('active')
+    loadRitaQuestionsSection()
+  } else {
+    if (opsView) opsView.style.display = 'block'
+    if (ritaView) ritaView.style.display = 'none'
+    navRita?.classList.remove('active')
+    navArrivals?.classList.add('active')
+  }
+}
+
+document.getElementById('navRitaQuestions')?.addEventListener('click', (e) => {
+  e.preventDefault()
+  switchDashboardView('rita-questions')
+})
+
+document.getElementById('navArrivals')?.addEventListener('click', (e) => {
+  e.preventDefault()
+  switchDashboardView('ops')
+})
+
+loadRitaQuestionsCount()
 
 function loadRitaConversation() {
   try {
