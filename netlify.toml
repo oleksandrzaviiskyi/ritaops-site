@@ -133,6 +133,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/rita-webhook"
+  to = "/.netlify/functions/rita-webhook"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200
