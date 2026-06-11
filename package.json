@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@sanity/client": "^6.0.0"
+    "@sanity/client": "^6.0.0",
+    "chromadb": "^3.4.3"
   }
 }

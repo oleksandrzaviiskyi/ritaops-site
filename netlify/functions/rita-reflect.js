@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk')
 const {createClient} = require('@sanity/client')
+const {CloudClient} = require('chromadb')
 const {resolveStaffAuth} = require('./lib/staffAuth')
 
 const cors = {
@@ -50,6 +51,60 @@ function parseReflection(text) {
 
 function randomKey() {
   return Math.random().toString(36).slice(2, 12)
+}
+
+async function embedReflectedEvent(event, observation) {
+  try {
+    const textToEmbed = `${event.description || ''}\n\nRita's observation: ${observation || ''}`
+
+    const voyageKey = (process.env.VOYAGE_API_KEY || '').trim()
+    if (!voyageKey) {
+      console.log('EMBED SKIP', event._id, 'VOYAGE_API_KEY not configured')
+      return
+    }
+
+    const vRes = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${voyageKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        input: [textToEmbed],
+        model: 'voyage-3.5',
+        input_type: 'document'
+      })
+    })
+    const vData = await vRes.json()
+    if (!vRes.ok) {
+      throw new Error(vData.detail || vData.error?.message || vRes.statusText)
+    }
+    const embedding = vData.data[0].embedding
+
+    const chroma = new CloudClient({
+      apiKey: process.env.CHROMA_API_KEY,
+      tenant: process.env.CHROMA_TENANT,
+      database: process.env.CHROMA_DATABASE
+    })
+    const collection = await chroma.getOrCreateCollection({
+      name: 'las_canas_events'
+    })
+    await collection.upsert({
+      ids: [event._id],
+      embeddings: [embedding],
+      documents: [textToEmbed],
+      metadatas: [
+        {
+          sanityId: event._id,
+          eventType: event.eventType || '',
+          timestamp: event.timestamp || '',
+          source: event.source || ''
+        }
+      ]
+    })
+  } catch (err) {
+    console.log('EMBED ERROR', event._id, err.message)
+  }
 }
 
 exports.handler = async (event, context) => {
@@ -144,6 +199,8 @@ ${alexContextBlock}`
           .set({ritaNotes: reflection.observation || '', processed: true})
           .commit()
         reflected++
+
+        await embedReflectedEvent(ev, reflection.observation || '')
 
         if (reflection.hasQuestion && reflection.question) {
           await client.create({
