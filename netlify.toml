@@ -139,6 +139,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/rita-booking-bridge"
+  to = "/.netlify/functions/rita-booking-bridge"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200
