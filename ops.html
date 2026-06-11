@@ -918,7 +918,7 @@ if (window.netlifyIdentity) {
 
   <div class="nav-section">Rita</div>
   <a class="nav-item" href="#" id="navRitaQuestions" data-view="rita-questions">
-    <span class="nav-dot red"></span> Вопросы Rita
+    <span class="nav-dot red"></span> Rita's Questions
     <span class="nav-badge" id="ritaQuestionsBadge" hidden>0</span>
   </a>
 
@@ -1056,12 +1056,12 @@ if (window.netlifyIdentity) {
   <div id="rita-questions-section" style="display:none">
     <div class="page-header">
       <div>
-        <div class="page-title">Вопросы <span>Rita</span></div>
-        <div class="page-date">Вопросы, на которые Rita ждёт ответа менеджера</div>
+        <div class="page-title">Rita's <span>Questions</span></div>
+        <div class="page-date">Questions Rita is waiting for the manager to answer</div>
       </div>
     </div>
     <div class="rita-q-list" id="ritaQuestionsList">
-      <p class="rita-q-loading">Загрузка…</p>
+      <p class="rita-q-loading">Loading…</p>
     </div>
   </div>
 
@@ -2451,8 +2451,8 @@ function ritaQuestionCardHtml(q) {
       }
       <div class="rita-q-question">${escapeHtml(q.question)}</div>
       <div class="rita-q-answer-row">
-        <textarea class="rita-q-textarea" placeholder="Ваш ответ…"></textarea>
-        <button type="button" class="btn btn-primary rita-q-submit">Ответить</button>
+        <textarea class="rita-q-textarea" placeholder="Your answer…"></textarea>
+        <button type="button" class="btn btn-primary rita-q-submit">Answer</button>
       </div>
     </div>
   `
@@ -2467,7 +2467,7 @@ function bindRitaQuestionCards() {
     btn.addEventListener('click', () => {
       const answer = textarea?.value?.trim()
       if (!answer) {
-        alert('Введите ответ')
+        alert('Enter an answer')
         return
       }
       submitRitaAnswer(card.dataset.questionId, answer, card)
@@ -2479,7 +2479,7 @@ function renderRitaQuestions(questions) {
   const list = document.getElementById('ritaQuestionsList')
   if (!list) return
   if (!questions.length) {
-    list.innerHTML = '<p class="rita-q-empty">Пока нет открытых вопросов</p>'
+    list.innerHTML = '<p class="rita-q-empty">No open questions</p>'
     return
   }
   list.innerHTML = questions.map((q) => ritaQuestionCardHtml(q)).join('')
@@ -2489,7 +2489,7 @@ function renderRitaQuestions(questions) {
 async function loadRitaQuestionsSection() {
   const list = document.getElementById('ritaQuestionsList')
   if (!list) return
-  list.innerHTML = '<p class="rita-q-loading">Загрузка…</p>'
+  list.innerHTML = '<p class="rita-q-loading">Loading…</p>'
   try {
     const res = await staffFetch('/api/rita-questions')
     const json = await res.json()
@@ -2532,7 +2532,7 @@ async function submitRitaAnswer(questionId, answer, cardEl) {
 
     const list = document.getElementById('ritaQuestionsList')
     if (list && !list.querySelector('.rita-q-card')) {
-      list.innerHTML = '<p class="rita-q-empty">Пока нет открытых вопросов</p>'
+      list.innerHTML = '<p class="rita-q-empty">No open questions</p>'
     }
   } catch (err) {
     alert(err.message)
