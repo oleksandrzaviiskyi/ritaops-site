@@ -53,16 +53,22 @@ function randomKey() {
   return Math.random().toString(36).slice(2, 12)
 }
 
-async function embedReflectedEvent(event, observation) {
+async function embedReflectedEvent(event, observation, embedDebug) {
+  const textToEmbed = `${event.description || ''}\n\nRita's observation: ${observation || ''}`
+
+  const voyageKey = (process.env.VOYAGE_API_KEY || '').trim()
+  if (!voyageKey) {
+    embedDebug.push({
+      id: event._id,
+      embedded: false,
+      error: 'VOYAGE_API_KEY not configured',
+      stage: 'voyage'
+    })
+    return
+  }
+
+  let embedding
   try {
-    const textToEmbed = `${event.description || ''}\n\nRita's observation: ${observation || ''}`
-
-    const voyageKey = (process.env.VOYAGE_API_KEY || '').trim()
-    if (!voyageKey) {
-      console.log('EMBED SKIP', event._id, 'VOYAGE_API_KEY not configured')
-      return
-    }
-
     const vRes = await fetch('https://api.voyageai.com/v1/embeddings', {
       method: 'POST',
       headers: {
@@ -79,8 +85,18 @@ async function embedReflectedEvent(event, observation) {
     if (!vRes.ok) {
       throw new Error(vData.detail || vData.error?.message || vRes.statusText)
     }
-    const embedding = vData.data[0].embedding
+    embedding = vData.data[0].embedding
+  } catch (err) {
+    embedDebug.push({
+      id: event._id,
+      embedded: false,
+      error: String(err && err.message ? err.message : err),
+      stage: 'voyage'
+    })
+    return
+  }
 
+  try {
     const chroma = new CloudClient({
       apiKey: process.env.CHROMA_API_KEY,
       tenant: process.env.CHROMA_TENANT,
@@ -102,8 +118,14 @@ async function embedReflectedEvent(event, observation) {
         }
       ]
     })
+    embedDebug.push({id: event._id, embedded: true})
   } catch (err) {
-    console.log('EMBED ERROR', event._id, err.message)
+    embedDebug.push({
+      id: event._id,
+      embedded: false,
+      error: String(err && err.message ? err.message : err),
+      stage: 'chroma'
+    })
   }
 }
 
@@ -122,6 +144,14 @@ exports.handler = async (event, context) => {
     const auth = resolveStaffAuth(event, parsedBody, context)
     if (!auth.authorized) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
+    }
+
+    const embedDebug = []
+    const envCheck = {
+      voyage: !!process.env.VOYAGE_API_KEY,
+      chromaKey: !!process.env.CHROMA_API_KEY,
+      chromaTenant: !!process.env.CHROMA_TENANT,
+      chromaDb: !!process.env.CHROMA_DATABASE
     }
 
     const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
@@ -143,7 +173,11 @@ exports.handler = async (event, context) => {
     `)
 
     if (!events.length) {
-      return {statusCode: 200, headers: cors, body: JSON.stringify({reflected: 0})}
+      return {
+        statusCode: 200,
+        headers: cors,
+        body: JSON.stringify({reflected: 0, envCheck, embedDebug})
+      }
     }
 
     const [principles, observations] = await Promise.all([
@@ -200,7 +234,7 @@ ${alexContextBlock}`
           .commit()
         reflected++
 
-        await embedReflectedEvent(ev, reflection.observation || '')
+        await embedReflectedEvent(ev, reflection.observation || '', embedDebug)
 
         if (reflection.hasQuestion && reflection.question) {
           await client.create({
@@ -221,7 +255,7 @@ ${alexContextBlock}`
     return {
       statusCode: 200,
       headers: cors,
-      body: JSON.stringify({reflected, questions})
+      body: JSON.stringify({reflected, questions, envCheck, embedDebug})
     }
   } catch (err) {
     return {statusCode: 500, headers: cors, body: JSON.stringify({error: err.message})}
