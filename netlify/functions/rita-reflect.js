@@ -53,17 +53,12 @@ function randomKey() {
   return Math.random().toString(36).slice(2, 12)
 }
 
-async function embedReflectedEvent(event, observation, embedDebug) {
+async function embedReflectedEvent(event, observation) {
   const textToEmbed = `${event.description || ''}\n\nRita's observation: ${observation || ''}`
 
   const voyageKey = (process.env.VOYAGE_API_KEY || '').trim()
   if (!voyageKey) {
-    embedDebug.push({
-      id: event._id,
-      embedded: false,
-      error: 'VOYAGE_API_KEY not configured',
-      stage: 'voyage'
-    })
+    console.log('EMBED SKIP', event._id, 'VOYAGE_API_KEY not configured')
     return
   }
 
@@ -87,12 +82,7 @@ async function embedReflectedEvent(event, observation, embedDebug) {
     }
     embedding = vData.data[0].embedding
   } catch (err) {
-    embedDebug.push({
-      id: event._id,
-      embedded: false,
-      error: String(err && err.message ? err.message : err),
-      stage: 'voyage'
-    })
+    console.log('EMBED ERROR', event._id, 'voyage', err.message)
     return
   }
 
@@ -118,14 +108,8 @@ async function embedReflectedEvent(event, observation, embedDebug) {
         }
       ]
     })
-    embedDebug.push({id: event._id, embedded: true})
   } catch (err) {
-    embedDebug.push({
-      id: event._id,
-      embedded: false,
-      error: String(err && err.message ? err.message : err),
-      stage: 'chroma'
-    })
+    console.log('EMBED ERROR', event._id, 'chroma', err.message)
   }
 }
 
@@ -144,14 +128,6 @@ exports.handler = async (event, context) => {
     const auth = resolveStaffAuth(event, parsedBody, context)
     if (!auth.authorized) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
-    }
-
-    const embedDebug = []
-    const envCheck = {
-      voyage: !!process.env.VOYAGE_API_KEY,
-      chromaKey: !!process.env.CHROMA_API_KEY,
-      chromaTenant: !!process.env.CHROMA_TENANT,
-      chromaDb: !!process.env.CHROMA_DATABASE
     }
 
     const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
@@ -173,11 +149,7 @@ exports.handler = async (event, context) => {
     `)
 
     if (!events.length) {
-      return {
-        statusCode: 200,
-        headers: cors,
-        body: JSON.stringify({reflected: 0, envCheck, embedDebug})
-      }
+      return {statusCode: 200, headers: cors, body: JSON.stringify({reflected: 0})}
     }
 
     const [principles, observations] = await Promise.all([
@@ -234,7 +206,7 @@ ${alexContextBlock}`
           .commit()
         reflected++
 
-        await embedReflectedEvent(ev, reflection.observation || '', embedDebug)
+        await embedReflectedEvent(ev, reflection.observation || '')
 
         if (reflection.hasQuestion && reflection.question) {
           await client.create({
@@ -255,7 +227,7 @@ ${alexContextBlock}`
     return {
       statusCode: 200,
       headers: cors,
-      body: JSON.stringify({reflected, questions, envCheck, embedDebug})
+      body: JSON.stringify({reflected, questions})
     }
   } catch (err) {
     return {statusCode: 500, headers: cors, body: JSON.stringify({error: err.message})}
