@@ -5,6 +5,7 @@ const {
   buildSavedRoomingContext,
   createProductionClient
 } = require('./lib/roomingPdfFlow')
+const {parseOperationalIntake, applyOperationalIntake} = require('./lib/operationalIntake')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -221,6 +222,44 @@ exports.handler = async (event, context) => {
 
     const liveData = parsedBody.liveData || {}
     const history = Array.isArray(parsedBody.history) ? parsedBody.history : []
+
+    if (message && writeToken) {
+      try {
+        const sanityClient = createProductionClient(writeToken)
+        const intake = await parseOperationalIntake({
+          client: sanityClient,
+          apiKey,
+          message,
+          history
+        })
+
+        if (intake.isOperational) {
+          let applyResult = null
+          if (
+            intake.completedTaskIds.length ||
+            (intake.placeId && intake.newTasks.length && !intake.needsClarification)
+          ) {
+            applyResult = await applyOperationalIntake(sanityClient, intake, {message})
+          }
+
+          return {
+            statusCode: 200,
+            headers: cors,
+            body: JSON.stringify({
+              reply:
+                intake.reply ||
+                intake.needsClarification ||
+                'Поняла.',
+              operational: true,
+              ...(applyResult || {}),
+              ...(roomingMeta || {})
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[ritaops] operational intake failed, falling back to chat', err.message)
+      }
+    }
 
     console.log('LIVE DATA', JSON.stringify(liveData).slice(0, 200))
     console.log('[ritaops] inject property context', needsPropertyContext(message))
