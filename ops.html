@@ -842,6 +842,13 @@ html.auth-pending .shell { visibility: hidden; }
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
+.rita-input-compose {
+  display: flex;
+  flex-direction: column;
+}
+.rita-input-compose .rita-q-attach-row {
+  padding: 8px 14px 0;
+}
 .rita-input-row {
   display: flex;
   gap: 8px;
@@ -1124,11 +1131,21 @@ if (window.netlifyIdentity) {
     <span class="rita-panel-live">live · Las Canas</span>
   </div>
   <div class="rita-messages" id="ritaMessages"></div>
-  <div class="rita-panel-footer">
+  <div class="rita-panel-footer" id="ritaPanelFooter">
     <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
-    <div class="rita-input-row">
-      <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
-      <button type="button" class="rita-send" id="ritaSend">Send</button>
+    <div class="rita-input-compose" id="ritaChatCompose">
+      <div class="rita-q-attach-row">
+        <input type="file" class="rita-q-file" id="ritaChatFile" accept=".pdf,application/pdf" hidden />
+        <button type="button" class="rita-q-attach" id="ritaChatAttach" title="Attach PDF">📎</button>
+        <div class="rita-q-file-chip" id="ritaChatFileChip" hidden>
+          <span class="rita-q-file-name" id="ritaChatFileName"></span>
+          <button type="button" class="rita-q-file-clear" id="ritaChatFileClear" aria-label="Remove PDF">×</button>
+        </div>
+      </div>
+      <div class="rita-input-row">
+        <input type="text" class="rita-input" id="ritaInput" placeholder="Ask Rita anything…" autocomplete="off" />
+        <button type="button" class="rita-send" id="ritaSend">Send</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2498,19 +2515,27 @@ function readPdfAsBase64(file) {
   })
 }
 
-function setRitaQuestionPdf(cardEl, fileName, base64Data) {
-  cardEl.dataset.pdfName = fileName || ''
-  cardEl.dataset.pdfBase64 = base64Data || ''
-  const chip = cardEl.querySelector('.rita-q-file-chip')
-  const nameEl = cardEl.querySelector('.rita-q-file-name')
+function setRitaPdfAttachment(containerEl, fileName, base64Data) {
+  containerEl.dataset.pdfName = fileName || ''
+  containerEl.dataset.pdfBase64 = base64Data || ''
+  const chip = containerEl.querySelector('.rita-q-file-chip')
+  const nameEl = containerEl.querySelector('.rita-q-file-name')
   if (chip) chip.hidden = !fileName
   if (nameEl) nameEl.textContent = fileName || ''
 }
 
-function clearRitaQuestionPdf(cardEl) {
-  setRitaQuestionPdf(cardEl, '', '')
-  const input = cardEl.querySelector('.rita-q-file')
+function clearRitaPdfAttachment(containerEl) {
+  setRitaPdfAttachment(containerEl, '', '')
+  const input = containerEl.querySelector('.rita-q-file')
   if (input) input.value = ''
+}
+
+function setRitaQuestionPdf(cardEl, fileName, base64Data) {
+  setRitaPdfAttachment(cardEl, fileName, base64Data)
+}
+
+function clearRitaQuestionPdf(cardEl) {
+  clearRitaPdfAttachment(cardEl)
 }
 
 function ritaQuestionCardHtml(q) {
@@ -3082,11 +3107,16 @@ async function sendRitaMessage(text) {
   const input = document.getElementById('ritaInput')
   const sendBtn = document.getElementById('ritaSend')
   const typing = document.getElementById('ritaTyping')
+  const compose = document.getElementById('ritaChatCompose')
   const message = String(text || input?.value || '').trim()
-  if (!message) return
+  const pdfBase64 = compose?.dataset.pdfBase64 || ''
+  const pdfFileName = compose?.dataset.pdfName || ''
+  if (!message && !pdfBase64) return
+
+  const displayContent = message || `📎 ${pdfFileName || 'attachment.pdf'}`
 
   const messages = loadRitaConversation()
-  messages.push({role: 'user', content: message})
+  messages.push({role: 'user', content: displayContent})
   saveRitaConversation(messages)
   renderRitaMessages(messages)
   if (input) input.value = ''
@@ -3113,7 +3143,8 @@ async function sendRitaMessage(text) {
     console.log('[ritaops] rita-chat request', {
       currentUser: user?.email || null,
       tokenPresent: Boolean(token),
-      staffKey: staffKeyValue
+      staffKey: staffKeyValue,
+      hasPdf: Boolean(pdfBase64)
     })
 
     console.log('RITA SEND', {
@@ -3127,15 +3158,23 @@ async function sendRitaMessage(text) {
       headers.Authorization = 'Bearer ' + token
     }
 
+    const payload = {
+      message,
+      history: recentHistory,
+      liveData,
+      staffKey: staffKeyValue
+    }
+    if (pdfBase64) {
+      payload.pdf = {
+        fileName: pdfFileName || 'attachment.pdf',
+        base64Data: pdfBase64
+      }
+    }
+
     const res = await fetch('/api/rita-chat', {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        message,
-        history: recentHistory,
-        liveData,
-        staffKey: staffKeyValue
-      })
+      body: JSON.stringify(payload)
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || res.statusText)
@@ -3148,10 +3187,43 @@ async function sendRitaMessage(text) {
     saveRitaConversation(messages)
     renderRitaMessages(messages)
   } finally {
+    if (compose) clearRitaPdfAttachment(compose)
     if (sendBtn) sendBtn.disabled = false
     if (typing) typing.hidden = true
   }
 }
+
+function bindRitaChatAttach() {
+  const compose = document.getElementById('ritaChatCompose')
+  const attachBtn = document.getElementById('ritaChatAttach')
+  const fileInput = document.getElementById('ritaChatFile')
+  const clearBtn = document.getElementById('ritaChatFileClear')
+  if (!compose || attachBtn?.dataset.bound) return
+  if (attachBtn) attachBtn.dataset.bound = '1'
+
+  attachBtn?.addEventListener('click', () => fileInput?.click())
+
+  fileInput?.addEventListener('change', async () => {
+    const file = fileInput.files?.[0]
+    if (!file) return
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+      alert('Please attach a PDF file')
+      fileInput.value = ''
+      return
+    }
+    try {
+      const base64Data = await readPdfAsBase64(file)
+      setRitaPdfAttachment(compose, file.name, base64Data)
+    } catch (err) {
+      alert(err.message)
+      clearRitaPdfAttachment(compose)
+    }
+  })
+
+  clearBtn?.addEventListener('click', () => clearRitaPdfAttachment(compose))
+}
+
+bindRitaChatAttach()
 
 document.getElementById('ritaFab')?.addEventListener('click', () => {
   toggleRitaPanel()
