@@ -1,6 +1,7 @@
 const {createClient} = require('@sanity/client')
 const {resolveStaffAuth} = require('./lib/staffAuth')
 const {extractPdfRoomingList, buildAnswerFromParts} = require('./lib/extractPdfRoomingList')
+const {persistGroupRoomingList} = require('./lib/persistGroupRoomingList')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -72,6 +73,7 @@ exports.handler = async (event, context) => {
           "group": relatedGroup->{
             _id,
             groupName,
+            groupId,
             checkIn,
             checkOut
           }
@@ -86,6 +88,7 @@ exports.handler = async (event, context) => {
 
     const group = resolveRelatedGroup(question)
     let extraction = null
+    let roomingPersist = null
 
     if (pdfData) {
       const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
@@ -103,6 +106,14 @@ exports.handler = async (event, context) => {
         apiKey
       })
       extraction = result.extraction
+
+      if (group?._id) {
+        roomingPersist = await persistGroupRoomingList(client, {
+          group,
+          extraction,
+          pdfFileName
+        })
+      }
     }
 
     const answer = buildAnswerFromParts({
@@ -129,6 +140,8 @@ exports.handler = async (event, context) => {
             }
           : null,
         extraction,
+        roomingListId: roomingPersist?.roomingListId || null,
+        groupIdUpdated: roomingPersist?.groupIdUpdated || false,
         answerPreview: answer.slice(0, 500)
       })
     }
