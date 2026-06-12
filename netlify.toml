@@ -145,6 +145,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/seed-ef-category"
+  to = "/.netlify/functions/seed-ef-category"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200
