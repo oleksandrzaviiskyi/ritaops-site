@@ -721,6 +721,72 @@
         return key ? `${PORTAL_HOME}?key=${encodeURIComponent(key)}` : PORTAL_HOME
       }
 
+      let groupCategories = []
+
+      function formatCategoryLabel(category) {
+        if (!category?.name && !category?.code) return ''
+        if (category.name && category.code) return `${category.name} (${category.code})`
+        return category.name || category.code
+      }
+
+      async function loadGroupCategories(force = false) {
+        if (!force && groupCategories.length) return groupCategories
+        const qs = new URLSearchParams()
+        const key = staffKey()
+        if (key) qs.set('key', key)
+        const res = await fetch(`/api/group-categories?${qs}`)
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || res.statusText)
+        groupCategories = json.categories || []
+        return groupCategories
+      }
+
+      function categorySelectOptions(selectedId = '') {
+        const opts = ['<option value="">— нет —</option>']
+        groupCategories.forEach((c) => {
+          const label = `${c.name || 'Без названия'} (${c.code || '—'})`
+          const sel = c._id === selectedId ? ' selected' : ''
+          opts.push(`<option value="${escapeHtml(c._id)}"${sel}>${escapeHtml(label)}</option>`)
+        })
+        return opts.join('')
+      }
+
+      async function saveGroupCategory() {
+        const portal = getPortalData()
+        const slug =
+          portal?.groupSlug ||
+          portal?.slug ||
+          new URLSearchParams(location.search).get('slug')
+        const select = document.getElementById('groupCategorySelect')
+        const status = document.getElementById('categorySaveStatus')
+        const btn = document.getElementById('btnSaveCategory')
+        if (!slug || !select) return
+        if (btn) btn.disabled = true
+        if (status) {
+          status.hidden = false
+          status.textContent = 'Saving…'
+        }
+        try {
+          const res = await fetch('/api/update-group-category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              staffKey: staffKey(),
+              slug,
+              categoryId: select.value || null
+            })
+          })
+          const json = await res.json()
+          if (!res.ok) throw new Error(json.error || res.statusText)
+          window.portalData = {...portal, category: json.category || null}
+          if (status) status.textContent = 'Saved'
+        } catch (err) {
+          if (status) status.textContent = err.message
+        } finally {
+          if (btn) btn.disabled = false
+        }
+      }
+
       function openCancelModal() {
         document.getElementById('cancelModalBackdrop').hidden = false
       }
@@ -1044,6 +1110,7 @@
             <tr><th>Dates</th><td>${escapeHtml(dates)}</td></tr>
             <tr><th>Guests</th><td>${escapeHtml(guests)}</td></tr>
             <tr><th>Event type</th><td>${escapeHtml(EVENT_TYPE_LABELS[p.eventType] || p.eventType || '—')}</td></tr>
+            <tr><th>Group profile</th><td>${escapeHtml(formatCategoryLabel(p.category) || '—')}</td></tr>
             <tr><th>Organizer email</th><td>${escapeHtml(p.organizerEmail || '—')}</td></tr>
           </tbody></table>`
         }
@@ -1191,6 +1258,7 @@
             ['Dates', dates],
             ['Guests', guests],
             ['Event type', EVENT_TYPE_LABELS[p.eventType] || p.eventType || ''],
+            ['Group profile', formatCategoryLabel(p.category) || ''],
             ['Organizer email', p.organizerEmail || '']
           ]),
           'Overview'
@@ -1288,6 +1356,7 @@
         const updated = p.lastPortalSaveAt
           ? new Date(p.lastPortalSaveAt).toLocaleDateString('en-US')
           : '—'
+        const categoryLabel = formatCategoryLabel(p.category)
 
         const joinUrl = p.organizerJoinUrl || p.organizerPortalUrl
         const guestUrl =
@@ -1350,6 +1419,7 @@
                 <div class="ops-hero-meta">
                   <span>📅 ${escapeHtml(p.checkIn || '?')} — ${escapeHtml(p.checkOut || '?')}${nights ? ` (${nights} nights)` : ''}</span>
                   <span>👥 ${p.totalGuests ?? '—'} guests · ${p.adults ?? '—'} adults${p.children ? ` · ${p.children} children` : ''}</span>
+                  ${categoryLabel ? `<span>🏷 ${escapeHtml(categoryLabel)}</span>` : ''}
                 </div>
               </div>
               <div class="ops-progress-card">
@@ -1381,6 +1451,19 @@
               <h3>RitaOps reminders</h3>
               <ul class="ops-reminders">${reminders || '<li>No urgent items</li>'}</ul>
             </div>
+            ${
+              hasStaffKeyInUrl()
+                ? `<div class="ops-panel">
+              <h3>Group profile</h3>
+              <label for="groupCategorySelect" style="display:block;font-size:0.85rem;margin-bottom:0.35rem;color:var(--muted)">Категория / профиль группы</label>
+              <select id="groupCategorySelect" style="width:100%;margin-bottom:0.75rem;padding:0.45rem 0.5rem;border:1px solid var(--border);border-radius:8px;font:inherit">${categorySelectOptions(p.category?._id || '')}</select>
+              <button type="button" class="ops-btn" id="btnSaveCategory">Save profile</button>
+              <p id="categorySaveStatus" style="margin:0.5rem 0 0;font-size:0.82rem;color:var(--muted)" hidden></p>
+            </div>`
+                : categoryLabel
+                  ? `<div class="ops-panel"><h3>Group profile</h3><p style="margin:0">${escapeHtml(categoryLabel)}</p></div>`
+                  : ''
+            }
           </div>
 
           ${renderGroupRevenueSummary(p, guestList, savedTransfers)}
@@ -1485,6 +1568,12 @@
           return
         }
 
+        if (e.target.closest('#btnSaveCategory')) {
+          e.preventDefault()
+          saveGroupCategory()
+          return
+        }
+
         const waBtn = e.target.closest('[data-whatsapp-transfer]')
         if (waBtn) {
           e.preventDefault()
@@ -1519,6 +1608,9 @@
         }
         syncStaffKeyToUrl()
         const key = logStaffKeyDebug('ops-group load')
+        await loadGroupCategories().catch((err) => {
+          console.warn('[ritaops] group categories load failed', err.message)
+        })
         const qs = new URLSearchParams({slug})
         if (key) qs.set('key', key)
         const apiUrl = `/api/ops-portal?${qs}`

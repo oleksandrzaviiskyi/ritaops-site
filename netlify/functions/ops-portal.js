@@ -17,7 +17,8 @@ const PORTAL_QUERY = `*[_type == "groupPortal" && portalSlug.current == $slug][0
   dietaryRestrictions, menuPlan, activities, specialRequests, organizerEmail,
   "slug": portalSlug.current,
   "groupSlug": portalSlug.current,
-  portalAccessToken
+  portalAccessToken,
+  "category": category->{ _id, code, name }
 }`
 
 exports.handler = async (event, context) => {

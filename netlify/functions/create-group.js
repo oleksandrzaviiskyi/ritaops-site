@@ -63,6 +63,9 @@ exports.handler = async (event, context) => {
     if (body.checkIn) doc.checkIn = body.checkIn
     if (body.checkOut) doc.checkOut = body.checkOut
     if (body.eventType) doc.eventType = body.eventType
+    if (body.categoryId) {
+      doc.category = {_type: 'reference', _ref: String(body.categoryId).trim()}
+    }
     if (body.organizerEmail) doc.organizerEmail = String(body.organizerEmail).trim()
     if (guests != null && !Number.isNaN(guests)) {
       doc.totalGuests = guests

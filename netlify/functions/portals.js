@@ -15,7 +15,8 @@ const LIST_QUERY = `*[_type == "groupPortal"] | order(checkIn asc) {
   status, progressPercent, lastPortalSaveAt,
   "slug": portalSlug.current,
   portalAccessToken,
-  flights, menuPlan, activities, specialRequests, dietaryRestrictions, transferNeeded
+  flights, menuPlan, activities, specialRequests, dietaryRestrictions, transferNeeded,
+  "category": category->{ _id, code, name }
 }`
 
 exports.handler = async (event, context) => {
@@ -42,6 +43,7 @@ exports.handler = async (event, context) => {
           adults: enriched.adults,
           children: enriched.children,
           eventType: enriched.eventType,
+          category: enriched.category || null,
           status: enriched.status,
           progressPercent: enriched.progressPercent,
           progressSections: enriched.progressSections,

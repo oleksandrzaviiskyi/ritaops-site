@@ -151,6 +151,18 @@
   force = true
 
 [[redirects]]
+  from = "/api/group-categories"
+  to = "/.netlify/functions/group-categories"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/update-group-category"
+  to = "/.netlify/functions/update-group-category"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/request-edit"
   to = "/.netlify/functions/request-edit"
   status = 200

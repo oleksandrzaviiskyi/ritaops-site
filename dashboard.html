@@ -28,7 +28,10 @@
       })
 
       netlifyIdentity.on('logout', () => {
-        redirectToLogin()
+        const redirect = window.location.pathname + window.location.search
+        sessionStorage.setItem(REDIRECT_KEY, redirect)
+        console.log('[ritaops] saving redirect:', window.location.pathname)
+        window.location.href = '/login'
       })
 
       document.addEventListener('click', (e) => {
@@ -113,6 +116,11 @@
               <option value="private_vacation">Private Vacation</option>
             </select>
 
+            <label for="ngCategory">Категория / профиль группы</label>
+            <select id="ngCategory" name="categoryId">
+              <option value="">— нет —</option>
+            </select>
+
             <label for="ngOrganizerName">Organizer name</label>
             <input id="ngOrganizerName" name="organizerName" />
 
@@ -164,6 +172,7 @@
 
       let successOrganizerLink = ''
       let successGuestLink = ''
+      let groupCategories = []
 
       const STAFF_KEY_STORAGE = 'ritaops_staff_key'
 
@@ -241,12 +250,50 @@
         return n > 0 ? n : null
       }
 
+      function formatCategoryLabel(category) {
+        if (!category?.name && !category?.code) return ''
+        if (category.name && category.code) return `${category.name} (${category.code})`
+        return category.name || category.code
+      }
+
+      async function loadGroupCategories() {
+        if (groupCategories.length) return groupCategories
+        const res = await staffFetch('/api/group-categories')
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || res.statusText)
+        groupCategories = json.categories || []
+        return groupCategories
+      }
+
+      function populateCategorySelect(select, selectedId = '') {
+        if (!select) return
+        const options = ['<option value="">— нет —</option>']
+        groupCategories.forEach((c) => {
+          const label = `${c.name || 'Без названия'} (${c.code || '—'})`
+          const selected = c._id === selectedId ? ' selected' : ''
+          options.push(
+            `<option value="${escapeHtml(c._id)}"${selected}>${escapeHtml(label)}</option>`
+          )
+        })
+        select.innerHTML = options.join('')
+      }
+
       function openModal() {
         modalError.hidden = true
         modalFormView.hidden = false
         modalSuccessView.hidden = true
         newGroupForm.reset()
+        populateCategorySelect(document.getElementById('ngCategory'))
         modalBackdrop.hidden = false
+      }
+
+      async function openModalAsync() {
+        try {
+          await loadGroupCategories()
+        } catch (err) {
+          console.warn('[ritaops] group categories load failed', err.message)
+        }
+        openModal()
       }
 
       function closeModal() {
@@ -282,11 +329,13 @@
             const isNew = p.status === 'new' || pct < 15
             const nights = nightsBetween(p.checkIn, p.checkOut)
             const groupHref = opsGroupHref(p.slug)
+            const categoryLabel = formatCategoryLabel(p.category)
             return `
           <a class="ops-group-card${isNew ? ' new-group' : ''}" href="${groupHref}" data-slug="${escapeHtml(p.slug)}">
             ${isNew ? '<span class="ops-badge">New group</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
             <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
             <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} nights` : ''}</p>
+            ${categoryLabel ? `<p style="margin:0 0 0.35rem;font-size:0.82rem;color:var(--accent)">${escapeHtml(categoryLabel)}</p>` : ''}
             <p style="margin:0 0 0.75rem;font-size:0.88rem">${p.totalGuests ?? '—'} guests${p.adults != null ? ` (${p.adults} adults${p.children ? `, ${p.children} children` : ''})` : ''}</p>
             <div class="ops-progress-bar"><span style="width:${pct}%"></span></div>
             <p style="margin:0.5rem 0 0;font-size:0.85rem;font-weight:600;color:var(--accent)">${pct}% complete</p>
@@ -296,7 +345,9 @@
           .join('')
       }
 
-      document.getElementById('btnNewGroup').addEventListener('click', openModal)
+      document.getElementById('btnNewGroup').addEventListener('click', () => {
+        openModalAsync().catch((err) => showModalError(err.message))
+      })
       document.getElementById('btnCancelModal').addEventListener('click', closeModal)
       modalBackdrop.addEventListener('click', (e) => {
         if (e.target === modalBackdrop) closeModal()
@@ -333,6 +384,7 @@
             ? Number(newGroupForm.totalGuests.value)
             : null,
           eventType: newGroupForm.eventType.value || null,
+          categoryId: newGroupForm.categoryId.value || null,
           organizerName: newGroupForm.organizerName.value.trim() || null,
           organizerEmail: newGroupForm.organizerEmail.value.trim() || null
         }
@@ -380,6 +432,9 @@
         if (dashboardStarted) return
         dashboardStarted = true
         staffKey()
+        loadGroupCategories().catch((err) => {
+          console.warn('[ritaops] group categories preload failed', err.message)
+        })
         load().catch((e) => {
           document.getElementById('intro').textContent = 'Error: ' + e.message
         })
