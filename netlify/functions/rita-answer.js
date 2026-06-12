@@ -1,7 +1,10 @@
 const {createClient} = require('@sanity/client')
 const {resolveStaffAuth} = require('./lib/staffAuth')
 const {extractPdfRoomingList, buildAnswerFromParts} = require('./lib/extractPdfRoomingList')
-const {persistGroupRoomingList} = require('./lib/persistGroupRoomingList')
+const {
+  processRoomingPdf
+} = require('./lib/roomingPdfFlow')
+const {resolveGroupFromQuestion} = require('./lib/resolveGroupForRooming')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -17,15 +20,6 @@ const client = createClient({
   token: writeToken,
   apiVersion: '2024-01-01'
 })
-
-function resolveRelatedGroup(question) {
-  for (const ev of question?.events || []) {
-    if (ev?.group?._id || ev?.group?.groupName) {
-      return ev.group
-    }
-  }
-  return null
-}
 
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -86,9 +80,10 @@ exports.handler = async (event, context) => {
       return {statusCode: 404, headers: cors, body: JSON.stringify({error: 'Question not found'})}
     }
 
-    const group = resolveRelatedGroup(question)
     let extraction = null
+    let group = null
     let roomingPersist = null
+    let groupSource = null
 
     if (pdfData) {
       const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
@@ -107,13 +102,17 @@ exports.handler = async (event, context) => {
       })
       extraction = result.extraction
 
-      if (group?._id) {
-        roomingPersist = await persistGroupRoomingList(client, {
-          group,
-          extraction,
-          pdfFileName
-        })
-      }
+      const processed = await processRoomingPdf(client, {
+        extraction,
+        pdfFileName,
+        question
+      })
+      group = processed.group
+      roomingPersist = processed.roomingPersist
+      groupSource = processed.source
+    } else {
+      group = resolveGroupFromQuestion(question)
+      groupSource = group?._id ? 'question' : null
     }
 
     const answer = buildAnswerFromParts({
@@ -135,10 +134,12 @@ exports.handler = async (event, context) => {
           ? {
               _id: group._id,
               groupName: group.groupName,
+              groupId: group.groupId,
               checkIn: group.checkIn,
               checkOut: group.checkOut
             }
           : null,
+        groupSource,
         extraction,
         roomingListId: roomingPersist?.roomingListId || null,
         groupIdUpdated: roomingPersist?.groupIdUpdated || false,

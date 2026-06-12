@@ -1,6 +1,10 @@
 const Anthropic = require('@anthropic-ai/sdk')
 const {resolveStaffAuth, dashboardSecret} = require('./lib/staffAuth')
-const {extractPdfRoomingList, formatExtractionAsText} = require('./lib/extractPdfRoomingList')
+const {
+  extractAndProcessRoomingPdf,
+  buildSavedRoomingContext,
+  createProductionClient
+} = require('./lib/roomingPdfFlow')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -166,17 +170,48 @@ exports.handler = async (event, context) => {
       return anthropicErrorReply(new Error('ANTHROPIC_API_KEY not configured'))
     }
 
+    const writeToken = process.env.SANITY_TOKEN || process.env.SANITY_API_WRITE_TOKEN
     let pdfContext = ''
+    let roomingMeta = null
+
     if (pdfData) {
+      if (!writeToken) {
+        return anthropicErrorReply(new Error('SANITY_TOKEN not configured'))
+      }
+
       try {
-        const {extraction, fileName} = await extractPdfRoomingList({
-          base64Data: pdfData,
-          fileName: pdf?.fileName || 'attachment.pdf',
+        const client = createProductionClient(writeToken)
+        const processed = await extractAndProcessRoomingPdf(client, {
+          pdfData,
+          pdfFileName: pdf?.fileName || 'attachment.pdf',
           apiKey
         })
-        pdfContext =
-          `\n\nATTACHED PDF (${fileName}) — extracted rooming list:\n` +
-          formatExtractionAsText(extraction)
+
+        roomingMeta = {
+          groupSource: processed.source,
+          roomingListId: processed.roomingPersist?.roomingListId || null,
+          groupIdUpdated: processed.roomingPersist?.groupIdUpdated || false
+        }
+
+        if (processed.unmatched) {
+          return {
+            statusCode: 200,
+            headers: cors,
+            body: JSON.stringify({
+              reply: processed.unmatchedReply,
+              extraction: processed.extraction,
+              group: null,
+              unmatched: true
+            })
+          }
+        }
+
+        pdfContext = `\n\n${buildSavedRoomingContext({
+          group: processed.group,
+          roomingPersist: processed.roomingPersist,
+          extraction: processed.extraction,
+          fileName: processed.fileName
+        })}`
       } catch (err) {
         return anthropicErrorReply(new Error(`PDF extraction failed: ${err.message}`))
       }
@@ -228,7 +263,10 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers: cors,
-        body: JSON.stringify({reply})
+        body: JSON.stringify({
+          reply,
+          ...(roomingMeta || {})
+        })
       }
     } catch (error) {
       return anthropicErrorReply(error)
