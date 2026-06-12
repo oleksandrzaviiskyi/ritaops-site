@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk')
 const {resolveStaffAuth, dashboardSecret} = require('./lib/staffAuth')
+const {extractPdfRoomingList, formatExtractionAsText} = require('./lib/extractPdfRoomingList')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -153,14 +154,35 @@ exports.handler = async (event, context) => {
     }
 
     const message = String(parsedBody.message || '').trim()
-    if (!message) {
-      return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'message required'})}
+    const pdf = parsedBody.pdf || null
+    const pdfData = pdf?.base64Data ? String(pdf.base64Data).trim() : ''
+
+    if (!message && !pdfData) {
+      return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'message or pdf required'})}
     }
 
     const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
     if (!apiKey) {
       return anthropicErrorReply(new Error('ANTHROPIC_API_KEY not configured'))
     }
+
+    let pdfContext = ''
+    if (pdfData) {
+      try {
+        const {extraction, fileName} = await extractPdfRoomingList({
+          base64Data: pdfData,
+          fileName: pdf?.fileName || 'attachment.pdf',
+          apiKey
+        })
+        pdfContext =
+          `\n\nATTACHED PDF (${fileName}) — extracted rooming list:\n` +
+          formatExtractionAsText(extraction)
+      } catch (err) {
+        return anthropicErrorReply(new Error(`PDF extraction failed: ${err.message}`))
+      }
+    }
+
+    const userMessage = `${message || 'Please review the attached rooming list PDF.'}${pdfContext}`.trim()
 
     const liveData = parsedBody.liveData || {}
     const history = Array.isArray(parsedBody.history) ? parsedBody.history : []
@@ -180,7 +202,7 @@ exports.handler = async (event, context) => {
         role: m.role === 'rita' ? 'assistant' : m.role,
         content: String(m.content || '')
       }))
-    messages.push({role: 'user', content: message})
+    messages.push({role: 'user', content: userMessage})
 
     const anthropic = new Anthropic({apiKey})
 

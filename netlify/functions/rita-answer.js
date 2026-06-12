@@ -1,5 +1,6 @@
 const {createClient} = require('@sanity/client')
 const {resolveStaffAuth} = require('./lib/staffAuth')
+const {extractPdfRoomingList, buildAnswerFromParts} = require('./lib/extractPdfRoomingList')
 
 const cors = {
   'Content-Type': 'application/json',
@@ -15,6 +16,15 @@ const client = createClient({
   token: writeToken,
   apiVersion: '2024-01-01'
 })
+
+function resolveRelatedGroup(question) {
+  for (const ev of question?.events || []) {
+    if (ev?.group?._id || ev?.group?.groupName) {
+      return ev.group
+    }
+  }
+  return null
+}
 
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -38,21 +48,89 @@ exports.handler = async (event, context) => {
     }
 
     const questionId = String(body.questionId || '').trim()
-    const answer = String(body.answer || '').trim()
+    const typedAnswer = String(body.answer || '').trim()
+    const pdf = body.pdf || null
+    const pdfData = pdf?.base64Data ? String(pdf.base64Data).trim() : ''
+    const pdfFileName = pdf?.fileName ? String(pdf.fileName).trim() : 'attachment.pdf'
 
     if (!questionId) {
       return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'questionId is required'})}
     }
-    if (!answer) {
-      return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'answer is required'})}
+    if (!typedAnswer && !pdfData) {
+      return {
+        statusCode: 400,
+        headers: cors,
+        body: JSON.stringify({error: 'answer or pdf is required'})
+      }
     }
+
+    const question = await client.fetch(
+      `*[_type == "ritaQuestion" && _id == $questionId][0]{
+        _id,
+        "events": relatedEvents[]->{
+          _id,
+          "group": relatedGroup->{
+            _id,
+            groupName,
+            checkIn,
+            checkOut
+          }
+        }
+      }`,
+      {questionId}
+    )
+
+    if (!question?._id) {
+      return {statusCode: 404, headers: cors, body: JSON.stringify({error: 'Question not found'})}
+    }
+
+    const group = resolveRelatedGroup(question)
+    let extraction = null
+
+    if (pdfData) {
+      const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
+      if (!apiKey) {
+        return {
+          statusCode: 500,
+          headers: cors,
+          body: JSON.stringify({error: 'ANTHROPIC_API_KEY not configured'})
+        }
+      }
+
+      const result = await extractPdfRoomingList({
+        base64Data: pdfData,
+        fileName: pdfFileName,
+        apiKey
+      })
+      extraction = result.extraction
+    }
+
+    const answer = buildAnswerFromParts({
+      typedAnswer,
+      extraction,
+      group,
+      pdfFileName: pdfData ? pdfFileName : null
+    })
 
     await client.patch(questionId).set({answer, status: 'answered'}).commit()
 
     return {
       statusCode: 200,
       headers: cors,
-      body: JSON.stringify({ok: true, questionId})
+      body: JSON.stringify({
+        ok: true,
+        questionId,
+        group: group
+          ? {
+              _id: group._id,
+              groupName: group.groupName,
+              checkIn: group.checkIn,
+              checkOut: group.checkOut
+            }
+          : null,
+        extraction,
+        answerPreview: answer.slice(0, 500)
+      })
     }
   } catch (err) {
     return {statusCode: 500, headers: cors, body: JSON.stringify({error: err.message})}

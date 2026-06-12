@@ -768,6 +768,51 @@ html.auth-pending .shell { visibility: hidden; }
   color: var(--text);
 }
 .rita-q-answer-row { display: flex; flex-direction: column; gap: 10px; }
+.rita-q-answer-compose { display: flex; flex-direction: column; gap: 8px; }
+.rita-q-attach-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rita-q-attach {
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--text-2);
+}
+.rita-q-attach:hover { background: var(--bg); color: var(--text); }
+.rita-q-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  background: var(--blue-bg);
+  border: 1px solid rgba(26, 74, 122, 0.15);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--blue);
+  max-width: 100%;
+}
+.rita-q-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.rita-q-file-clear {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
 .rita-q-textarea {
   width: 100%;
   min-height: 88px;
@@ -2427,6 +2472,47 @@ function updateRitaQuestionsBadge() {
   }
 }
 
+function formatRitaExtractionSummary(extraction) {
+  if (!extraction) return ''
+  const lines = []
+  if (extraction.summary) lines.push(extraction.summary)
+  if (extraction.groupId) lines.push(`GROUP ID: ${extraction.groupId}`)
+  if (extraction.prodTourId) lines.push(`Prod Tour ID: ${extraction.prodTourId}`)
+  if (Array.isArray(extraction.guests) && extraction.guests.length) {
+    lines.push(`Guests read: ${extraction.guests.length}`)
+  } else if (Array.isArray(extraction.rooms) && extraction.rooms.length) {
+    lines.push(`Rooms read: ${extraction.rooms.length}`)
+  }
+  return lines.join('\n')
+}
+
+function readPdfAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      resolve(result.includes(',') ? result.split(',')[1] : result)
+    }
+    reader.onerror = () => reject(reader.error || new Error('Could not read PDF'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function setRitaQuestionPdf(cardEl, fileName, base64Data) {
+  cardEl.dataset.pdfName = fileName || ''
+  cardEl.dataset.pdfBase64 = base64Data || ''
+  const chip = cardEl.querySelector('.rita-q-file-chip')
+  const nameEl = cardEl.querySelector('.rita-q-file-name')
+  if (chip) chip.hidden = !fileName
+  if (nameEl) nameEl.textContent = fileName || ''
+}
+
+function clearRitaQuestionPdf(cardEl) {
+  setRitaQuestionPdf(cardEl, '', '')
+  const input = cardEl.querySelector('.rita-q-file')
+  if (input) input.value = ''
+}
+
 function ritaQuestionCardHtml(q) {
   const ev = (q.events || []).find(Boolean) || {}
   const eventDesc = ev.description || q.context || '—'
@@ -2451,7 +2537,17 @@ function ritaQuestionCardHtml(q) {
       }
       <div class="rita-q-question">${escapeHtml(q.question)}</div>
       <div class="rita-q-answer-row">
-        <textarea class="rita-q-textarea" placeholder="Your answer…"></textarea>
+        <div class="rita-q-answer-compose">
+          <textarea class="rita-q-textarea" placeholder="Your answer…"></textarea>
+          <div class="rita-q-attach-row">
+            <input type="file" class="rita-q-file" accept=".pdf,application/pdf" hidden />
+            <button type="button" class="rita-q-attach" title="Attach PDF">📎</button>
+            <div class="rita-q-file-chip" hidden>
+              <span class="rita-q-file-name"></span>
+              <button type="button" class="rita-q-file-clear" aria-label="Remove PDF">×</button>
+            </div>
+          </div>
+        </div>
         <button type="button" class="btn btn-primary rita-q-submit">Answer</button>
       </div>
     </div>
@@ -2462,15 +2558,44 @@ function bindRitaQuestionCards() {
   document.querySelectorAll('.rita-q-card').forEach((card) => {
     const btn = card.querySelector('.rita-q-submit')
     const textarea = card.querySelector('.rita-q-textarea')
+    const attachBtn = card.querySelector('.rita-q-attach')
+    const fileInput = card.querySelector('.rita-q-file')
+    const clearBtn = card.querySelector('.rita-q-file-clear')
     if (!btn || btn.dataset.bound) return
     btn.dataset.bound = '1'
-    btn.addEventListener('click', () => {
-      const answer = textarea?.value?.trim()
-      if (!answer) {
-        alert('Enter an answer')
+
+    attachBtn?.addEventListener('click', () => fileInput?.click())
+
+    fileInput?.addEventListener('change', async () => {
+      const file = fileInput.files?.[0]
+      if (!file) return
+      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+        alert('Please attach a PDF file')
+        fileInput.value = ''
         return
       }
-      submitRitaAnswer(card.dataset.questionId, answer, card)
+      try {
+        const base64Data = await readPdfAsBase64(file)
+        setRitaQuestionPdf(card, file.name, base64Data)
+      } catch (err) {
+        alert(err.message)
+        clearRitaQuestionPdf(card)
+      }
+    })
+
+    clearBtn?.addEventListener('click', () => clearRitaQuestionPdf(card))
+
+    btn.addEventListener('click', () => {
+      const answer = textarea?.value?.trim() || ''
+      const pdfBase64 = card.dataset.pdfBase64 || ''
+      if (!answer && !pdfBase64) {
+        alert('Enter an answer or attach a PDF')
+        return
+      }
+      submitRitaAnswer(card.dataset.questionId, answer, card, {
+        fileName: card.dataset.pdfName || '',
+        base64Data: pdfBase64
+      })
     })
   })
 }
@@ -2514,17 +2639,30 @@ async function loadRitaQuestionsCount() {
   }
 }
 
-async function submitRitaAnswer(questionId, answer, cardEl) {
+async function submitRitaAnswer(questionId, answer, cardEl, pdf) {
   const btn = cardEl.querySelector('.rita-q-submit')
   if (btn) btn.disabled = true
   try {
+    const payload = {questionId, answer: answer || ''}
+    if (pdf?.base64Data) {
+      payload.pdf = {
+        fileName: pdf.fileName || 'attachment.pdf',
+        base64Data: pdf.base64Data
+      }
+    }
+
     const res = await staffFetch('/api/rita-answer', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({questionId, answer})
+      body: JSON.stringify(payload)
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || res.statusText)
+
+    const summary = formatRitaExtractionSummary(json.extraction)
+    if (summary) {
+      alert(`Rita read from the PDF:\n\n${summary}`)
+    }
 
     cardEl.remove()
     ritaQuestionsCount = Math.max(0, ritaQuestionsCount - 1)
