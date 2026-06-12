@@ -53,6 +53,44 @@ function randomKey() {
   return Math.random().toString(36).slice(2, 12)
 }
 
+function hasGroupProfile(profile) {
+  if (!profile) return false
+  return Boolean(
+    profile.code ||
+      profile.name ||
+      profile.summary ||
+      profile.participantProfile ||
+      profile.leadershipStructure ||
+      profile.operationalSpecifics ||
+      profile.sensitivities ||
+      profile.ritaGuidance
+  )
+}
+
+function buildGroupProfileBlock(profile) {
+  if (!hasGroupProfile(profile)) return ''
+
+  const lines = []
+  if (profile.name && profile.code) {
+    lines.push(`This event relates to a ${profile.name} group (${profile.code}).`)
+  } else if (profile.name) {
+    lines.push(`This event relates to a ${profile.name} group.`)
+  } else if (profile.code) {
+    lines.push(`This event relates to a group (${profile.code}).`)
+  }
+
+  if (profile.summary) lines.push(`Who they are: ${profile.summary}`)
+  if (profile.participantProfile) lines.push(`Participants: ${profile.participantProfile}`)
+  if (profile.leadershipStructure) lines.push(`Leadership: ${profile.leadershipStructure}`)
+  if (profile.operationalSpecifics) lines.push(`Operational specifics: ${profile.operationalSpecifics}`)
+  if (profile.sensitivities) lines.push(`Sensitivities: ${profile.sensitivities}`)
+  if (profile.ritaGuidance) lines.push(`How to attend to this group: ${profile.ritaGuidance}`)
+  lines.push('')
+  lines.push('Reflect on the event with this group context in mind.')
+
+  return lines.join('\n')
+}
+
 async function embedReflectedEvent(event, observation) {
   const textToEmbed = `${event.description || ''}\n\nRita's observation: ${observation || ''}`
 
@@ -144,7 +182,11 @@ exports.handler = async (event, context) => {
         _id, timestamp, source, eventType, description,
         "groupName": relatedGroup->groupName,
         "personName": relatedPerson->fullName,
-        "placeName": relatedPlace->name
+        "placeName": relatedPlace->name,
+        "groupProfile": relatedGroup->category->{
+          code, name, summary, participantProfile, leadershipStructure,
+          operationalSpecifics, sensitivities, ritaGuidance
+        }
       }
     `)
 
@@ -170,6 +212,7 @@ ${observations.map((o) => `- ${o.title}: ${o.observation || ''}`).join('\n')}`
 
     for (const ev of events) {
       try {
+        const groupProfileBlock = buildGroupProfileBlock(ev.groupProfile)
         const response = await anthropic.messages.create({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
@@ -191,7 +234,7 @@ ${JSON.stringify(
                 null,
                 2
               )}
-
+${groupProfileBlock ? `\n${groupProfileBlock}\n` : ''}
 ${alexContextBlock}`
             }
           ]
