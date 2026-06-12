@@ -1,6 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk')
 
-const PDF_MODEL = 'claude-sonnet-4-20250514'
+const PDF_MODEL = 'claude-sonnet-4-6'
 
 const EXTRACTION_INSTRUCTION = `You are reading a hotel or tour group rooming list PDF.
 Extract all available structured data from the document.
