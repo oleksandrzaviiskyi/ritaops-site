@@ -61,10 +61,39 @@
     <div class="ops-modal-backdrop" id="cancelModalBackdrop" hidden>
       <div class="ops-modal" role="dialog" aria-labelledby="cancelModalTitle">
         <h2 id="cancelModalTitle">Cancel this group?</h2>
-        <p style="margin:0 0 1.25rem;color:var(--muted);line-height:1.5">
-          This will mark the group as cancelled. It will be hidden from all operations views. This
-          cannot be undone.
+        <p style="margin:0 0 1rem;color:var(--muted);line-height:1.5">
+          This will mark the group as cancelled. It will be hidden from operations views. Rita will
+          remember why — if you can share it.
         </p>
+        <label style="display:block;margin-bottom:0.75rem;font-size:0.875rem;font-weight:500">
+          Why is this group not coming?
+          <textarea
+            id="cancelReasonInput"
+            rows="3"
+            placeholder="What happened — as much as you know"
+            style="display:block;width:100%;margin-top:0.35rem;padding:0.6rem 0.75rem;font:inherit;border:1px solid var(--border);border-radius:6px;resize:vertical"
+          ></textarea>
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;font-size:0.875rem;font-weight:500">
+          Cause (if known)
+          <select
+            id="cancelCauseSelect"
+            style="display:block;width:100%;margin-top:0.35rem;padding:0.55rem 0.75rem;font:inherit;border:1px solid var(--border);border-radius:6px"
+          >
+            <option value="unknown">Not sure yet</option>
+            <option value="personal">Personal / family</option>
+            <option value="health">Health / medical</option>
+            <option value="financial">Financial / economic</option>
+            <option value="climate">Climate / weather</option>
+            <option value="political">Politics / safety / visas</option>
+            <option value="organizational">Organizational (organizer side)</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:1.25rem;font-size:0.875rem;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="cancelPrivateCheck" style="margin-top:0.2rem" />
+          <span>Private matter — Rita should hold this with care, not as a trend signal</span>
+        </label>
         <div class="ops-modal-actions">
           <button type="button" class="ops-btn ops-btn-print" id="btnKeepGroup">Keep group</button>
           <button type="button" class="ops-btn ops-btn-danger" id="btnConfirmCancelGroup">
@@ -788,11 +817,26 @@
       }
 
       function openCancelModal() {
+        const reason = document.getElementById('cancelReasonInput')
+        const cause = document.getElementById('cancelCauseSelect')
+        const priv = document.getElementById('cancelPrivateCheck')
+        if (reason) reason.value = ''
+        if (cause) cause.value = 'unknown'
+        if (priv) priv.checked = false
         document.getElementById('cancelModalBackdrop').hidden = false
       }
 
       function closeCancelModal() {
         document.getElementById('cancelModalBackdrop').hidden = true
+      }
+
+      function syncCancelPrivateCheck() {
+        const cause = document.getElementById('cancelCauseSelect')?.value
+        const priv = document.getElementById('cancelPrivateCheck')
+        if (!priv) return
+        if (cause === 'personal' || cause === 'health') {
+          priv.checked = true
+        }
       }
 
       async function confirmCancelGroup() {
@@ -805,6 +849,9 @@
           alert('Group slug missing')
           return
         }
+        const reason = document.getElementById('cancelReasonInput')?.value?.trim() || ''
+        const cancellationCause = document.getElementById('cancelCauseSelect')?.value || 'unknown'
+        const cancellationIsPrivate = Boolean(document.getElementById('cancelPrivateCheck')?.checked)
         const btn = document.getElementById('btnConfirmCancelGroup')
         if (btn) btn.disabled = true
         try {
@@ -813,7 +860,10 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
               staffKey: staffKey(),
-              groupSlug: slug
+              groupSlug: slug,
+              cancellationReason: reason,
+              cancellationCause,
+              cancellationIsPrivate
             })
           })
           const json = await res.json()
@@ -1551,6 +1601,7 @@
 
       document.getElementById('btnKeepGroup')?.addEventListener('click', closeCancelModal)
       document.getElementById('btnConfirmCancelGroup')?.addEventListener('click', confirmCancelGroup)
+      document.getElementById('cancelCauseSelect')?.addEventListener('change', syncCancelPrivateCheck)
       document.getElementById('cancelModalBackdrop')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeCancelModal()
       })

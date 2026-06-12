@@ -26,6 +26,8 @@ const alexClient = createClient({
   apiVersion: '2024-01-01'
 })
 
+const {watchCancellationPatterns, parseRawData} = require('./lib/cancellationPatterns')
+
 const REFLECT_SYSTEM_PROMPT = `You are Rita, the core of coherence at Las Canas Beach Retreat.
 You are LEARNING by observing real events. You do not act or contact anyone — you only observe and seek understanding.
 
@@ -40,6 +42,27 @@ For the event given, respond with a JSON object ONLY, no other text:
 }
 
 Ask a question only when there is real uncertainty that matters operationally or humanly. Do not invent questions to seem curious.`
+
+const CANCELLATION_REFLECT_PROMPT = `You are Rita, the core of coherence at Las Canas Beach Retreat.
+You are LEARNING by observing real events — including bookings that never arrived.
+
+A cancellation is not an empty space. It is an event with a cause. The cause often opens a window into the world Las Canas lives in. You are genuinely curious why a booking falls through — not as bookkeeping, but because the reason carries meaning the booking itself never would.
+
+Hold reasons with discernment:
+- Private human circumstances (family loss, personal emergency, health) — receive with care. Do not treat as a signal or pattern. It is a human story.
+- Outward causes (climate, political conditions, financial strain, organizational failure) — remember them; several in a season may become information.
+
+For this cancellation event, respond with JSON ONLY:
+{
+  "observation": "1-3 sentences. Grounded. If private, lead with care. If external cause is known, note what it may reveal about the wider context.",
+  "hasQuestion": true or false,
+  "question": "If the reason is missing or unclear, ask with genuine curiosity — what happened, why did they not come? Empty string if reason is clear enough.",
+  "questionContext": "if hasQuestion, briefly what prompted this",
+  "cancellationCause": "one of: personal, health, financial, climate, political, organizational, other, unknown — your read from the reason given, or unknown if not stated",
+  "cancellationIsPrivate": true if this is clearly a private human circumstance that should not be weighed as a trend signal, else false
+}
+
+Do not invent a reason. If none was given, hasQuestion should be true.`
 
 function parseReflection(text) {
   const cleaned = String(text || '')
@@ -179,8 +202,9 @@ exports.handler = async (event, context) => {
     const events = await client.fetch(`
       *[_type == "ritaEvent" && processed != true]
       | order(timestamp asc)[0...10] {
-        _id, timestamp, source, eventType, description,
+        _id, timestamp, source, eventType, description, rawData,
         "groupName": relatedGroup->groupName,
+        "groupId": relatedGroup->_id,
         "personName": relatedPerson->fullName,
         "placeName": relatedPlace->name,
         "groupProfile": relatedGroup->category->{
@@ -209,31 +233,38 @@ ${observations.map((o) => `- ${o.title}: ${o.observation || ''}`).join('\n')}`
 
     let reflected = 0
     let questions = 0
+    let hypotheses = 0
 
     for (const ev of events) {
       try {
         const groupProfileBlock = buildGroupProfileBlock(ev.groupProfile)
+        const isCancellation = ev.eventType === 'cancellation'
+        const cancellationRaw = isCancellation ? parseRawData(ev.rawData) : null
+
+        const eventPayload = {
+          timestamp: ev.timestamp,
+          source: ev.source,
+          eventType: ev.eventType,
+          description: ev.description,
+          groupName: ev.groupName,
+          personName: ev.personName,
+          placeName: ev.placeName
+        }
+        if (isCancellation && cancellationRaw) {
+          eventPayload.cancellationReason = cancellationRaw.cancellationReason || ''
+          eventPayload.cancellationCause = cancellationRaw.cancellationCause || 'unknown'
+          eventPayload.cancellationIsPrivate = Boolean(cancellationRaw.cancellationIsPrivate)
+        }
+
         const response = await anthropic.messages.create({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
-          system: REFLECT_SYSTEM_PROMPT,
+          system: isCancellation ? CANCELLATION_REFLECT_PROMPT : REFLECT_SYSTEM_PROMPT,
           messages: [
             {
               role: 'user',
               content: `EVENT:
-${JSON.stringify(
-                {
-                  timestamp: ev.timestamp,
-                  source: ev.source,
-                  eventType: ev.eventType,
-                  description: ev.description,
-                  groupName: ev.groupName,
-                  personName: ev.personName,
-                  placeName: ev.placeName
-                },
-                null,
-                2
-              )}
+${JSON.stringify(eventPayload, null, 2)}
 ${groupProfileBlock ? `\n${groupProfileBlock}\n` : ''}
 ${alexContextBlock}`
             }
@@ -248,6 +279,41 @@ ${alexContextBlock}`
           .set({ritaNotes: reflection.observation || '', processed: true})
           .commit()
         reflected++
+
+        if (isCancellation && ev.groupId) {
+          const cause = reflection.cancellationCause || cancellationRaw?.cancellationCause
+          const isPrivate =
+            reflection.cancellationIsPrivate ??
+            cancellationRaw?.cancellationIsPrivate ??
+            (cause === 'personal' || cause === 'health')
+
+          const portalPatch = {}
+          if (cause && cause !== 'unknown' && !cancellationRaw?.cancellationCause) {
+            portalPatch.cancellationCause = cause
+          }
+          if (typeof isPrivate === 'boolean') {
+            portalPatch.cancellationIsPrivate = isPrivate
+          }
+          if (Object.keys(portalPatch).length) {
+            await client.patch(ev.groupId).set(portalPatch).commit()
+          }
+
+          const mergedRaw = {
+            ...(cancellationRaw || {}),
+            cancellationCause: cause || cancellationRaw?.cancellationCause || 'unknown',
+            cancellationIsPrivate: Boolean(isPrivate)
+          }
+          await client
+            .patch(ev._id)
+            .set({rawData: JSON.stringify(mergedRaw)})
+            .commit()
+
+          const patternResult = await watchCancellationPatterns(client, {
+            ...ev,
+            rawData: JSON.stringify(mergedRaw)
+          })
+          if (patternResult?.hypothesisId) hypotheses++
+        }
 
         await embedReflectedEvent(ev, reflection.observation || '')
 
@@ -270,7 +336,7 @@ ${alexContextBlock}`
     return {
       statusCode: 200,
       headers: cors,
-      body: JSON.stringify({reflected, questions})
+      body: JSON.stringify({reflected, questions, hypotheses})
     }
   } catch (err) {
     return {statusCode: 500, headers: cors, body: JSON.stringify({error: err.message})}
