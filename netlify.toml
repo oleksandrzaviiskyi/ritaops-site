@@ -94,6 +94,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/ops-pulse"
+  to = "/.netlify/functions/ops-pulse"
+  status = 200
+
+[[redirects]]
   from = "/api/staff"
   to = "/.netlify/functions/staff"
   status = 200

@@ -537,7 +537,77 @@ html.auth-pending .shell { visibility: hidden; }
   background: var(--green-bg); color: var(--green);
 }
 
-/* ── TASKS ── */
+/* ── PULSE (manager awareness) ── */
+.pulse-view {
+  max-width: 640px;
+  padding: 8px 0 48px;
+}
+.pulse-statement-block {
+  padding: 32px 0 40px;
+  border-bottom: 1px solid var(--border);
+}
+.pulse-statement {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+.pulse-balance {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pulse-register {
+  padding: 36px 0 0;
+}
+.pulse-register + .pulse-register {
+  padding-top: 44px;
+}
+.pulse-register-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 20px;
+}
+.pulse-line {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pulse-line:last-child { border-bottom: none; }
+.pulse-line-place {
+  color: var(--text);
+  font-weight: 500;
+}
+.pulse-empty {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-3);
+  font-style: normal;
+  padding: 8px 0;
+}
+.pulse-needs-you .pulse-line {
+  padding-left: 14px;
+  border-left: 2px solid var(--amber-mid);
+  border-bottom: none;
+  margin-bottom: 12px;
+}
+.pulse-needs-you .pulse-line:last-child { margin-bottom: 0; }
+.pulse-loading {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 24px 0;
+}
+
+/* ── TASKS (legacy static list — hidden) ── */
 .tasks-wrap {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -968,6 +1038,11 @@ if (window.netlifyIdentity) {
     <span class="nav-dot"></span> Improvements
   </a>
 
+  <div class="nav-section">Operations</div>
+  <a class="nav-item" href="#" id="navPulse" data-view="pulse">
+    <span class="nav-dot green"></span> Pulse
+  </a>
+
   <div class="nav-section">Rita</div>
   <a class="nav-item" href="#" id="navRitaQuestions" data-view="rita-questions">
     <span class="nav-dot red"></span> Rita's Questions
@@ -1094,16 +1169,19 @@ if (window.netlifyIdentity) {
   </div>
   </div>
 
-  <!-- Tasks -->
-  <div id="tasks-section">
-  <div id="tasks" class="section-head">
-    <div class="section-title">Tasks</div>
-    <button class="btn" style="font-size:12px;padding:6px 12px;">+ Task</button>
-  </div>
-  <div class="tasks-wrap" id="tasks-wrap"></div>
-  </div>
-
   </div><!-- /ops-main-view -->
+
+  <div id="pulse-section" style="display:none">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Pulse</div>
+        <div class="page-date">Состояние пространства — без участия, только осознанность</div>
+      </div>
+    </div>
+    <div class="pulse-view" id="pulse-view">
+      <p class="pulse-loading">Загрузка…</p>
+    </div>
+  </div>
 
   <div id="rita-questions-section" style="display:none">
     <div class="page-header">
@@ -2217,7 +2295,6 @@ function applyTimeMode() {
   }
 
   updateInventory()
-  renderTasks()
   updateArrivalDateLines()
   applyArrivalFilter()
 }
@@ -2705,27 +2782,169 @@ async function submitRitaAnswer(questionId, answer, cardEl, pdf) {
 
 function switchDashboardView(view) {
   const opsView = document.getElementById('ops-main-view')
+  const pulseView = document.getElementById('pulse-section')
   const ritaView = document.getElementById('rita-questions-section')
   const navArrivals = document.getElementById('navArrivals')
+  const navPulse = document.getElementById('navPulse')
   const navRita = document.getElementById('navRitaQuestions')
+
+  navArrivals?.classList.remove('active')
+  navPulse?.classList.remove('active')
+  navRita?.classList.remove('active')
 
   if (view === 'rita-questions') {
     if (opsView) opsView.style.display = 'none'
+    if (pulseView) pulseView.style.display = 'none'
     if (ritaView) ritaView.style.display = 'block'
-    navArrivals?.classList.remove('active')
     navRita?.classList.add('active')
     loadRitaQuestionsSection()
-  } else {
-    if (opsView) opsView.style.display = 'block'
+    return
+  }
+
+  if (view === 'pulse') {
+    if (opsView) opsView.style.display = 'none'
+    if (pulseView) pulseView.style.display = 'block'
     if (ritaView) ritaView.style.display = 'none'
-    navRita?.classList.remove('active')
-    navArrivals?.classList.add('active')
+    navPulse?.classList.add('active')
+    loadPulseSection()
+    return
+  }
+
+  if (opsView) opsView.style.display = 'block'
+  if (pulseView) pulseView.style.display = 'none'
+  if (ritaView) ritaView.style.display = 'none'
+  navArrivals?.classList.add('active')
+}
+
+const BALANCE_LABELS = {
+  aligned: 'Согласованно',
+  'guest-heavy': 'Нагрузка на гостей',
+  'staff-strained': 'Персонал на пределе',
+  'dual-strain': 'Оба поля под стрессом',
+  resting: 'Покой'
+}
+
+const DEPT_LABELS = {
+  maintenance: 'техобслуживание',
+  cleaning: 'клининг',
+  kitchen: 'кухня',
+  grounds: 'территория',
+  restaurant: 'ресторан',
+  security: 'безопасность',
+  reception: 'ресепшен',
+  bar: 'бар',
+  purchases: 'закупки',
+  reservations: 'бронирования',
+  accounting: 'бухгалтерия',
+  groups: 'группы'
+}
+
+function formatDeptList(codes) {
+  const list = (Array.isArray(codes) ? codes : [])
+    .filter(Boolean)
+    .map((code) => DEPT_LABELS[code] || code)
+  return [...new Set(list)].join(', ')
+}
+
+function formatPlaceLabel(place) {
+  if (!place) return 'Место не указано'
+  return place.unitCode || place.name || 'Место'
+}
+
+function formatOpenDuration(openedAt) {
+  if (!openedAt) return ''
+  const opened = new Date(openedAt)
+  if (Number.isNaN(opened.getTime())) return ''
+  const hours = (Date.now() - opened.getTime()) / (1000 * 60 * 60)
+  if (hours < 1) return 'меньше часа'
+  if (hours < 24) {
+    const h = Math.round(hours)
+    return `${h} ч`
+  }
+  const days = Math.round(hours / 24)
+  return `${days} дн`
+}
+
+function concernOpenHours(openedAt) {
+  if (!openedAt) return 0
+  const opened = new Date(openedAt)
+  if (Number.isNaN(opened.getTime())) return 0
+  return (Date.now() - opened.getTime()) / (1000 * 60 * 60)
+}
+
+function renderConcernLine(concern) {
+  const place = formatPlaceLabel(concern.relatedPlace)
+  const duration = formatOpenDuration(concern.openedAt)
+  const depts = formatDeptList(concern.depts)
+  const parts = [`<span class="pulse-line-place">${escapeHtml(place)}</span>`, 'в работе']
+  if (duration) parts.push(escapeHtml(duration))
+  if (depts) parts.push(escapeHtml(depts))
+  return `<div class="pulse-line">${parts.join(' · ')}</div>`
+}
+
+function renderPulse(data) {
+  const root = document.getElementById('pulse-view')
+  if (!root) return
+
+  const pulse = data?.pulse || {}
+  const concerns = Array.isArray(data?.concerns) ? data.concerns : []
+  const statement =
+    pulse.coherenceStatement?.trim() ||
+    'Пространство в равновесии — подробная сводка появится после синхронизации нагрузки.'
+  const balance = BALANCE_LABELS[pulse.balanceStatus] || pulse.balanceStatus || '—'
+
+  const needsYou = concerns.filter((c) => concernOpenHours(c.openedAt) > 12)
+  const fieldLines = concerns.map(renderConcernLine).join('')
+
+  root.innerHTML = `
+    <section class="pulse-statement-block" aria-label="Pulse statement">
+      <p class="pulse-statement">${escapeHtml(statement)}</p>
+      <div class="pulse-balance">${escapeHtml(balance)}</div>
+    </section>
+
+    <section class="pulse-register" aria-label="Field summary">
+      <div class="pulse-register-label">Поле</div>
+      ${
+        concerns.length
+          ? fieldLines
+          : '<p class="pulse-empty">Все места в порядке.</p>'
+      }
+    </section>
+
+    <section class="pulse-register pulse-needs-you" aria-label="Needs you">
+      <div class="pulse-register-label">Требует тебя</div>
+      ${
+        needsYou.length
+          ? needsYou.map(renderConcernLine).join('')
+          : '<p class="pulse-empty">Ничего не требует тебя.</p>'
+      }
+    </section>
+  `
+}
+
+async function loadPulseSection() {
+  const root = document.getElementById('pulse-view')
+  if (root) root.innerHTML = '<p class="pulse-loading">Загрузка…</p>'
+  try {
+    const res = await staffFetch('/api/ops-pulse')
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || res.statusText)
+    renderPulse(json)
+  } catch (err) {
+    if (root) {
+      root.innerHTML = `<p class="pulse-empty" style="color:var(--red)">${escapeHtml(err.message)}</p>`
+    }
   }
 }
 
 document.getElementById('navRitaQuestions')?.addEventListener('click', (e) => {
   e.preventDefault()
   switchDashboardView('rita-questions')
+})
+
+document.getElementById('navPulse')?.addEventListener('click', (e) => {
+  e.preventDefault()
+  switchDashboardView('pulse')
 })
 
 document.getElementById('navArrivals')?.addEventListener('click', (e) => {
