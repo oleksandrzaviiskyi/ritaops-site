@@ -11,7 +11,8 @@ const client = createClient({
 
 const cors = {
   'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*'
+  'Access-Control-Allow-Origin': '*',
+  'Cache-Control': 'no-store, no-cache, must-revalidate'
 }
 
 const PULSE_QUERY = `*[_id == "lasCanasPulse.lcbr"][0]{

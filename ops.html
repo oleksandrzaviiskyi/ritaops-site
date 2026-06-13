@@ -2793,6 +2793,7 @@ function switchDashboardView(view) {
   navRita?.classList.remove('active')
 
   if (view === 'rita-questions') {
+    stopPulsePolling()
     if (opsView) opsView.style.display = 'none'
     if (pulseView) pulseView.style.display = 'none'
     if (ritaView) ritaView.style.display = 'block'
@@ -2807,9 +2808,11 @@ function switchDashboardView(view) {
     if (ritaView) ritaView.style.display = 'none'
     navPulse?.classList.add('active')
     loadPulseSection()
+    startPulsePolling()
     return
   }
 
+  stopPulsePolling()
   if (opsView) opsView.style.display = 'block'
   if (pulseView) pulseView.style.display = 'none'
   if (ritaView) ritaView.style.display = 'none'
@@ -2848,7 +2851,30 @@ function formatDeptList(codes) {
 
 function formatPlaceLabel(place) {
   if (!place) return 'Место не указано'
-  return place.unitCode || place.name || 'Место'
+  const name = String(place.name || '').trim()
+  const unitCode = String(place.unitCode || '').trim()
+  if (name) {
+    if (unitCode && name !== unitCode && !name.includes(unitCode)) {
+      return `${name} · ${unitCode}`
+    }
+    return name
+  }
+  return unitCode || 'Место'
+}
+
+let pulsePollTimer = null
+const PULSE_POLL_MS = 25000
+
+function stopPulsePolling() {
+  if (pulsePollTimer) {
+    clearInterval(pulsePollTimer)
+    pulsePollTimer = null
+  }
+}
+
+function startPulsePolling() {
+  stopPulsePolling()
+  pulsePollTimer = setInterval(() => loadPulseSection({silent: true}), PULSE_POLL_MS)
 }
 
 function formatOpenDuration(openedAt) {
@@ -2922,16 +2948,17 @@ function renderPulse(data) {
   `
 }
 
-async function loadPulseSection() {
+async function loadPulseSection({silent = false} = {}) {
   const root = document.getElementById('pulse-view')
-  if (root) root.innerHTML = '<p class="pulse-loading">Загрузка…</p>'
+  if (root && !silent) root.innerHTML = '<p class="pulse-loading">Загрузка…</p>'
   try {
-    const res = await staffFetch('/api/ops-pulse')
+    const cacheBust = `_=${Date.now()}`
+    const res = await staffFetch(`/api/ops-pulse?${cacheBust}`)
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || res.statusText)
     renderPulse(json)
   } catch (err) {
-    if (root) {
+    if (root && !silent) {
       root.innerHTML = `<p class="pulse-empty" style="color:var(--red)">${escapeHtml(err.message)}</p>`
     }
   }
