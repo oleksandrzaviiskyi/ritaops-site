@@ -1,5 +1,10 @@
 const {createClient} = require('@sanity/client')
 const {staffAuthorized} = require('./lib/staffAuth')
+const {
+  buildFieldPulse,
+  PLACES_QUERY,
+  CONCERNS_WITH_TASKS_QUERY
+} = require('./lib/buildFieldPulse')
 
 const client = createClient({
   projectId: '0po0panc',
@@ -21,14 +26,17 @@ const PULSE_QUERY = `*[_id == "lasCanasPulse.lcbr"][0]{
   "lastSyncedAt": coherence.lastSyncedAt
 }`
 
-const CONCERNS_QUERY = `*[_type == "ritaConcern" && status == "open"] | order(openedAt asc) {
-  _id,
-  openedAt,
-  summary,
-  relatedPlace->{name, unitCode},
-  "openTasks": count(*[_type == "ritaTask" && references(^._id) && status == "open"]),
-  "deptDetails": *[_type == "ritaTask" && references(^._id) && status == "open"].department->{code, titleEn, title}
-}`
+function deptDetailsFromTasks(openTasks) {
+  const seen = new Set()
+  const list = []
+  for (const task of openTasks || []) {
+    const dept = task.department
+    if (!dept?.code || seen.has(dept.code)) continue
+    seen.add(dept.code)
+    list.push(dept)
+  }
+  return list
+}
 
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -45,17 +53,26 @@ exports.handler = async (event, context) => {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
     }
 
-    const [pulse, concerns] = await Promise.all([
+    const [pulse, places, concernsRaw] = await Promise.all([
       client.fetch(PULSE_QUERY),
-      client.fetch(CONCERNS_QUERY)
+      client.fetch(PLACES_QUERY),
+      client.fetch(CONCERNS_WITH_TASKS_QUERY)
     ])
+
+    const concerns = (concernsRaw || []).map((c) => ({
+      ...c,
+      deptDetails: deptDetailsFromTasks(c.openTasks)
+    }))
+
+    const field = buildFieldPulse(places || [], concernsRaw || [])
 
     return {
       statusCode: 200,
       headers: cors,
       body: JSON.stringify({
         pulse: pulse || {coherenceStatement: null, balanceStatus: null},
-        concerns: concerns || []
+        field,
+        concerns
       })
     }
   } catch (err) {

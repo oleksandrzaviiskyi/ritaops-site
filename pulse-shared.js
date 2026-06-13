@@ -126,26 +126,89 @@ function renderConcernLine(concern) {
   return `<div class="live-field-line">${parts.join(' · ')}</div>`
 }
 
-function renderPulseRegisters(concerns) {
+/** Editable department → color map for Field overlay. */
+const DEPARTMENT_COLORS = {
+  maintenance: {
+    color: 'var(--color-text-warning)',
+    chipBg: 'var(--color-bg-warning)'
+  },
+  cleaning: {
+    color: 'var(--color-text-info)',
+    chipBg: 'var(--color-bg-info)'
+  },
+  default: {
+    color: 'var(--color-text-accent)',
+    chipBg: 'var(--color-bg-accent)'
+  }
+}
+
+function deptColors(code) {
+  return DEPARTMENT_COLORS[code] || DEPARTMENT_COLORS.default
+}
+
+function renderSharedPlace(place) {
+  if (place.concern) {
+    const {color} = deptColors(place.concern.departmentCode)
+    const c = place.concern
+    return `<span class="field-place field-place--active"><span class="field-place-name" style="color:${color}">${escapeHtml(place.displayName)}</span><span class="field-place-meta"> · ${escapeHtml(c.shortDescription)} · ${escapeHtml(c.hoursOpen)}</span></span>`
+  }
+  return `<span class="field-place field-place--neutral">${escapeHtml(place.displayName)}</span>`
+}
+
+function renderUnitChip(unit) {
+  if (unit.concern) {
+    const {color, chipBg} = deptColors(unit.concern.departmentCode)
+    const c = unit.concern
+    return `<span class="field-unit field-unit--active"><span class="field-unit-chip" style="color:${color};background:${chipBg}">${escapeHtml(unit.unitCode)}</span><span class="field-unit-meta">${escapeHtml(c.shortDescription)} · ${escapeHtml(c.hoursOpen)}</span></span>`
+  }
+  return `<span class="field-unit field-unit--neutral"><span class="field-unit-chip">${escapeHtml(unit.unitCode)}</span></span>`
+}
+
+function renderBuildingCard(building) {
+  return `<div class="field-building-card"><div class="field-building-title">${escapeHtml(building.name)}</div><div class="field-units">${building.units.map(renderUnitChip).join('')}</div></div>`
+}
+
+function renderVillaCard(villa) {
+  const chip = villa.concern
+    ? (() => {
+        const {color, chipBg} = deptColors(villa.concern.departmentCode)
+        const c = villa.concern
+        return `<span class="field-unit field-unit--active"><span class="field-unit-chip" style="color:${color};background:${chipBg}">${escapeHtml(villa.unitCode || 'Villa')}</span><span class="field-unit-meta">${escapeHtml(c.shortDescription)} · ${escapeHtml(c.hoursOpen)}</span></span>`
+      })()
+    : `<span class="field-unit field-unit--neutral"><span class="field-unit-chip">${escapeHtml(villa.unitCode || 'Villa')}</span></span>`
+  return `<div class="field-building-card field-villa-card"><div class="field-building-title">Villa</div><div class="field-units">${chip}</div></div>`
+}
+
+function renderFieldLayout(field) {
+  if (!field) return '<p class="live-field-empty">Loading…</p>'
+  const shared = (field.sharedSpaces || []).map(renderSharedPlace).join('<span class="field-sep"> · </span>')
+  const buildings = (field.buildings || []).map(renderBuildingCard).join('')
+  const villa = field.villa ? renderVillaCard(field.villa) : ''
+  return `<div class="field-layout"><div class="field-shared-row">${shared}</div><div class="field-buildings-grid">${buildings}${villa}</div></div>`
+}
+
+function renderNeedsYou(concerns) {
   const needsYou = concerns.filter((c) => concernOpenHours(c.openedAt) > 12)
-  const fieldHtml = concerns.length
-    ? concerns.map(renderConcernLine).join('')
-    : '<p class="live-field-empty">All places are in order.</p>'
-  const needsHtml = needsYou.length
+  return needsYou.length
     ? needsYou.map(renderConcernLine).join('')
     : '<p class="live-field-empty">Nothing needs you.</p>'
+}
 
+function renderPulseRegisters(concerns, field) {
+  const fieldHtml = renderFieldLayout(field)
+  const needsHtml = renderNeedsYou(concerns)
   return {fieldHtml, needsHtml, concernCount: concerns.length}
 }
 
 function applyPulseLiveData(data, targets = {}) {
   const pulse = data?.pulse || {}
   const concerns = Array.isArray(data?.concerns) ? data.concerns : []
+  const field = data?.field || null
   const statement =
     pulse.coherenceStatement?.trim() ||
     'The space is in balance — a detailed summary will appear after the next load sync.'
   const balance = formatBalanceStatus(pulse.balanceStatus)
-  const {fieldHtml, needsHtml, concernCount} = renderPulseRegisters(concerns)
+  const {fieldHtml, needsHtml, concernCount} = renderPulseRegisters(concerns, field)
 
   if (targets.pageMeta) {
     targets.pageMeta.textContent = `${formatHeaderDate()} · Las Canas Beach Retreat`
@@ -191,6 +254,7 @@ function startPulsePolling(onTick) {
 
 window.RitaPulse = {
   PULSE_POLL_MS,
+  DEPARTMENT_COLORS,
   escapeHtml,
   formatBalanceStatus,
   staffKey,
@@ -202,6 +266,8 @@ window.RitaPulse = {
   formatOpenDuration,
   concernOpenHours,
   renderConcernLine,
+  renderFieldLayout,
+  renderNeedsYou,
   renderPulseRegisters,
   applyPulseLiveData,
   fetchOpsPulse,
