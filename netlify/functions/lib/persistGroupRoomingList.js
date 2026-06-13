@@ -2,7 +2,7 @@ const {formatExtractionAsText} = require('./extractPdfRoomingList')
 
 function fileSlug(fileName) {
   const base = String(fileName || 'attachment')
-    .replace(/\.pdf$/i, '')
+    .replace(/\.(pdf|png|jpe?g|webp|gif)$/i, '')
     .replace(/[^a-zA-Z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .toLowerCase()

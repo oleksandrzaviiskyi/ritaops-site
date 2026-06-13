@@ -163,7 +163,7 @@ exports.handler = async (event, context) => {
     const pdfData = pdf?.base64Data ? String(pdf.base64Data).trim() : ''
 
     if (!message && !pdfData) {
-      return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'message or pdf required'})}
+      return {statusCode: 400, headers: cors, body: JSON.stringify({error: 'message or attachment required'})}
     }
 
     const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
@@ -214,11 +214,11 @@ exports.handler = async (event, context) => {
           fileName: processed.fileName
         })}`
       } catch (err) {
-        return anthropicErrorReply(new Error(`PDF extraction failed: ${err.message}`))
+        return anthropicErrorReply(new Error(`Attachment extraction failed: ${err.message}`))
       }
     }
 
-    const userMessage = `${message || 'Please review the attached rooming list PDF.'}${pdfContext}`.trim()
+    const userMessage = `${message || 'Please review the attached rooming list.'}${pdfContext}`.trim()
 
     const liveData = parsedBody.liveData || {}
     const history = Array.isArray(parsedBody.history) ? parsedBody.history : []

@@ -1,8 +1,16 @@
 const Anthropic = require('@anthropic-ai/sdk')
 
-const PDF_MODEL = 'claude-sonnet-4-6'
+const FILE_MODEL = 'claude-sonnet-4-6'
 
-const EXTRACTION_INSTRUCTION = `You are reading a hotel or tour group rooming list PDF.
+const IMAGE_MEDIA_TYPES = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif'
+}
+
+const EXTRACTION_INSTRUCTION = `You are reading a hotel or tour group rooming list from a PDF or screenshot/image.
 Extract all available structured data from the document.
 
 Return JSON ONLY — no markdown fences, no commentary:
@@ -23,7 +31,35 @@ Return JSON ONLY — no markdown fences, no commentary:
   "summary": "Plain-language summary of the rooming list in 2-4 sentences"
 }
 
-Use empty strings or empty arrays for fields not found in the PDF.`
+Use empty strings or empty arrays for fields not found in the document.`
+
+function fileExtension(fileName) {
+  const match = String(fileName || '')
+    .toLowerCase()
+    .match(/\.([a-z0-9]+)$/)
+  return match ? `.${match[1]}` : ''
+}
+
+function detectFileKind(fileName) {
+  const ext = fileExtension(fileName)
+  if (ext === '.pdf') return 'pdf'
+  if (IMAGE_MEDIA_TYPES[ext]) return 'image'
+  throw new Error(`Unsupported attachment type: ${ext || 'unknown'}`)
+}
+
+function imageMediaTypeFromFileName(fileName) {
+  const ext = fileExtension(fileName)
+  const mediaType = IMAGE_MEDIA_TYPES[ext]
+  if (!mediaType) {
+    throw new Error(`Unsupported image type: ${ext || 'unknown'}`)
+  }
+  return mediaType
+}
+
+function defaultFileName(fileName, kind) {
+  if (fileName) return fileName
+  return kind === 'pdf' ? 'attachment.pdf' : 'attachment.png'
+}
 
 function parseJsonFromText(text) {
   const cleaned = String(text || '')
@@ -33,16 +69,54 @@ function parseJsonFromText(text) {
   return JSON.parse(cleaned)
 }
 
-function normalizeBase64Pdf(base64Data) {
-  return String(base64Data || '')
-    .replace(/^data:application\/pdf;base64,/, '')
-    .trim()
+function normalizeBase64Attachment(base64Data) {
+  let data = String(base64Data || '').trim()
+  if (data.startsWith('data:') && data.includes(',')) {
+    data = data.slice(data.indexOf(',') + 1)
+  }
+  return data.trim()
 }
 
-async function extractPdfRoomingList({base64Data, fileName, apiKey}) {
-  const data = normalizeBase64Pdf(base64Data)
+/** @deprecated use normalizeBase64Attachment */
+function normalizeBase64Pdf(base64Data) {
+  return normalizeBase64Attachment(base64Data)
+}
+
+function buildAnthropicContent({kind, data, fileName}) {
+  const prompt = `${EXTRACTION_INSTRUCTION}\n\nFile name: ${fileName}`
+
+  if (kind === 'pdf') {
+    return [
+      {
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data
+        }
+      },
+      {type: 'text', text: prompt}
+    ]
+  }
+
+  return [
+    {
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: imageMediaTypeFromFileName(fileName),
+        data
+      }
+    },
+    {type: 'text', text: prompt}
+  ]
+}
+
+async function extractRoomingFromAttachment({base64Data, fileName, apiKey}) {
+  const kind = detectFileKind(fileName)
+  const data = normalizeBase64Attachment(base64Data)
   if (!data) {
-    throw new Error('PDF data is empty')
+    throw new Error('Attachment data is empty')
   }
 
   const key = (apiKey || process.env.ANTHROPIC_API_KEY || '').trim()
@@ -50,27 +124,15 @@ async function extractPdfRoomingList({base64Data, fileName, apiKey}) {
     throw new Error('ANTHROPIC_API_KEY not configured')
   }
 
+  const resolvedName = defaultFileName(fileName, kind)
   const anthropic = new Anthropic({apiKey: key})
   const response = await anthropic.messages.create({
-    model: PDF_MODEL,
+    model: FILE_MODEL,
     max_tokens: 4096,
     messages: [
       {
         role: 'user',
-        content: [
-          {
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data
-            }
-          },
-          {
-            type: 'text',
-            text: `${EXTRACTION_INSTRUCTION}\n\nFile name: ${fileName || 'attachment.pdf'}`
-          }
-        ]
+        content: buildAnthropicContent({kind, data, fileName: resolvedName})
       }
     ]
   })
@@ -80,9 +142,15 @@ async function extractPdfRoomingList({base64Data, fileName, apiKey}) {
 
   return {
     extraction,
-    fileName: fileName || 'attachment.pdf',
-    model: PDF_MODEL
+    fileName: resolvedName,
+    fileKind: kind,
+    model: FILE_MODEL
   }
+}
+
+/** @deprecated use extractRoomingFromAttachment */
+async function extractPdfRoomingList(args) {
+  return extractRoomingFromAttachment(args)
 }
 
 function formatExtractionAsText(extraction) {
@@ -121,7 +189,8 @@ function formatExtractionAsText(extraction) {
   return lines.join('\n')
 }
 
-function buildAnswerFromParts({typedAnswer, extraction, group, pdfFileName}) {
+function buildAnswerFromParts({typedAnswer, extraction, group, pdfFileName, attachmentFileName}) {
+  const fileName = attachmentFileName || pdfFileName
   const parts = []
 
   if (group?.groupName || group?._id) {
@@ -134,8 +203,8 @@ function buildAnswerFromParts({typedAnswer, extraction, group, pdfFileName}) {
     if (groupLine) parts.push(groupLine)
   }
 
-  if (extraction?.groupId) parts.push(`GROUP ID (from PDF): ${extraction.groupId}`)
-  if (extraction?.prodTourId) parts.push(`Prod Tour ID (from PDF): ${extraction.prodTourId}`)
+  if (extraction?.groupId) parts.push(`GROUP ID (from attachment): ${extraction.groupId}`)
+  if (extraction?.prodTourId) parts.push(`Prod Tour ID (from attachment): ${extraction.prodTourId}`)
 
   if (typedAnswer) {
     parts.push('')
@@ -144,7 +213,7 @@ function buildAnswerFromParts({typedAnswer, extraction, group, pdfFileName}) {
 
   if (extraction) {
     parts.push('')
-    parts.push(`--- Rooming list from ${pdfFileName || 'attached PDF'} ---`)
+    parts.push(`--- Rooming list from ${fileName || 'attached file'} ---`)
     parts.push(formatExtractionAsText(extraction))
   }
 
@@ -152,9 +221,15 @@ function buildAnswerFromParts({typedAnswer, extraction, group, pdfFileName}) {
 }
 
 module.exports = {
-  PDF_MODEL,
+  FILE_MODEL,
+  PDF_MODEL: FILE_MODEL,
+  IMAGE_MEDIA_TYPES,
+  detectFileKind,
+  imageMediaTypeFromFileName,
   parseJsonFromText,
+  normalizeBase64Attachment,
   normalizeBase64Pdf,
+  extractRoomingFromAttachment,
   extractPdfRoomingList,
   formatExtractionAsText,
   buildAnswerFromParts

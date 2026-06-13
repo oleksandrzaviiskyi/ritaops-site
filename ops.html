@@ -1126,11 +1126,11 @@ if (window.netlifyIdentity) {
     <div class="rita-typing" id="ritaTyping" hidden>Rita is thinking…</div>
     <div class="rita-input-compose" id="ritaChatCompose">
       <div class="rita-q-attach-row">
-        <input type="file" class="rita-q-file" id="ritaChatFile" accept=".pdf,application/pdf" hidden />
-        <button type="button" class="rita-q-attach" id="ritaChatAttach" title="Attach PDF">📎</button>
+        <input type="file" class="rita-q-file" id="ritaChatFile" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,application/pdf,image/png,image/jpeg,image/webp,image/gif" hidden />
+        <button type="button" class="rita-q-attach" id="ritaChatAttach" title="Attach PDF or image">📎</button>
         <div class="rita-q-file-chip" id="ritaChatFileChip" hidden>
           <span class="rita-q-file-name" id="ritaChatFileName"></span>
-          <button type="button" class="rita-q-file-clear" id="ritaChatFileClear" aria-label="Remove PDF">×</button>
+          <button type="button" class="rita-q-file-clear" id="ritaChatFileClear" aria-label="Remove attachment">×</button>
         </div>
       </div>
       <div class="rita-input-row">
@@ -2493,16 +2493,27 @@ function formatRitaExtractionSummary(extraction) {
   return lines.join('\n')
 }
 
-function readPdfAsBase64(file) {
+function isRitaRoomingAttachment(file) {
+  if (!file) return false
+  if (/\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name)) return true
+  return /^(application\/pdf|image\/(png|jpeg|webp|gif))$/i.test(file.type)
+}
+
+function readAttachmentAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
       const result = String(reader.result || '')
       resolve(result.includes(',') ? result.split(',')[1] : result)
     }
-    reader.onerror = () => reject(reader.error || new Error('Could not read PDF'))
+    reader.onerror = () => reject(reader.error || new Error('Could not read attachment'))
     reader.readAsDataURL(file)
   })
+}
+
+/** @deprecated use readAttachmentAsBase64 */
+function readPdfAsBase64(file) {
+  return readAttachmentAsBase64(file)
 }
 
 function setRitaPdfAttachment(containerEl, fileName, base64Data) {
@@ -2555,11 +2566,11 @@ function ritaQuestionCardHtml(q) {
         <div class="rita-q-answer-compose">
           <textarea class="rita-q-textarea" placeholder="Your answer…"></textarea>
           <div class="rita-q-attach-row">
-            <input type="file" class="rita-q-file" accept=".pdf,application/pdf" hidden />
-            <button type="button" class="rita-q-attach" title="Attach PDF">📎</button>
+            <input type="file" class="rita-q-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,application/pdf,image/png,image/jpeg,image/webp,image/gif" hidden />
+            <button type="button" class="rita-q-attach" title="Attach PDF or image">📎</button>
             <div class="rita-q-file-chip" hidden>
               <span class="rita-q-file-name"></span>
-              <button type="button" class="rita-q-file-clear" aria-label="Remove PDF">×</button>
+              <button type="button" class="rita-q-file-clear" aria-label="Remove attachment">×</button>
             </div>
           </div>
         </div>
@@ -2584,13 +2595,13 @@ function bindRitaQuestionCards() {
     fileInput?.addEventListener('change', async () => {
       const file = fileInput.files?.[0]
       if (!file) return
-      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-        alert('Please attach a PDF file')
+      if (!isRitaRoomingAttachment(file)) {
+        alert('Please attach a PDF or image (.png, .jpg, .jpeg, .webp, .gif)')
         fileInput.value = ''
         return
       }
       try {
-        const base64Data = await readPdfAsBase64(file)
+        const base64Data = await readAttachmentAsBase64(file)
         setRitaQuestionPdf(card, file.name, base64Data)
       } catch (err) {
         alert(err.message)
@@ -2604,7 +2615,7 @@ function bindRitaQuestionCards() {
       const answer = textarea?.value?.trim() || ''
       const pdfBase64 = card.dataset.pdfBase64 || ''
       if (!answer && !pdfBase64) {
-        alert('Enter an answer or attach a PDF')
+        alert('Enter an answer or attach a PDF or image')
         return
       }
       submitRitaAnswer(card.dataset.questionId, answer, card, {
@@ -2676,7 +2687,7 @@ async function submitRitaAnswer(questionId, answer, cardEl, pdf) {
 
     const summary = formatRitaExtractionSummary(json.extraction)
     if (summary) {
-      alert(`Rita read from the PDF:\n\n${summary}`)
+      alert(`Rita read from the attachment:\n\n${summary}`)
     }
 
     cardEl.remove()
@@ -3105,7 +3116,7 @@ async function sendRitaMessage(text) {
   const pdfFileName = compose?.dataset.pdfName || ''
   if (!message && !pdfBase64) return
 
-  const displayContent = message || `📎 ${pdfFileName || 'attachment.pdf'}`
+  const displayContent = message || `📎 ${pdfFileName || 'attachment'}`
 
   const messages = loadRitaConversation()
   messages.push({role: 'user', content: displayContent})
@@ -3198,13 +3209,13 @@ function bindRitaChatAttach() {
   fileInput?.addEventListener('change', async () => {
     const file = fileInput.files?.[0]
     if (!file) return
-    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-      alert('Please attach a PDF file')
+    if (!isRitaRoomingAttachment(file)) {
+      alert('Please attach a PDF or image (.png, .jpg, .jpeg, .webp, .gif)')
       fileInput.value = ''
       return
     }
     try {
-      const base64Data = await readPdfAsBase64(file)
+      const base64Data = await readAttachmentAsBase64(file)
       setRitaPdfAttachment(compose, file.name, base64Data)
     } catch (err) {
       alert(err.message)

@@ -1,6 +1,6 @@
 const {createClient} = require('@sanity/client')
 const {resolveStaffAuth} = require('./lib/staffAuth')
-const {extractPdfRoomingList, buildAnswerFromParts} = require('./lib/extractPdfRoomingList')
+const {extractRoomingFromAttachment, buildAnswerFromParts} = require('./lib/extractPdfRoomingList')
 const {
   processRoomingPdf
 } = require('./lib/roomingPdfFlow')
@@ -55,7 +55,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: cors,
-        body: JSON.stringify({error: 'answer or pdf is required'})
+        body: JSON.stringify({error: 'answer or attachment is required'})
       }
     }
 
@@ -95,7 +95,7 @@ exports.handler = async (event, context) => {
         }
       }
 
-      const result = await extractPdfRoomingList({
+      const result = await extractRoomingFromAttachment({
         base64Data: pdfData,
         fileName: pdfFileName,
         apiKey

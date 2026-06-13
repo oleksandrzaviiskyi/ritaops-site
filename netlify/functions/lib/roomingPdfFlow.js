@@ -1,5 +1,5 @@
 const {createClient} = require('@sanity/client')
-const {extractPdfRoomingList, formatExtractionAsText} = require('./extractPdfRoomingList')
+const {extractRoomingFromAttachment, formatExtractionAsText} = require('./extractPdfRoomingList')
 const {persistGroupRoomingList} = require('./persistGroupRoomingList')
 const {resolveGroupForRooming, buildUnmatchedGroupReply} = require('./resolveGroupForRooming')
 
@@ -33,7 +33,7 @@ async function processRoomingPdf(client, {extraction, pdfFileName, question}) {
 }
 
 async function extractAndProcessRoomingPdf(client, {pdfData, pdfFileName, apiKey, question}) {
-  const result = await extractPdfRoomingList({
+  const result = await extractRoomingFromAttachment({
     base64Data: pdfData,
     fileName: pdfFileName,
     apiKey
@@ -64,7 +64,7 @@ function buildSavedRoomingContext({group, roomingPersist, extraction, fileName})
     lines.push(`Saved as placement history record ${roomingPersist.roomingListId}`)
   }
   lines.push('')
-  lines.push(`ATTACHED PDF (${fileName}) — extracted rooming list:`)
+  lines.push(`ATTACHED FILE (${fileName}) — extracted rooming list:`)
   lines.push(formatExtractionAsText(extraction))
   return lines.join('\n')
 }
