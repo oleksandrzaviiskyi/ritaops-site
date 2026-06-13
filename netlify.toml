@@ -9,7 +9,17 @@
   status = 200
 
 [[redirects]]
+  from = "/pulse"
+  to = "/pulse.html"
+  status = 200
+
+[[redirects]]
   from = "/ops"
+  to = "/pulse"
+  status = 301
+
+[[redirects]]
+  from = "/arrivals"
   to = "/ops.html"
   status = 200
 
@@ -25,7 +35,7 @@
 
 [[redirects]]
   from = "/groups"
-  to = "/ops"
+  to = "/pulse"
   status = 301
 
 [[redirects]]

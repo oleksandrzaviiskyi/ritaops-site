@@ -4,12 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pulse · RitaOps</title>
-  <link rel="stylesheet" href="style.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a1a; display: flex; min-height: 100vh; }
+    html.auth-pending body { visibility: hidden; }
 
-    /* Sidebar */
     .sidebar { width: 190px; flex-shrink: 0; background: #fff; border-right: 0.5px solid #e5e3de; padding: 1.5rem 0; display: flex; flex-direction: column; }
     .sidebar-brand { padding: 0 1.25rem 1.5rem; }
     .sidebar-brand .name { font-size: 13px; font-weight: 600; letter-spacing: .02em; color: #1a1a1a; }
@@ -24,38 +23,44 @@
     @keyframes pulsedot { 0%,100%{opacity:1;} 50%{opacity:.3;} }
     .sidebar-footer { margin-top: auto; padding: 1rem 1.25rem; border-top: 0.5px solid #e5e3de; }
     .sidebar-tag { display: inline-block; font-size: 11px; background: #f0ede8; color: #888; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
-    .sidebar-logout { font-size: 12px; color: #999; cursor: pointer; }
+    .sidebar-logout { font-size: 12px; color: #999; cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; }
 
-    /* Main */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .topbar { background: #fff; border-bottom: 0.5px solid #e5e3de; padding: .875rem 2rem; display: flex; align-items: center; justify-content: space-between; }
     .topbar-left .title { font-size: 22px; font-weight: 400; color: #1a1a1a; }
     .topbar-left .title strong { font-weight: 600; }
     .topbar-left .meta { font-size: 12px; color: #999; margin-top: 2px; }
     .topbar-right { display: flex; gap: 10px; align-items: center; }
-    .btn { font-size: 13px; padding: 6px 16px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #333; cursor: pointer; font-family: inherit; }
+    .btn { font-size: 13px; padding: 6px 16px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #333; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; }
     .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 
-    /* Content */
     .content { flex: 1; overflow-y: auto; padding: 2rem; }
 
-    /* Pulse header */
-    .pulse-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
+    .pulse-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; gap: 1.5rem; }
     .pulse-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #999; margin-bottom: 4px; }
     .pulse-title { font-size: 22px; font-weight: 500; color: #1a1a1a; }
-    .pulse-sub { font-size: 13px; color: #888; margin-top: 3px; }
-    .pulse-score { text-align: right; }
-    .pulse-score .big { font-size: 40px; font-weight: 500; line-height: 1; color: #4a8a2a; }
-    .pulse-score .big span { font-size: 18px; font-weight: 400; color: #bbb; }
-    .pulse-score .status { font-size: 12px; color: #4a8a2a; display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 3px; }
+    .pulse-sub { font-size: 15px; color: #444; margin-top: 10px; line-height: 1.55; max-width: 520px; }
+    .pulse-score { text-align: right; flex-shrink: 0; }
+    .pulse-score .balance-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+    .pulse-score .balance-value { font-size: 15px; font-weight: 500; color: #4a8a2a; line-height: 1.4; }
 
-    /* Wave field */
     .wave-field { background: #f7f6f1; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; }
     canvas#pw { display: block; width: 100%; height: 160px; }
 
-    /* Two col */
+    .live-layer { margin-bottom: 2rem; padding: 1.5rem 0 0; border-top: 0.5px solid #e5e3de; }
+    .live-register { margin-bottom: 1.75rem; }
+    .live-register:last-child { margin-bottom: 0; }
+    .live-register-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #aaa; margin-bottom: 14px; }
+    .live-field-line { font-size: 14px; line-height: 1.55; color: #555; padding: 12px 0; border-bottom: 0.5px solid #ebe8e3; }
+    .live-field-line:last-child { border-bottom: none; }
+    .live-field-empty { font-size: 14px; color: #999; padding: 6px 0; }
+    .live-needs-you .live-field-line { padding-left: 14px; border-left: 2px solid #E9A23B; border-bottom: none; margin-bottom: 10px; }
+    .live-needs-you .live-field-line:last-child { margin-bottom: 0; }
+
+    .demo-note { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #bbb; margin-bottom: 10px; }
+
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
-    .half-card { border-radius: 12px; padding: 1.25rem; }
+    .half-card { border-radius: 12px; padding: 1.25rem; opacity: 0.92; }
     .half-card.guests { background: #E6F1FB; }
     .half-card.staff  { background: #EAF3DE; }
     .hc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -72,10 +77,8 @@
     .factor-owner { font-size: 11px; color: #aaa; margin-top: 1px; }
     .factor-pts { font-size: 12px; font-weight: 500; flex-shrink: 0; }
 
-    /* Section label */
     .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: #888; margin-bottom: 10px; }
 
-    /* Staff grid */
     .staff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
     .staff-card { background: #fff; border: 0.5px solid #e5e3de; border-radius: 8px; padding: .75rem; }
     .staff-dept { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #aaa; margin-bottom: 4px; }
@@ -84,7 +87,6 @@
     .staff-status { font-size: 11px; color: #888; }
     .staff-bar { height: 3px; border-radius: 2px; margin-top: 6px; }
 
-    /* Timeline */
     .timeline-card { background: #fff; border: 0.5px solid #e5e3de; border-radius: 12px; padding: 1.25rem; }
     .tl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
     .tl-title { font-size: 13px; font-weight: 500; }
@@ -105,6 +107,8 @@
   </style>
 </head>
 <body>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>document.documentElement.classList.add('auth-pending')</script>
 
 <aside class="sidebar">
   <div class="sidebar-brand">
@@ -112,25 +116,25 @@
     <div class="sub">Operations platform</div>
   </div>
 
-  <a class="sidebar-item active" href="pulse.html">
+  <a class="sidebar-item active" href="/pulse">
     <span class="sidebar-dot pulse-dot"></span> Pulse
   </a>
 
   <div class="sidebar-section">Guests</div>
-  <a class="sidebar-item" href="ops.html"><span class="sidebar-dot green"></span> Arrivals</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Transfers</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Kitchen · Restaurant · Bar</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Activities</a>
+  <a class="sidebar-item" href="/arrivals"><span class="sidebar-dot green"></span> Arrivals</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Transfers</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Kitchen · Restaurant · Bar</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Activities</a>
 
   <div class="sidebar-section">Staff</div>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Inventory & Purchases</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Housekeeping</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Maintenance</a>
-  <a class="sidebar-item" href="ops.html#"><span class="sidebar-dot"></span> Improvements</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Inventory & Purchases</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Housekeeping</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Maintenance</a>
+  <a class="sidebar-item" href="/arrivals#"><span class="sidebar-dot"></span> Improvements</a>
 
   <div class="sidebar-footer">
     <div class="sidebar-tag">Las Canas Beach</div>
-    <div class="sidebar-logout">Log out</div>
+    <button type="button" class="sidebar-logout" id="btnLogout">Log out</button>
   </div>
 </aside>
 
@@ -138,10 +142,11 @@
   <div class="topbar">
     <div class="topbar-left">
       <div class="title">Operations <strong>center</strong></div>
-      <div class="meta">Sat 6 Jun 2026 · Las Canas Beach Retreat</div>
+      <div class="meta" id="page-meta">Las Canas Beach Retreat</div>
     </div>
     <div class="topbar-right">
-      <button class="btn" onclick="window.location='ops.html'">Group Portal</button>
+      <a class="btn" href="/arrivals">Arrivals</a>
+      <a class="btn btn-primary" href="/group-portal/lascanasbeachretreat?key=rita2026" target="_blank" rel="noopener">Group Portal</a>
     </div>
   </div>
 
@@ -150,18 +155,31 @@
     <div class="pulse-header">
       <div>
         <div class="pulse-eyebrow">⬤ Pulse · Las Canas Beach Retreat</div>
-        <div class="pulse-title">Today, June 6 2026</div>
-        <div class="pulse-sub">On property: 0 guests · next arrival in 27 days</div>
+        <div class="pulse-title" id="pulse-title-date">Today</div>
+        <p class="pulse-sub" id="pulse-statement">Загрузка…</p>
       </div>
       <div class="pulse-score">
-        <div class="big">178<span>/200</span></div>
-        <div class="status">✓ All clear</div>
+        <div class="balance-label">Balance</div>
+        <div class="balance-value" id="pulse-balance">—</div>
       </div>
     </div>
 
     <div class="wave-field">
       <canvas id="pw" height="160"></canvas>
     </div>
+
+    <section class="live-layer" aria-label="Operational field">
+      <div class="live-register">
+        <div class="live-register-label">Поле</div>
+        <div id="pulse-field"><p class="live-field-empty">Загрузка…</p></div>
+      </div>
+      <div class="live-register live-needs-you">
+        <div class="live-register-label">Требует тебя</div>
+        <div id="pulse-needs-you"><p class="live-field-empty">Загрузка…</p></div>
+      </div>
+    </section>
+
+    <div class="demo-note">Preview · not yet wired to live data</div>
 
     <div class="two-col">
       <div class="half-card guests">
@@ -194,11 +212,11 @@
 
     <div class="section-label">Day timeline</div>
     <div class="timeline-card">
-      <div class="tl-head"><span class="tl-title">June 6, 2026</span><span class="tl-now-label">Now 12:05</span></div>
+      <div class="tl-head"><span class="tl-title" id="tl-date">Today</span><span class="tl-now-label" id="tl-now">Now</span></div>
       <div class="tl-row"><span class="tl-time">08:00</span><div class="tl-line"><div class="tl-dot" style="background:#639922;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Shift start — kitchen, reception, bar <span class="tl-badge bdg">✓ done</span></div><div class="tl-sub">11 staff members on duty</div></div></div>
       <div class="tl-row"><span class="tl-time">09:30</span><div class="tl-line"><div class="tl-dot" style="background:#639922;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Inventory check <span class="tl-badge bdg">✓ done</span></div><div class="tl-sub">Purchasing · no deficits found</div></div></div>
       <div class="tl-row"><span class="tl-time">13:00</span><div class="tl-line"><div class="tl-dot" style="background:#378ADD;border:2px solid #185FA5;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Lunch · restaurant <span class="tl-badge bdb">now</span></div><div class="tl-sub">Individual guests · 0 reservations today</div></div></div>
-      <div class="now-pill">▸ Now 12:05</div>
+      <div class="now-pill" id="now-pill">▸ Now</div>
       <div class="tl-row"><span class="tl-time">15:00</span><div class="tl-line"><div class="tl-dot" style="background:#ccc;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Room cleaning · scheduled</div><div class="tl-sub">Housekeeping · 2 of 3 on shift</div></div></div>
       <div class="tl-row"><span class="tl-time">17:00</span><div class="tl-line"><div class="tl-dot" style="background:#BA7517;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Purchase order deadline <span class="tl-badge bda">△ pending</span></div><div class="tl-sub">Purchasing · must be placed before end of day</div></div></div>
       <div class="tl-row"><span class="tl-time">19:00</span><div class="tl-line"><div class="tl-dot" style="background:#ccc;"></div><div class="tl-vline"></div></div><div class="tl-content"><div class="tl-event">Dinner · restaurant</div><div class="tl-sub">Open to outside guests · no reservations received</div></div></div>
@@ -208,16 +226,92 @@
   </div>
 </div>
 
+<script src="/pulse-shared.js"></script>
 <script>
-const canvas = document.getElementById('pw');
-const ctx = canvas.getContext('2d');
+const REDIRECT_KEY = 'ritaops_redirect_after_login'
+let waveLoad = 0.35
 
-// Rita calculates LOAD from live data
-// guests on property / max capacity * 0.6 + staff on shift / total staff * 0.4
-const guestsOnProperty = 0;
-const staffOnShift = 11;
-const LOAD = Math.min(1, (guestsOnProperty / 50) * 0.6 + (staffOnShift / 15) * 0.4);
+function redirectToLogin() {
+  sessionStorage.setItem(REDIRECT_KEY, window.location.pathname + window.location.search)
+  window.location.replace('/login')
+}
 
+function setupAuth() {
+  if (!window.netlifyIdentity) return
+  netlifyIdentity.on('init', () => {
+    if (!netlifyIdentity.currentUser()) {
+      redirectToLogin()
+      return
+    }
+    document.documentElement.classList.remove('auth-pending')
+    initPulsePage()
+  })
+  netlifyIdentity.on('logout', () => redirectToLogin())
+}
+
+document.getElementById('btnLogout')?.addEventListener('click', () => {
+  window.netlifyIdentity?.logout()
+})
+
+function pulseTargets() {
+  return {
+    pageMeta: document.getElementById('page-meta'),
+    pulseTitle: document.getElementById('pulse-title-date'),
+    pulseStatement: document.getElementById('pulse-statement'),
+    pulseBalance: document.getElementById('pulse-balance'),
+    pulseField: document.getElementById('pulse-field'),
+    pulseNeedsYou: document.getElementById('pulse-needs-you')
+  }
+}
+
+function updateTimelineDates() {
+  const d = new Date()
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const tlDate = document.getElementById('tl-date')
+  const tlNow = document.getElementById('tl-now')
+  const nowPill = document.getElementById('now-pill')
+  if (tlDate) tlDate.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
+  const time = d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})
+  if (tlNow) tlNow.textContent = `Now ${time}`
+  if (nowPill) nowPill.textContent = `▸ Now ${time}`
+}
+
+async function refreshPulseLive({silent = false} = {}) {
+  if (!silent) {
+    const field = document.getElementById('pulse-field')
+    const needs = document.getElementById('pulse-needs-you')
+    if (field) field.innerHTML = '<p class="live-field-empty">Загрузка…</p>'
+    if (needs) needs.innerHTML = '<p class="live-field-empty">Загрузка…</p>'
+  }
+  try {
+    const data = await RitaPulse.fetchOpsPulse()
+    const result = RitaPulse.applyPulseLiveData(data, pulseTargets())
+    waveLoad = Math.min(1, 0.2 + (result.concernCount || 0) * 0.12)
+  } catch (err) {
+    if (!silent) {
+      const msg = RitaPulse.escapeHtml(err.message)
+      document.getElementById('pulse-field').innerHTML = `<p class="live-field-empty" style="color:#c44">${msg}</p>`
+      document.getElementById('pulse-needs-you').innerHTML = '<p class="live-field-empty">—</p>'
+    }
+  }
+}
+
+function initPulsePage() {
+  updateTimelineDates()
+  RitaPulse.applyPulseLiveData({pulse: {}, concerns: []}, pulseTargets())
+  refreshPulseLive()
+  RitaPulse.startPulsePolling(() => refreshPulseLive({silent: true}))
+  window.addEventListener('beforeunload', () => RitaPulse.stopPulsePolling())
+}
+
+if (window.netlifyIdentity) {
+  setupAuth()
+} else {
+  window.addEventListener('load', setupAuth)
+}
+
+const canvas = document.getElementById('pw')
+const ctx = canvas.getContext('2d')
 const WD = [
   {color:'#5DCAA5', phaseOff:0,   freqMult:1.0},
   {color:'#E9A23B', phaseOff:1.3, freqMult:1.3},
@@ -225,65 +319,61 @@ const WD = [
   {color:'#85B7EB', phaseOff:3.8, freqMult:1.1},
   {color:'#F0997B', phaseOff:0.7, freqMult:.95},
   {color:'#97C459', phaseOff:4.5, freqMult:1.2},
-];
-
-let t = 0;
+]
+let t = 0
 
 function resize() {
-  canvas.width  = canvas.offsetWidth * devicePixelRatio;
-  canvas.height = 160 * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
+  canvas.width = canvas.offsetWidth * devicePixelRatio
+  canvas.height = 160 * devicePixelRatio
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0)
 }
-resize();
-window.addEventListener('resize', resize);
+resize()
+window.addEventListener('resize', resize)
 
 function draw() {
-  const W = canvas.offsetWidth, H = 160, mid = H / 2;
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#f7f6f1';
-  ctx.fillRect(0, 0, W, H);
-
-  const vis = Math.max(1, Math.round(1 + LOAD * (WD.length - 1)));
-  const breathSpeed = 0.2 + Math.pow(LOAD, 1.4) * 4.5;
-  const maxAmp = 8 + LOAD * 62;
-  const spatialFreq = 0.5 + LOAD * 1.8;
-
+  const LOAD = waveLoad
+  const W = canvas.offsetWidth, H = 160, mid = H / 2
+  ctx.clearRect(0, 0, W, H)
+  ctx.fillStyle = '#f7f6f1'
+  ctx.fillRect(0, 0, W, H)
+  const vis = Math.max(1, Math.round(1 + LOAD * (WD.length - 1)))
+  const breathSpeed = 0.2 + Math.pow(LOAD, 1.4) * 4.5
+  const maxAmp = 8 + LOAD * 62
+  const spatialFreq = 0.5 + LOAD * 1.8
   for (let wi = 0; wi < vis; wi++) {
-    const w = WD[wi];
-    const breathe = (Math.sin(t * breathSpeed + w.phaseOff) + 1) / 2;
-    const amp = maxAmp * (0.12 + 0.88 * breathe);
-    const alpha = (0.12 + LOAD * 0.18) * (0.4 + 0.6 * breathe);
-    const freq = spatialFreq * w.freqMult;
-    ctx.save();
-    ctx.globalAlpha = alpha * 2.6;
-    ctx.fillStyle = w.color;
-    ctx.beginPath(); ctx.moveTo(0, mid);
+    const w = WD[wi]
+    const breathe = (Math.sin(t * breathSpeed + w.phaseOff) + 1) / 2
+    const amp = maxAmp * (0.12 + 0.88 * breathe)
+    const alpha = (0.12 + LOAD * 0.18) * (0.4 + 0.6 * breathe)
+    const freq = spatialFreq * w.freqMult
+    ctx.save()
+    ctx.globalAlpha = alpha * 2.6
+    ctx.fillStyle = w.color
+    ctx.beginPath(); ctx.moveTo(0, mid)
     for (let x = 0; x <= W; x += 2) {
-      const nx = x / W;
-      const env = Math.sin(nx * Math.PI);
-      ctx.lineTo(x, mid - Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env);
+      const nx = x / W
+      const env = Math.sin(nx * Math.PI)
+      ctx.lineTo(x, mid - Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env)
     }
-    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(0, mid);
+    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill()
+    ctx.beginPath(); ctx.moveTo(0, mid)
     for (let x = 0; x <= W; x += 2) {
-      const nx = x / W;
-      const env = Math.sin(nx * Math.PI);
-      ctx.lineTo(x, mid + Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env);
+      const nx = x / W
+      const env = Math.sin(nx * Math.PI)
+      ctx.lineTo(x, mid + Math.sin(nx * Math.PI * 2 * freq + w.phaseOff) * amp * env)
     }
-    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill();
-    ctx.restore();
+    ctx.lineTo(W, mid); ctx.closePath(); ctx.fill()
+    ctx.restore()
   }
-
-  ctx.beginPath();
-  ctx.strokeStyle = `rgba(0,0,0,${0.06 - LOAD * 0.05})`;
-  ctx.lineWidth = 1;
-  ctx.moveTo(0, mid); ctx.lineTo(W, mid);
-  ctx.stroke();
-
-  t += 0.014;
-  requestAnimationFrame(draw);
+  ctx.beginPath()
+  ctx.strokeStyle = `rgba(0,0,0,${0.06 - LOAD * 0.05})`
+  ctx.lineWidth = 1
+  ctx.moveTo(0, mid); ctx.lineTo(W, mid)
+  ctx.stroke()
+  t += 0.014
+  requestAnimationFrame(draw)
 }
-draw();
+draw()
 </script>
 </body>
 </html>
