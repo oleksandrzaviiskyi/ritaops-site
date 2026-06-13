@@ -27,7 +27,7 @@ const CONCERNS_QUERY = `*[_type == "ritaConcern" && status == "open"] | order(op
   summary,
   relatedPlace->{name, unitCode},
   "openTasks": count(*[_type == "ritaTask" && references(^._id) && status == "open"]),
-  "depts": array::unique(*[_type == "ritaTask" && references(^._id) && status == "open"].department->code)
+  "deptDetails": *[_type == "ritaTask" && references(^._id) && status == "open"].department->{code, titleEn, title}
 }`
 
 exports.handler = async (event, context) => {

@@ -1,27 +1,4 @@
-/** Shared live Pulse data — used by /pulse (canonical) and ops arrivals. */
-
-const BALANCE_LABELS = {
-  aligned: 'Согласованно',
-  'guest-heavy': 'Нагрузка на гостей',
-  'staff-strained': 'Персонал на пределе',
-  'dual-strain': 'Оба поля под стрессом',
-  resting: 'Покой'
-}
-
-const DEPT_LABELS = {
-  maintenance: 'техобслуживание',
-  cleaning: 'клининг',
-  kitchen: 'кухня',
-  grounds: 'территория',
-  restaurant: 'ресторан',
-  security: 'безопасность',
-  reception: 'ресепшен',
-  bar: 'бар',
-  purchases: 'закупки',
-  reservations: 'бронирования',
-  accounting: 'бухгалтерия',
-  groups: 'группы'
-}
+/** Shared live Pulse data — used by /pulse (canonical). */
 
 const PULSE_POLL_MS = 25000
 let pulsePollTimer = null
@@ -31,6 +8,14 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function formatBalanceStatus(status) {
+  if (!status) return '—'
+  return String(status)
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
 function staffKey() {
@@ -87,15 +72,21 @@ function formatPulseTitleDate(d = new Date()) {
   return `Today, ${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`
 }
 
-function formatDeptList(codes) {
-  const list = (Array.isArray(codes) ? codes : [])
-    .filter(Boolean)
-    .map((code) => DEPT_LABELS[code] || code)
-  return [...new Set(list)].join(', ')
+function formatDeptList(deptDetails) {
+  const seen = new Set()
+  const list = []
+  for (const dept of Array.isArray(deptDetails) ? deptDetails : []) {
+    if (!dept) continue
+    const key = dept.code || dept.titleEn || dept.title
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    list.push(dept.titleEn || dept.title || dept.code)
+  }
+  return list.join(', ')
 }
 
 function formatPlaceLabel(place) {
-  if (!place) return 'Место не указано'
+  if (!place) return 'Place not set'
   const name = String(place.name || '').trim()
   const unitCode = String(place.unitCode || '').trim()
   if (name) {
@@ -104,7 +95,7 @@ function formatPlaceLabel(place) {
     }
     return name
   }
-  return unitCode || 'Место'
+  return unitCode || 'Place'
 }
 
 function formatOpenDuration(openedAt) {
@@ -112,9 +103,10 @@ function formatOpenDuration(openedAt) {
   const opened = new Date(openedAt)
   if (Number.isNaN(opened.getTime())) return ''
   const hours = (Date.now() - opened.getTime()) / (1000 * 60 * 60)
-  if (hours < 1) return 'меньше часа'
-  if (hours < 24) return `${Math.round(hours)} ч`
-  return `${Math.round(hours / 24)} дн`
+  if (hours < 1) return 'under 1h'
+  if (hours < 24) return `${Math.round(hours)}h`
+  const days = Math.round(hours / 24)
+  return `${days}d`
 }
 
 function concernOpenHours(openedAt) {
@@ -127,8 +119,8 @@ function concernOpenHours(openedAt) {
 function renderConcernLine(concern) {
   const place = formatPlaceLabel(concern.relatedPlace)
   const duration = formatOpenDuration(concern.openedAt)
-  const depts = formatDeptList(concern.depts)
-  const parts = [escapeHtml(place), 'в работе']
+  const depts = formatDeptList(concern.deptDetails || concern.depts)
+  const parts = [escapeHtml(place), 'in progress']
   if (duration) parts.push(escapeHtml(duration))
   if (depts) parts.push(escapeHtml(depts))
   return `<div class="live-field-line">${parts.join(' · ')}</div>`
@@ -138,10 +130,10 @@ function renderPulseRegisters(concerns) {
   const needsYou = concerns.filter((c) => concernOpenHours(c.openedAt) > 12)
   const fieldHtml = concerns.length
     ? concerns.map(renderConcernLine).join('')
-    : '<p class="live-field-empty">Все места в порядке.</p>'
+    : '<p class="live-field-empty">All places are in order.</p>'
   const needsHtml = needsYou.length
     ? needsYou.map(renderConcernLine).join('')
-    : '<p class="live-field-empty">Ничего не требует тебя.</p>'
+    : '<p class="live-field-empty">Nothing needs you.</p>'
 
   return {fieldHtml, needsHtml, concernCount: concerns.length}
 }
@@ -151,8 +143,8 @@ function applyPulseLiveData(data, targets = {}) {
   const concerns = Array.isArray(data?.concerns) ? data.concerns : []
   const statement =
     pulse.coherenceStatement?.trim() ||
-    'Пространство в равновесии — подробная сводка появится после синхронизации нагрузки.'
-  const balance = BALANCE_LABELS[pulse.balanceStatus] || pulse.balanceStatus || '—'
+    'The space is in balance — a detailed summary will appear after the next load sync.'
+  const balance = formatBalanceStatus(pulse.balanceStatus)
   const {fieldHtml, needsHtml, concernCount} = renderPulseRegisters(concerns)
 
   if (targets.pageMeta) {
@@ -198,15 +190,15 @@ function startPulsePolling(onTick) {
 }
 
 window.RitaPulse = {
-  BALANCE_LABELS,
-  DEPT_LABELS,
   PULSE_POLL_MS,
   escapeHtml,
+  formatBalanceStatus,
   staffKey,
   staffFetch,
   formatHeaderDate,
   formatPulseTitleDate,
   formatPlaceLabel,
+  formatDeptList,
   formatOpenDuration,
   concernOpenHours,
   renderConcernLine,

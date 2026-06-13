@@ -20,6 +20,10 @@ When operational:
 - Use judgment on urgency — mention the manager in reply only when it genuinely warrants attention. No invented rules.
 - reply: natural response in the reporter's language. Confirm what you understood and what you routed or closed.
 
+LANGUAGE RULE (critical):
+- reply and needsClarification: write in the reporter's language (Russian, English, Spanish, etc.).
+- OPERATIONAL RECORDS always in English: newTasks[].description must be written in English even when the report is in another language. These strings are stored in the system and shown to managers on the Pulse dashboard.
+
 Respond with STRICT JSON ONLY — no markdown, no prose outside JSON:
 {
   "isOperational": boolean,
@@ -124,14 +128,14 @@ function resolveDepartmentRef(departments, departmentCode) {
 }
 
 function buildConcernSummary(place, newTasks) {
-  const placeLabel = place?.unitCode || place?.name || ''
+  const placeLabel = place?.name || place?.unitCode || ''
   const taskPart = newTasks
     .map((t) => String(t.description || '').trim())
     .filter(Boolean)
     .slice(0, 3)
     .join(' + ')
   if (placeLabel && taskPart) return `${placeLabel}: ${taskPart}`
-  return taskPart || placeLabel || 'Новая забота'
+  return taskPart || placeLabel || 'New concern'
 }
 
 async function findOpenConcernForPlace(client, placeId) {

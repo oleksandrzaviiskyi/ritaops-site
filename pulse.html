@@ -156,7 +156,7 @@
       <div>
         <div class="pulse-eyebrow">⬤ Pulse · Las Canas Beach Retreat</div>
         <div class="pulse-title" id="pulse-title-date">Today</div>
-        <p class="pulse-sub" id="pulse-statement">Загрузка…</p>
+        <p class="pulse-sub" id="pulse-statement">Loading…</p>
       </div>
       <div class="pulse-score">
         <div class="balance-label">Balance</div>
@@ -170,12 +170,12 @@
 
     <section class="live-layer" aria-label="Operational field">
       <div class="live-register">
-        <div class="live-register-label">Поле</div>
-        <div id="pulse-field"><p class="live-field-empty">Загрузка…</p></div>
+        <div class="live-register-label">Field</div>
+        <div id="pulse-field"><p class="live-field-empty">Loading…</p></div>
       </div>
       <div class="live-register live-needs-you">
-        <div class="live-register-label">Требует тебя</div>
-        <div id="pulse-needs-you"><p class="live-field-empty">Загрузка…</p></div>
+        <div class="live-register-label">Needs you</div>
+        <div id="pulse-needs-you"><p class="live-field-empty">Loading…</p></div>
       </div>
     </section>
 
@@ -280,8 +280,8 @@ async function refreshPulseLive({silent = false} = {}) {
   if (!silent) {
     const field = document.getElementById('pulse-field')
     const needs = document.getElementById('pulse-needs-you')
-    if (field) field.innerHTML = '<p class="live-field-empty">Загрузка…</p>'
-    if (needs) needs.innerHTML = '<p class="live-field-empty">Загрузка…</p>'
+    if (field) field.innerHTML = '<p class="live-field-empty">Loading…</p>'
+    if (needs) needs.innerHTML = '<p class="live-field-empty">Loading…</p>'
   }
   try {
     const data = await RitaPulse.fetchOpsPulse()
