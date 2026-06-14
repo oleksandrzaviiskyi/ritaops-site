@@ -268,7 +268,7 @@ exports.handler = async (event, context) => {
     if (liveData && Object.keys(liveData).length) {
       const d = liveData
       let ctx = '\n\n--- LIVE DATA FROM SANITY (Las Canas Beach Retreat) ---\n'
-      if (d.places?.length) ctx += 'PLACES & STRUCTURES: ' + d.places.join(' · ') + '\n'
+      if (d.buildings?.length) ctx += 'BUILDINGS: ' + d.buildings.join(' · ') + '\n'
       if (d.unitDetails?.length) {
         ctx += 'UNIT BED CONFIGURATIONS:\n'
         d.unitDetails.forEach((u) => {
@@ -276,6 +276,7 @@ exports.handler = async (event, context) => {
         })
       }
       if (d.balanceStatus) ctx += 'BALANCE STATUS: ' + d.balanceStatus + '\n'
+      if (d.coherenceStatement) ctx += 'PULSE NOTE: ' + d.coherenceStatement + '\n'
       if (d.openConcernsCount !== undefined) ctx += 'OPEN CONCERNS: ' + d.openConcernsCount + '\n'
       if (d.openConcerns?.length) {
         ctx += 'CONCERN DETAILS:\n'
@@ -283,10 +284,34 @@ exports.handler = async (event, context) => {
           ctx += '  - ' + c.place + ': ' + (c.summary || 'open issue') + '\n'
         })
       }
-      if (d.portals?.length) {
+      if (d.people?.length) {
+        ctx += 'PEOPLE:\n'
+        d.people.slice(0, 20).forEach((person) => {
+          ctx += '  - ' + person.name + (person.role ? ' · ' + person.role : '') + (person.department ? ' · ' + person.department : '') + '\n'
+        })
+      }
+      if (d.responsibilities?.length) {
+        ctx += 'RESPONSIBILITY DOMAINS:\n'
+        d.responsibilities.forEach((r) => {
+          ctx += '  - ' + r.domain + ' · ' + (r.authority || '') + (r.holder ? ' · ' + r.holder : '') + '\n'
+        })
+      }
+      if (d.upcomingGroups?.length) {
         ctx += 'UPCOMING GROUPS:\n'
-        d.portals.forEach((p) => {
-          ctx += '  - ' + p.group + ' · ' + p.checkIn + ' → ' + p.checkOut + ' · ' + (p.guests || '?') + ' guests\n'
+        d.upcomingGroups.forEach((g) => {
+          ctx += '  - ' + g.name + ' · ' + g.checkIn + ' → ' + g.checkOut + ' · ' + (g.guests || '?') + ' guests\n'
+        })
+      }
+      if (d.roomingLists?.length) {
+        ctx += 'ROOMING LISTS:\n'
+        d.roomingLists.forEach((r) => {
+          ctx += '  - ' + (r.groupId || 'group') + ' · ' + r.dates + ' · ' + (r.guests || '?') + ' guests · ' + (r.rooms || '') + '\n'
+        })
+      }
+      if (d.openQuestions?.length) {
+        ctx += 'OPEN QUESTIONS FOR STAFF:\n'
+        d.openQuestions.forEach((q) => {
+          ctx += '  - ' + q + '\n'
         })
       }
       ctx += '--- END LIVE DATA ---\n'

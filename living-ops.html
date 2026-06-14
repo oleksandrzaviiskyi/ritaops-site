@@ -730,49 +730,67 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
   function buildLiveContext() {
     if (!pulseCache) return {}
-    const places = []
-    const f = pulseCache.field || {}
-    ;(f.sharedSpaces || []).forEach(function (s) { places.push(s.name) })
-    ;(f.buildings || []).forEach(function (b) {
-      places.push(b.name + ' (' + (b.units || []).map(function (u) { return u.unitCode }).join(', ') + ')')
-    })
-    if (f.villa) places.push('Villa')
-    const unitDetails = (pulseCache.places || [])
-      .filter(function (p) { return p.type === 'accommodation' && p.bedrooms })
-      .map(function (p) {
-        const beds = p.bedrooms.map(function (b) {
+    const p = pulseCache
+
+    const unitDetails = (p.places || [])
+      .filter(function (pl) { return pl.type === 'accommodation' && pl.bedrooms })
+      .map(function (pl) {
+        const beds = (pl.bedrooms || []).map(function (b) {
           const parts = []
           if (b.kingBeds) parts.push(b.kingBeds + ' king')
           if (b.queenBeds) parts.push(b.queenBeds + ' queen')
-          if (b.twinBeds) parts.push(b.twinBeds + ' twin' + (b.twinCanConvertToKing ? ' (convertible to king)' : ''))
+          if (b.twinBeds) parts.push(b.twinBeds + ' twin' + (b.twinCanConvertToKing ? ' (convertible)' : ''))
           if (b.bunkBeds) parts.push(b.bunkBeds + ' bunk')
           return b.label + ': ' + parts.join(', ')
         }).join('; ')
-        return p.unitCode + ': ' + beds + ', sleeps ' + p.capacity
+        return pl.unitCode + ': ' + beds + ', sleeps ' + pl.capacity + (pl.livingRoomSleeps ? ' (+' + pl.livingRoomSleeps + ' sofa)' : '')
       })
+
+    const buildings = (p.places || [])
+      .filter(function (pl) { return pl.type === 'building' })
+      .sort(function (a, b) { return (a.buildingNumber || 0) - (b.buildingNumber || 0) })
+      .map(function (b) {
+        return 'Building ' + b.buildingNumber + ' (' + (b.suiteCategory || '') + ')'
+      })
+
     return {
       property: 'Las Canas Beach Retreat',
-      balanceStatus: pulseCache.pulse?.balanceStatus || null,
-      coherenceStatement: pulseCache.pulse?.coherenceStatement || null,
-      places: places,
+      balanceStatus: p.pulse?.balanceStatus || null,
+      coherenceStatement: p.pulse?.coherenceStatement || null,
+      buildings: buildings,
       unitDetails: unitDetails,
-      openConcernsCount: (pulseCache.concerns || []).length,
-      openConcerns: (pulseCache.concerns || []).slice(0, 5).map(function (c) {
+      openConcernsCount: (p.openConcerns || []).length,
+      openConcerns: (p.openConcerns || []).map(function (c) {
         return {
-          place: c.relatedPlace?.name || c.relatedPlace?.unitCode || 'unknown',
+          place: c.place?.name || c.place?.unitCode || 'unknown',
           summary: c.summary,
           openedAt: c.openedAt
         }
       }),
-      portals: (portalsCache || []).slice(0, 5).map(function (p) {
+      people: (p.people || []).map(function (person) {
         return {
-          group: p.groupName,
-          checkIn: p.checkIn,
-          checkOut: p.checkOut,
-          guests: p.totalGuests
+          name: person.name,
+          role: person.role,
+          department: person.department?.titleEn || null
         }
       }),
-      roomingLists: (pulseCache.roomingLists || []).map(function (r) {
+      responsibilities: (p.responsibilities || []).map(function (r) {
+        return {
+          domain: r.title,
+          authority: r.authorityLevel,
+          holder: r.holder?.name || null
+        }
+      }),
+      upcomingGroups: (p.portals || []).map(function (g) {
+        return {
+          name: g.groupName || g.title,
+          checkIn: g.checkIn,
+          checkOut: g.checkOut,
+          guests: g.totalGuests,
+          category: g.categoryName?.name || null
+        }
+      }),
+      roomingLists: (p.roomingLists || []).map(function (r) {
         return {
           groupId: r.groupId,
           dates: r.stayDateStart + ' → ' + r.stayDateEnd,
@@ -782,7 +800,8 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
               (rm.occupants || []).map(function (o) { return o.name }).join(', ')
           }).join(' | ')
         }
-      })
+      }),
+      openQuestions: (p.openQuestions || []).map(function (q) { return q.question })
     }
   }
 

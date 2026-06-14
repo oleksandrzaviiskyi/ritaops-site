@@ -131,6 +131,7 @@ const PLACES_QUERY = `*[_type == "place" && defined(name)]{
   unitCode,
   type,
   buildingNumber,
+  suiteCategory,
   capacity,
   floor,
   livingRoomSleeps,
