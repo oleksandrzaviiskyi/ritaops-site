@@ -690,7 +690,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const json = await apiPost('/api/rita-chat', {
         message: routed,
         history: [],
-        liveData: {}
+        liveData: pulseCache || {}
       })
       logLine(key, 'rita', '<b>Рита:</b> ' + esc(json.reply || 'Приняла.'))
     } catch (err) {
@@ -749,7 +749,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const json = await apiPost('/api/rita-chat', {
         message: msg,
         history: recentHistory,
-        liveData: {}
+        liveData: pulseCache || {}
       })
       hideChatTyping()
       const reply = json.reply || 'Приняла.'
