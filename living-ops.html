@@ -771,6 +771,17 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           checkOut: p.checkOut,
           guests: p.totalGuests
         }
+      }),
+      roomingLists: (pulseCache.roomingLists || []).map(function (r) {
+        return {
+          groupId: r.groupId,
+          dates: r.stayDateStart + ' → ' + r.stayDateEnd,
+          guests: r.totalOccupants,
+          rooms: (r.rooms || []).map(function (rm) {
+            return 'Room ' + rm.roomNumber + ' (' + rm.roomType + '): ' +
+              (rm.occupants || []).map(function (o) { return o.name }).join(', ')
+          }).join(' | ')
+        }
       })
     }
   }

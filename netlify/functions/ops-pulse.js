@@ -26,6 +26,21 @@ const PULSE_QUERY = `*[_id == "lasCanasPulse.lcbr"][0]{
   "lastSyncedAt": coherence.lastSyncedAt
 }`
 
+const ROOMING_QUERY = `*[_type == "groupRoomingList"] | order(stayDateStart asc) {
+  _id,
+  groupId,
+  stayDateStart,
+  stayDateEnd,
+  totalOccupants,
+  sourceFileName,
+  "relatedGroupId": relatedGroup._ref,
+  rooms[]{
+    roomNumber,
+    roomType,
+    "occupants": occupants[]{name, gender, age}
+  }
+}`
+
 function deptDetailsFromTasks(openTasks) {
   const seen = new Set()
   const list = []
@@ -53,10 +68,11 @@ exports.handler = async (event, context) => {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
     }
 
-    const [pulse, places, concernsRaw] = await Promise.all([
+    const [pulse, places, concernsRaw, roomingLists] = await Promise.all([
       client.fetch(PULSE_QUERY),
       client.fetch(PLACES_QUERY),
-      client.fetch(CONCERNS_WITH_TASKS_QUERY)
+      client.fetch(CONCERNS_WITH_TASKS_QUERY),
+      client.fetch(ROOMING_QUERY)
     ])
 
     const concerns = (concernsRaw || []).map((c) => ({
