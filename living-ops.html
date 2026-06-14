@@ -690,7 +690,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const json = await apiPost('/api/rita-chat', {
         message: routed,
         history: [],
-        liveData: pulseCache || {}
+        liveData: buildLiveContext()
       })
       logLine(key, 'rita', '<b>Рита:</b> ' + esc(json.reply || 'Приняла.'))
     } catch (err) {
@@ -728,6 +728,39 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     document.getElementById('chatTyping')?.remove()
   }
 
+  function buildLiveContext() {
+    if (!pulseCache) return {}
+    const places = []
+    const f = pulseCache.field || {}
+    ;(f.sharedSpaces || []).forEach(function (s) { places.push(s.name) })
+    ;(f.buildings || []).forEach(function (b) {
+      places.push(b.name + ' (' + (b.units || []).map(function (u) { return u.unitCode }).join(', ') + ')')
+    })
+    if (f.villa) places.push('Villa')
+    return {
+      property: 'Las Canas Beach Retreat',
+      balanceStatus: pulseCache.pulse?.balanceStatus || null,
+      coherenceStatement: pulseCache.pulse?.coherenceStatement || null,
+      places: places,
+      openConcernsCount: (pulseCache.concerns || []).length,
+      openConcerns: (pulseCache.concerns || []).slice(0, 5).map(function (c) {
+        return {
+          place: c.relatedPlace?.name || c.relatedPlace?.unitCode || 'unknown',
+          summary: c.summary,
+          openedAt: c.openedAt
+        }
+      }),
+      portals: (portalsCache || []).slice(0, 5).map(function (p) {
+        return {
+          group: p.groupName,
+          checkIn: p.checkIn,
+          checkOut: p.checkOut,
+          guests: p.totalGuests
+        }
+      })
+    }
+  }
+
   async function sendChat() {
     const inp = document.getElementById('panelInput')
     const sendBtn = document.getElementById('panelSend')
@@ -749,7 +782,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const json = await apiPost('/api/rita-chat', {
         message: msg,
         history: recentHistory,
-        liveData: pulseCache || {}
+        liveData: buildLiveContext()
       })
       hideChatTyping()
       const reply = json.reply || 'Приняла.'
