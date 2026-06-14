@@ -266,7 +266,26 @@ exports.handler = async (event, context) => {
 
     let systemPrompt = buildSystemPrompt(message)
     if (liveData && Object.keys(liveData).length) {
-      systemPrompt += '\n\nCURRENT PROPERTY DATA:\n' + JSON.stringify(liveData, null, 2)
+      const d = liveData
+      let ctx = '\n\n--- LIVE DATA FROM SANITY (Las Canas Beach Retreat) ---\n'
+      if (d.places?.length) ctx += 'PLACES & STRUCTURES: ' + d.places.join(' · ') + '\n'
+      if (d.balanceStatus) ctx += 'BALANCE STATUS: ' + d.balanceStatus + '\n'
+      if (d.openConcernsCount !== undefined) ctx += 'OPEN CONCERNS: ' + d.openConcernsCount + '\n'
+      if (d.openConcerns?.length) {
+        ctx += 'CONCERN DETAILS:\n'
+        d.openConcerns.forEach((c) => {
+          ctx += '  - ' + c.place + ': ' + (c.summary || 'open issue') + '\n'
+        })
+      }
+      if (d.portals?.length) {
+        ctx += 'UPCOMING GROUPS:\n'
+        d.portals.forEach((p) => {
+          ctx += '  - ' + p.group + ' · ' + p.checkIn + ' → ' + p.checkOut + ' · ' + (p.guests || '?') + ' guests\n'
+        })
+      }
+      ctx += '--- END LIVE DATA ---\n'
+      ctx += 'Use this data to answer questions about Las Canas. This IS the real database — answer from it directly and confidently.\n'
+      systemPrompt += ctx
     }
 
     const messages = history
