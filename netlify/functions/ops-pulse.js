@@ -73,7 +73,7 @@ exports.handler = async (event, context) => {
         pulse: pulse || {coherenceStatement: null, balanceStatus: null},
         field,
         concerns,
-        _rawPlaces: places || []
+        places: places || []
       })
     }
   } catch (err) {

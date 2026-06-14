@@ -737,7 +737,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       places.push(b.name + ' (' + (b.units || []).map(function (u) { return u.unitCode }).join(', ') + ')')
     })
     if (f.villa) places.push('Villa')
-    const unitDetails = (pulseCache._rawPlaces || [])
+    const unitDetails = (pulseCache.places || [])
       .filter(function (p) { return p.type === 'accommodation' && p.bedrooms })
       .map(function (p) {
         const beds = p.bedrooms.map(function (b) {
