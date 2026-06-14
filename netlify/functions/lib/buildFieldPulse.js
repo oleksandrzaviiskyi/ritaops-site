@@ -6,7 +6,7 @@
 const STRUCTURE_TYPES = new Set(['property', 'building', 'accommodation', 'villa'])
 
 /** Canonical shared-space row order and name matching. */
-export const CANONICAL_SHARED = [
+const CANONICAL_SHARED = [
   {key: 'pool', displayName: 'Pool', match: /^pool$/i},
   {key: 'restaurant', displayName: 'Restaurant', match: /^restaurant$/i},
   {key: 'bar', displayName: 'Bar', match: /^bar$/i},
@@ -67,7 +67,7 @@ function sortUnitCodes(a, b) {
  * @param {Array<object>} places - all place docs from Sanity
  * @param {Array<object>} concerns - open ritaConcern docs with openTasks
  */
-export function buildFieldPulse(places, concerns) {
+function buildFieldPulse(places, concerns) {
   const concernMap = buildConcernMap(concerns)
 
   const sharedCandidates = places.filter((p) => !STRUCTURE_TYPES.has(p.type))
@@ -125,16 +125,28 @@ export function buildFieldPulse(places, concerns) {
   return {sharedSpaces, buildings: buildingCards, villa}
 }
 
-export const PLACES_QUERY = `*[_type == "place" && defined(name)]{
+const PLACES_QUERY = `*[_type == "place" && defined(name)]{
   _id,
   name,
   unitCode,
   type,
   buildingNumber,
-  "parentId": parentPlace._ref
+  capacity,
+  floor,
+  livingRoomSleeps,
+  "parentId": parentPlace._ref,
+  bedrooms[]{
+    label,
+    kingBeds,
+    queenBeds,
+    twinBeds,
+    bunkBeds,
+    twinCanConvertToKing,
+    hasPrivateBathroom
+  }
 }`
 
-export const CONCERNS_WITH_TASKS_QUERY = `*[_type == "ritaConcern" && status == "open"] | order(openedAt desc) {
+const CONCERNS_WITH_TASKS_QUERY = `*[_type == "ritaConcern" && status == "open"] | order(openedAt desc) {
   _id,
   openedAt,
   summary,
@@ -147,3 +159,10 @@ export const CONCERNS_WITH_TASKS_QUERY = `*[_type == "ritaConcern" && status == 
     department->{code, titleEn, title}
   }
 }`
+
+module.exports = {
+  CANONICAL_SHARED,
+  buildFieldPulse,
+  PLACES_QUERY,
+  CONCERNS_WITH_TASKS_QUERY
+}

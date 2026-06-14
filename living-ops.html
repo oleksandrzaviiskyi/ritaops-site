@@ -737,11 +737,25 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       places.push(b.name + ' (' + (b.units || []).map(function (u) { return u.unitCode }).join(', ') + ')')
     })
     if (f.villa) places.push('Villa')
+    const unitDetails = (pulseCache._rawPlaces || [])
+      .filter(function (p) { return p.type === 'accommodation' && p.bedrooms })
+      .map(function (p) {
+        const beds = p.bedrooms.map(function (b) {
+          const parts = []
+          if (b.kingBeds) parts.push(b.kingBeds + ' king')
+          if (b.queenBeds) parts.push(b.queenBeds + ' queen')
+          if (b.twinBeds) parts.push(b.twinBeds + ' twin' + (b.twinCanConvertToKing ? ' (convertible to king)' : ''))
+          if (b.bunkBeds) parts.push(b.bunkBeds + ' bunk')
+          return b.label + ': ' + parts.join(', ')
+        }).join('; ')
+        return p.unitCode + ': ' + beds + ', sleeps ' + p.capacity
+      })
     return {
       property: 'Las Canas Beach Retreat',
       balanceStatus: pulseCache.pulse?.balanceStatus || null,
       coherenceStatement: pulseCache.pulse?.coherenceStatement || null,
       places: places,
+      unitDetails: unitDetails,
       openConcernsCount: (pulseCache.concerns || []).length,
       openConcerns: (pulseCache.concerns || []).slice(0, 5).map(function (c) {
         return {

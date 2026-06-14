@@ -72,7 +72,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         pulse: pulse || {coherenceStatement: null, balanceStatus: null},
         field,
-        concerns
+        concerns,
+        _rawPlaces: places || []
       })
     }
   } catch (err) {
