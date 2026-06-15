@@ -355,33 +355,45 @@ exports.handler = async (event, context) => {
         system: systemPrompt,
         messages,
         tools: [{
-          name: 'show_card',
-          description: 'Выводит карточку на главный экран Living Operations. Используй когда менеджер просит показать сводку, заезды, расписание или любую информацию на экран.',
+          name: 'show_cards',
+          description: 'Выводит одну или несколько карточек на главный экран Living Operations. Используй когда менеджер просит показать сводку, заезды, детали групп или любую структурированную информацию. Можно передать несколько карточек сразу — по одной на каждую группу.',
           input_schema: {
             type: 'object',
             properties: {
-              title: {type: 'string'},
-              eyebrow: {type: 'string'},
-              rows: {type: 'array', items: {type: 'array', items: {type: 'string'}}},
-              note: {type: 'string'}
+              cards: {
+                type: 'array',
+                description: 'Список карточек для отображения',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: {type: 'string'},
+                    eyebrow: {type: 'string'},
+                    rows: {type: 'array', items: {type: 'array', items: {type: 'string'}}},
+                    note: {type: 'string'},
+                    contact: {type: 'string', description: 'Имя лидера группы для меню выбора'},
+                    contactPhone: {type: 'string', description: 'Телефон лидера'}
+                  },
+                  required: ['title', 'rows']
+                }
+              }
             },
-            required: ['title', 'rows']
+            required: ['cards']
           }
         }],
         tool_choice: {type: 'auto'}
       })
 
-      const toolUse = response.content?.find((b) => b.type === 'tool_use' && b.name === 'show_card')
+      const toolUse = response.content?.find((b) => b.type === 'tool_use' && b.name === 'show_cards')
       const reply =
         response.content?.find((b) => b.type === 'text')?.text?.trim() ||
-        (toolUse ? 'Вывела карточку на экран.' : 'Sorry, I could not generate a response.')
+        (toolUse ? 'Вывела карточки на экран.' : 'Sorry, I could not generate a response.')
 
       return {
         statusCode: 200,
         headers: cors,
         body: JSON.stringify({
           reply,
-          showCard: toolUse ? toolUse.input : null,
+          showCards: toolUse ? toolUse.input.cards : null,
           ...(roomingMeta || {})
         })
       }
