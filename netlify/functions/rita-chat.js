@@ -337,6 +337,7 @@ exports.handler = async (event, context) => {
         role: m.role === 'rita' ? 'assistant' : m.role,
         content: String(m.content || '')
       }))
+      .filter((m) => m.content.trim().length > 0)
     messages.push({role: 'user', content: userMessage})
 
     const anthropic = new Anthropic({apiKey})
