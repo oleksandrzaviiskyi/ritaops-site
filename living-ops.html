@@ -414,6 +414,16 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       recipients: [R],
       rows: [['Balance', '…', ''], ['Field', '…', '']],
       note: ''
+    },
+    room5a: {
+      eyebrow: 'Unit concern',
+      title: 'Unit 5A · Bar area',
+      span: false,
+      task: true,
+      live: true,
+      recipients: [R, 'Maintenance'],
+      rows: [['Status', tag('attention', 'open'), 'active concern']],
+      note: ''
     }
   }
 
@@ -943,17 +953,20 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     document.head.appendChild(lfStyle)
 
     const MOCK_BUBBLES = [
-      {type: 'concern', size: 72, urgent: true, text: 'Bar: течёт кран', dept: 'Maintenance · 7ч', ax: 0.22, ay: 0.30, cardKey: 'risks'},
-      {type: 'question', size: 54, text: 'EF 371170: Руминг-лист получен?', dept: 'Рита → Reception', ax: 0.44, ay: 0.22, cardKey: 'risks'},
-      {type: 'event', size: 48, text: 'EF группа (38 чел) заезжает 15 июня', dept: 'Groups', ax: 0.30, ay: 0.62, cardKey: 'arrivals'},
-      {type: 'question', size: 46, text: 'Dietary restrictions 372551', dept: 'Рита → Groups', ax: 0.52, ay: 0.54, cardKey: 'risks'}
+      {type: 'concern', cardKey: 'room5a', size: 64, urgent: true,
+        text: 'Bar: течёт кран — обслуживание не начато', dept: 'Maintenance · 7ч', ax: 0.22, ay: 0.30},
+      {type: 'question', cardKey: 'risks', size: 54,
+        text: 'EF 371170: Руминг-лист получен?', dept: 'Рита → Reception', ax: 0.50, ay: 0.22},
+      {type: 'event', cardKey: 'arrivals', size: 48,
+        text: 'EF группа (38 чел) заезжает 15 июня', dept: 'Groups', ax: 0.30, ay: 0.62},
+      {type: 'question', cardKey: 'purchase', size: 46,
+        text: 'Dietary restrictions 372551 — данных нет', dept: 'Рита → Groups', ax: 0.68, ay: 0.54}
     ]
 
-    const TYPE_TO_CARD = {concern: 'risks', 'concern-new': 'risks', question: 'risks', event: 'arrivals'}
     const zones = []
     let animT = 0
     let bubbles = []
-    const bubbleByCard = {}
+    let bubbleIdCounter = 0
 
     const ttEl = document.createElement('div')
     ttEl.className = 'lf-tt'
@@ -1011,7 +1024,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         ctx.fill()
       }
       const SYMS = {concern: '◌', 'concern-new': '◈', question: '◉', event: '·'}
-      const ss = Math.round(s * (dim ? 0.16 : 0.25))
+      const ss = Math.round(s * (dim ? 0.18 : 0.32))
       ctx.font = ss + 'px serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -1020,7 +1033,11 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     }
 
     function updateZones() {
+      const bubbleZones = zones.filter(function (z) {
+        return z.id && String(z.id).indexOf('bubble-') === 0
+      })
       zones.length = 0
+      bubbleZones.forEach(function (z) { zones.push(z) })
       document.querySelectorAll('.card').forEach(function (card) {
         if (card.style.display === 'none') return
         const rect = card.getBoundingClientRect()
@@ -1074,35 +1091,47 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       ttEl.style.top = ly + 'px'
     }
 
-    function openBubbleCard(b) {
-      if (b.open) return
-      b.open = true
-      drawBubble(b.gcv, b, animT, true)
-      b.ghost.style.left = (b.homeX - b.size / 2) + 'px'
-      b.ghost.style.top = (b.homeY - b.size / 2) + 'px'
-      b.ghost.style.display = 'block'
-      b.el.style.visibility = 'hidden'
-      hideTT()
-      const cardKey = b.cardKey || TYPE_TO_CARD[b.type] || 'pulse'
-      if (!bubbleByCard[cardKey]) bubbleByCard[cardKey] = []
-      bubbleByCard[cardKey].push(b)
-      wake(cardKey, b.text)
+    function restoreBubble(b) {
+      b.open = false
+      b.ghost.style.display = 'none'
+      b.el.style.visibility = 'visible'
+      b.vx = 0
+      b.vy = 0
+      const zi = zones.findIndex(function (z) { return z.id === b.id })
+      if (zi > -1) zones.splice(zi, 1)
+    }
+
+    function hookCardCloseForBubble(b, cardKey) {
+      setTimeout(function () {
+        const card = document.getElementById('card-' + cardKey)
+        if (!card) return
+
+        const rect = card.getBoundingClientRect()
+        const zi = zones.findIndex(function (z) { return z.id === b.id })
+        const zone = {
+          id: b.id,
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2,
+          r: Math.max(rect.width, rect.height) * 0.72
+        }
+        if (zi > -1) zones[zi] = zone
+        else zones.push(zone)
+
+        card.querySelectorAll('[data-act="close"], [data-act="min"], .resolve').forEach(function (btn) {
+          btn.addEventListener('click', function () { restoreBubble(b) }, {once: true})
+        })
+      }, 100)
     }
 
     window.lfRestoreBubble = function lfRestoreBubble(cardKey) {
-      const list = bubbleByCard[cardKey]
-      if (!list || !list.length) return
-      list.forEach(function (b) {
-        b.open = false
-        b.ghost.style.display = 'none'
-        b.el.style.visibility = 'visible'
+      bubbles.forEach(function (b) {
+        if (b.open && b._openedCardKey === cardKey) restoreBubble(b)
       })
-      delete bubbleByCard[cardKey]
     }
 
     window.lfRestoreAllBubbles = function lfRestoreAllBubbles() {
-      Object.keys(bubbleByCard).forEach(function (key) {
-        lfRestoreBubble(key)
+      bubbles.forEach(function (b) {
+        if (b.open) restoreBubble(b)
       })
     }
 
@@ -1112,7 +1141,6 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         if (b.ghost.parentNode) b.ghost.parentNode.removeChild(b.ghost)
       })
       bubbles = []
-      Object.keys(bubbleByCard).forEach(function (k) { delete bubbleByCard[k] })
     }
 
     function nextBubblePos(index) {
@@ -1134,7 +1162,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         const pos = nextBubblePos(idx++)
         items.push({
           type: 'question',
-          size: 46 + Math.min(24, String(q.question || '').length * 0.4),
+          size: Math.max(54, 46 + Math.min(24, String(q.question || '').length * 0.4)),
           text: q.question || 'Open question',
           dept: 'Рита наблюдает',
           cardKey: 'risks',
@@ -1149,14 +1177,15 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         const bubbleType = hours >= 6 ? 'concern' : 'concern-new'
         const place = c.place?.name || c.place?.unitCode || 'Place'
         const pos = nextBubblePos(idx++)
+        const isUnit = /5A|Bar/i.test(place) || /bar/i.test(c.summary || '')
         items.push({
           type: bubbleType === 'concern-new' ? 'concern-new' : 'concern',
           bubbleType: bubbleType,
           urgent: hours >= 6,
-          size: hours >= 6 ? 68 : 54,
+          size: hours >= 6 ? 64 : 54,
           text: place + ': ' + (c.summary || 'open issue'),
           dept: (hours >= 6 ? 'Maintenance · ' : 'New · ') + Math.max(1, Math.round(hours)) + 'ч',
-          cardKey: 'risks',
+          cardKey: isUnit ? 'room5a' : 'risks',
           sourceId: c._id,
           ax: pos.ax,
           ay: pos.ay
@@ -1207,6 +1236,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const py = (data.ay || 0.3) * vh
 
       const b = Object.assign({}, data, {
+        id: 'bubble-' + (++bubbleIdCounter),
         el: el,
         cv: cv,
         gcv: gcv,
@@ -1252,8 +1282,28 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       el.addEventListener('mouseleave', hideTT)
 
       el.addEventListener('click', function () {
-        if (b.didMove || b.open) return
-        openBubbleCard(b)
+        if (b.didMove) return
+        if (b.open) return
+        b.open = true
+
+        drawBubble(b.gcv, b, animT, true)
+        b.ghost.style.left = (b.homeX - b.size / 2) + 'px'
+        b.ghost.style.top = (b.homeY - b.size / 2) + 'px'
+        b.ghost.style.display = 'block'
+        b.el.style.visibility = 'hidden'
+        hideTT()
+
+        const cardKey = b.cardKey || b.type
+        b._openedCardKey = cardKey
+        if (typeof wake === 'function') {
+          wake(cardKey, b.text)
+        }
+
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        zones.push({id: b.id, cx: vw / 2, cy: vh / 2, r: 180})
+
+        hookCardCloseForBubble(b, cardKey)
       })
 
       document.addEventListener('mousemove', function (e) {
