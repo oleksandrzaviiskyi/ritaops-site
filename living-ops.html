@@ -1343,7 +1343,10 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
     window.lfRefreshBubblesFromLive = function lfRefreshBubblesFromLive() {
       const live = buildBubbleDataFromLive(pulseCache)
-      initBubbles(live || MOCK_BUBBLES)
+      if (live && live.length >= 2) {
+        initBubbles(live)
+      }
+      // if live data has fewer than 2 bubbles, keep current bubbles as-is
     }
 
     function tick() {
