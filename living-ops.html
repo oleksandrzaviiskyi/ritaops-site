@@ -1072,11 +1072,11 @@ body[data-panel="open"] .rita-panel{transform:none;}
     if (sendBtn) sendBtn.disabled = true
     showChatTyping()
 
-    const recentHistory = chatHistory
+    const recentHistory = (Array.isArray(chatHistory) ? chatHistory : [])
       .slice(0, -1)
       .slice(-6)
       .map((m) => ({role: m.role === 'rita' ? 'rita' : 'user', content: m.content}))
-      .filter((m) => m.content && m.content.trim().length > 0)
+      .filter((m) => m && m.content && String(m.content).trim().length > 0)
 
     try {
       const hasPdf = Boolean(pendingPdfData)
@@ -1134,11 +1134,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
       saveChatHistory()
 
-      // Debug: show what server returned
-      const serverKeys = Object.keys(json).join(', ')
-      if (json.showCards !== undefined || json.showCard !== undefined) {
-        addChatMsg('msg-rita', '🔍 debug: ' + serverKeys + ' | showCards: ' + JSON.stringify(json.showCards || json.showCard).slice(0,120))
-      }
+      // showCards debug removed
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
       if (cardsToShow && cardsToShow.length) {
