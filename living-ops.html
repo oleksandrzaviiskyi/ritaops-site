@@ -65,7 +65,7 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
-.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;}
+.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;padding:80px 20px 80px 20px;}
 .cards-area::-webkit-scrollbar{width:4px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
 .rita-panel{
@@ -119,7 +119,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .inp-wrap .attach.has-file{border-color:var(--ok);color:var(--ok);}
 .pdf-badge{font-size:11px;color:var(--ok);padding:2px 6px;background:rgba(58,122,85,.08);
   border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex:none;}
-.field{position:relative;width:100%;min-height:100%;padding-bottom:60px;}
+.field{display:flex;flex-direction:column;gap:16px;}
 .field-top{display:none!important;}
 .tray{position:fixed;top:88px;left:22px;display:flex;flex-direction:column;gap:6px;z-index:8;pointer-events:auto;}
 .tray-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);
@@ -132,7 +132,8 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 13px;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   filter:drop-shadow(0 2px 16px rgba(40,30,18,.07));
-  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:absolute;overflow:hidden;z-index:12;width:300px;}
+  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:relative;overflow:hidden;z-index:12;
+  width:300px;flex:none;transition:box-shadow .2s;}
 .card.expanded{box-shadow:0 8px 32px rgba(40,30,18,.12);}
 .card.card-today{border-color:rgba(217,138,43,.35);border-width:1.5px;}
 .card.card-today .eyebrow{color:var(--orange);}
@@ -707,9 +708,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
         const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
         if (b > maxBottom) maxBottom = b
       })
-      placedCard.style.left = '20px'
-      placedCard.style.top = maxBottom + 'px'
-      field.style.minHeight = (maxBottom + 300) + 'px'
+      // card flows naturally in column layout
     }
 
 
@@ -725,44 +724,57 @@ body[data-panel="open"] .rita-panel{transform:none;}
   function makeDraggableCard(card) {
     const head = card.querySelector('.card-head')
     if (!head) return
-    let ox = 0, oy = 0, dragging = false
-    head.style.cursor = 'move'
+    let ox = 0, oy = 0, dragging = false, placeholder = null
+    head.style.cursor = 'grab'
 
     head.addEventListener('mousedown', function (e) {
       if (e.target.closest('[data-act]')) return
-      const fieldRect = field.getBoundingClientRect()
-      const cardRect = card.getBoundingClientRect()
-      // convert to field-relative coords
-      card.style.left = (cardRect.left - fieldRect.left + field.parentElement.scrollLeft) + 'px'
-      card.style.top = (cardRect.top - fieldRect.top + field.parentElement.scrollTop) + 'px'
-      ox = e.clientX - cardRect.left
-      oy = e.clientY - cardRect.top
-      dragging = true
+      const rect = card.getBoundingClientRect()
+      // create placeholder to hold space
+      placeholder = document.createElement('div')
+      placeholder.style.cssText = 'width:' + rect.width + 'px;height:' + rect.height + 'px;flex:none;'
+      card.parentNode.insertBefore(placeholder, card.nextSibling)
+      // lift card to fixed
+      ox = e.clientX - rect.left
+      oy = e.clientY - rect.top
+      card.style.position = 'fixed'
+      card.style.left = rect.left + 'px'
+      card.style.top = rect.top + 'px'
+      card.style.width = rect.width + 'px'
       card.style.zIndex = '60'
-      card.style.width = cardRect.width + 'px'
+      card.style.margin = '0'
+      head.style.cursor = 'grabbing'
+      dragging = true
       e.preventDefault()
     })
 
     document.addEventListener('mousemove', function (e) {
       if (!dragging) return
-      const fieldRect = field.getBoundingClientRect()
-      const panelW = document.body.getAttribute('data-panel') === 'open'
-        ? (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--panel')) || 440) : 0
-      const maxX = window.innerWidth - panelW - card.offsetWidth - 8
-      let nx = e.clientX - ox - fieldRect.left + field.parentElement.scrollLeft
-      let ny = e.clientY - oy - fieldRect.top + field.parentElement.scrollTop
-      nx = Math.max(8, Math.min(nx, maxX))
-      ny = Math.max(8, ny)
+      const panelW = document.body.getAttribute('data-panel') === 'open' ? 440 : 0
+      let nx = e.clientX - ox
+      let ny = e.clientY - oy
+      nx = Math.max(4, Math.min(nx, window.innerWidth - panelW - card.offsetWidth - 4))
+      ny = Math.max(4, ny)
       card.style.left = nx + 'px'
       card.style.top = ny + 'px'
-      // expand canvas if dragged below viewport
-      const bottom = ny + card.offsetHeight + 40
-      if (bottom > field.offsetHeight) field.style.minHeight = bottom + 'px'
     })
 
     document.addEventListener('mouseup', function () {
-      if (dragging) card.style.zIndex = '12'
+      if (!dragging) return
       dragging = false
+      head.style.cursor = 'grab'
+      // drop back into flow at current screen position — convert fixed to scroll-relative
+      const rect = card.getBoundingClientRect()
+      const ca = document.querySelector('.cards-area')
+      const caRect = ca ? ca.getBoundingClientRect() : {left:0,top:0}
+      card.style.position = 'relative'
+      card.style.left = ''
+      card.style.top = ''
+      card.style.width = ''
+      card.style.zIndex = '12'
+      card.style.margin = ''
+      if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder)
+      placeholder = null
     })
   }
 
@@ -1151,8 +1163,6 @@ body[data-panel="open"] .rita-panel{transform:none;}
             note: sc.note || ''
           }
           const cardY = nextY + i * 220
-          field.style.minHeight = (cardY + 300) + 'px'
-
           setTimeout(function() {
             try {
               const cardHtml = renderCard(key, null, '')
