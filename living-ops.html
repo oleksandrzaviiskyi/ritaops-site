@@ -1011,25 +1011,49 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
     try {
       const hasPdf = Boolean(pendingPdfData)
-      const pdfPayload = hasPdf ? {
-        pdf: { base64Data: pendingPdfData, fileName: pendingPdfName || 'rooming.pdf' }
-      } : {}
-      // when PDF present — skip liveData to stay within Netlify 6MB limit
-      const json = await apiPost('/api/rita-chat', {
-        message: msg || 'Обработай прикреплённый руминг-лист и сохрани в базу.',
-        history: hasPdf ? [] : recentHistory,
-        liveData: hasPdf ? {} : buildLiveContext(),
-        ...pdfPayload
-      })
-      // clear PDF after send
-      pendingPdfData = null
-      pendingPdfName = null
-      const badge = document.getElementById('pdfBadge')
-      const attachBtn = document.getElementById('panelAttach')
-      if (badge) { badge.style.display = 'none'; badge.textContent = '' }
-      if (attachBtn) attachBtn.classList.remove('has-file')
-      const fileInput = document.getElementById('panelFile')
-      if (fileInput) fileInput.value = ''
+
+      let json
+      if (hasPdf) {
+        // PDF goes to dedicated upload-rooming endpoint — lighter, no liveData
+        const pdfRes = await fetch('/api/upload-rooming', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + STAFF_KEY
+          },
+          body: JSON.stringify({
+            pdfData: pendingPdfData,
+            fileName: pendingPdfName || 'rooming.pdf',
+            groupHint: msg || ''
+          })
+        })
+        const pdfData = await pdfRes.json().catch(() => ({}))
+        if (!pdfRes.ok) {
+          throw new Error(pdfData.error || ('HTTP ' + pdfRes.status))
+        }
+        if (pdfData.ok) {
+          json = { reply: '✅ Руминг сохранён в базу. Группа: ' + (pdfData.groupName || '?') + ' · ' + (pdfData.totalRooms || '?') + ' комнат · ' + (pdfData.totalGuests || '?') + ' гостей.' }
+        } else if (pdfData.unmatched) {
+          json = { reply: '⚠️ Группа не найдена автоматически. ' + (pdfData.message || 'Укажи Prod ID группы.') }
+        } else {
+          throw new Error(pdfData.error || 'Ошибка обработки PDF')
+        }
+        // clear PDF
+        pendingPdfData = null
+        pendingPdfName = null
+        const badge = document.getElementById('pdfBadge')
+        const attachBtn = document.getElementById('panelAttach')
+        if (badge) { badge.style.display = 'none'; badge.textContent = '' }
+        if (attachBtn) attachBtn.classList.remove('has-file')
+        const fileInput = document.getElementById('panelFile')
+        if (fileInput) fileInput.value = ''
+      } else {
+        json = await apiPost('/api/rita-chat', {
+          message: msg,
+          history: recentHistory,
+          liveData: buildLiveContext()
+        })
+      }
       hideChatTyping()
       const reply = json.reply || 'Приняла.'
       chatHistory.push({role: 'rita', content: reply})
