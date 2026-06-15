@@ -276,6 +276,10 @@ exports.handler = async (event, context) => {
       const d = liveData
       let ctx = '\n\n--- LIVE DATA FROM SANITY (Las Canas Beach Retreat) ---\n'
       if (d.buildings?.length) ctx += 'BUILDINGS: ' + d.buildings.join(' · ') + '\n'
+      if (d.sharedSpaces?.length) {
+        ctx += 'SHARED SPACES (pool, restaurant, bar, palapa, beach deck, fire pit etc):\n'
+        d.sharedSpaces.forEach((s) => { ctx += '  - ' + s + '\n' })
+      }
       if (d.unitDetails?.length) {
         ctx += 'UNIT BED CONFIGURATIONS:\n'
         d.unitDetails.forEach((u) => {
