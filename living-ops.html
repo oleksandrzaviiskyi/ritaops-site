@@ -16,7 +16,7 @@
   --maintenance:#a06b0a;--cleaning:#2F6FB0;--attention:#b83c0d;--ok:#3a7a55;
   --surface:rgba(255,253,247,.86);
   --grid:rgba(40,30,18,.045);
-  --panel:360px;
+  --panel:440px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
@@ -61,6 +61,7 @@ body::before{
   font-family:inherit;
 }
 .summon:hover{transform:translateY(-2px);filter:drop-shadow(0 12px 28px rgba(17,17,17,.28));}
+body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity .2s;}
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
@@ -131,8 +132,8 @@ body[data-qopen="yes"] .q-list{display:flex;}
 .inp-wrap{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;
   padding:8px 8px 8px 12px;background:rgba(255,253,247,.55);}
 .inp-wrap .rdot{width:7px;height:7px;border-radius:2px;background:var(--orange);flex:none;}
-.inp-wrap input{flex:1;border:none;background:none;outline:none;font-family:inherit;font-size:14px;color:var(--ink);}
-.inp-wrap input::placeholder{color:var(--ink-faint);}
+.inp-wrap input,.inp-wrap textarea{flex:1;border:none;background:none;outline:none;font-family:inherit;font-size:14px;color:var(--ink);}
+.inp-wrap input::placeholder,.inp-wrap textarea::placeholder{color:var(--ink-faint);}
 .inp-wrap .go{width:28px;height:28px;border-radius:8px;border:none;background:var(--ink);
   color:#fffaf0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:.15s;}
 .inp-wrap .go:hover{opacity:.8;}
@@ -261,7 +262,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       <div class="inp-wrap">
         <span class="rdot"></span>
         <span class="pdf-badge" id="pdfBadge" style="display:none"></span>
-        <input id="panelInput" type="text" placeholder="Спросить Риту…" autocomplete="off">
+        <textarea id="panelInput" placeholder="Спросить Риту…" autocomplete="off" rows="1" style="flex:1;border:none;background:none;outline:none;font-family:inherit;font-size:14px;color:var(--ink);resize:none;overflow:hidden;line-height:1.5;max-height:140px;padding:0;"></textarea>
         <button class="attach" id="panelAttach" type="button" title="Прикрепить PDF">📎</button>
         <button class="go" id="panelSend" type="button" aria-label="Send">→</button>
       </div>
@@ -1010,6 +1011,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     chatHistory.push({role: 'user', content: msg})
     addChatMsg('msg-you', esc(msg))
     inp.value = ''
+    inp.style.height = 'auto'
     if (sendBtn) sendBtn.disabled = true
     showChatTyping()
 
@@ -1809,11 +1811,17 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
   document.getElementById('closePanel').addEventListener('click', closePanel)
   document.getElementById('panelSend').addEventListener('click', sendChat)
-  document.getElementById('panelInput').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
+  const panelInputEl = document.getElementById('panelInput')
+  panelInputEl.addEventListener('input', function () {
+    this.style.height = 'auto'
+    this.style.height = Math.min(this.scrollHeight, 140) + 'px'
+  })
+  panelInputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendChat()
     }
+    // Shift+Enter = new line
   })
 
   loadQuestions(false)
