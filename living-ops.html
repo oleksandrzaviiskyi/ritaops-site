@@ -1090,13 +1090,24 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           span: true,
           task: false,
           live: false,
+          recipients: [],
           rows: (sc.rows || []).map(function(r) {
-            return [r[0] || '', r[1] || '', r[2] || '']
+            if (Array.isArray(r)) return [String(r[0] || ''), String(r[1] || ''), String(r[2] || '')]
+            return [String(r), '', '']
           }),
           note: sc.note || ''
         }
-        closePanel()
-        wake(key, sc.title)
+        // render card directly without going through wake() guard
+        const cardHtml = renderCard(key, sc.title || 'РИТА', '')
+        field.insertAdjacentHTML('beforeend', cardHtml)
+        shown.push(key)
+        // make draggable
+        const newCard = document.getElementById('card-' + key)
+        if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
+        // close panel after card appears
+        setTimeout(closePanel, 150)
+        // scroll into view
+        if (newCard) newCard.scrollIntoView({behavior: 'smooth', block: 'nearest'})
       }
     } catch (err) {
       hideChatTyping()
