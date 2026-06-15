@@ -158,7 +158,12 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 13px;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   filter:drop-shadow(0 2px 16px rgba(40,30,18,.07));
-  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:relative;overflow:hidden;}
+  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:relative;overflow:hidden;
+  transition:max-height .3s ease,box-shadow .2s;}
+.card.expanded{box-shadow:0 8px 32px rgba(40,30,18,.12);}
+.card.card-today{border-color:rgba(217,138,43,.35);border-width:1.5px;}
+.card.card-today .eyebrow{color:var(--orange);}
+.card.card-today::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--orange);}
 .card.closing{animation:fade .22s ease forwards;}
 .card.woken::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--orange);}
 .card.loading .rows{opacity:.55;}
@@ -184,7 +189,8 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 .tag.ok{color:var(--ok);}.tag.maintenance{color:var(--maintenance);}
 .tag.cleaning{color:var(--cleaning);}.tag.attention{color:var(--attention);}.tag.faint{color:var(--ink-faint);}
 .note{color:var(--ink-faint);font-size:11px;margin-top:8px;line-height:1.45;}
-.log{margin-top:10px;display:flex;flex-direction:column;gap:5px;}
+.log{margin-top:10px;display:flex;flex-direction:column;gap:5px;max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.card.has-log .log{max-height:600px;}
 .logline{font-size:11.5px;line-height:1.4;border-left:2px solid var(--line);padding-left:8px;}
 .logline.you{color:var(--ink);}.logline.rita{color:var(--ink-soft);border-left-color:var(--orange);}
 .logline b{font-weight:500;}.logline .to{color:var(--orange);font-weight:500;}
@@ -439,12 +445,12 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     return '<div class="row"><div class="k">' + esc(r[0]) + '</div><div class="v">' + v + s + '</div></div>'
   }
 
-  function renderCard(key, why) {
+  function renderCard(key, why, extraClass) {
     const d = CARDS[key]
     if (!d) return ''
     const rows = d.rows.map(rowHtml).join('')
     const opts = d.recipients.map((r) => '<option>' + esc(r) + '</option>').join('')
-    let h = '<div class="card' + (why ? ' woken' : '') + '" id="card-' + key + '" data-key="' + key + '">'
+    let h = '<div class="card' + (why ? ' woken' : '') + (extraClass ? ' ' + extraClass : '') + '" id="card-' + key + '" data-key="' + key + '">'
     h += '<div class="card-head"><div>'
     if (d.eyebrow) h += '<div class="eyebrow">' + esc(d.eyebrow) + '</div>'
     h += '<h3 id="card-title-' + key + '">' + esc(d.title) + '</h3></div>'
@@ -534,6 +540,44 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     return portalsCache
   }
 
+  function daysUntil(checkIn) {
+    const d1 = new Date(todayIso() + 'T12:00:00')
+    const d2 = new Date(checkIn + 'T12:00:00')
+    return Math.round((d2 - d1) / 86400000)
+  }
+
+  function portalGroupId(portal) {
+    if (portal.groupId) return portal.groupId
+    const fromPulse = (pulseCache?.portals || []).find(function (p) {
+      return p._id === portal._id || p.groupName === portal.groupName
+    })
+    return fromPulse?.groupId || null
+  }
+
+  function findRoomingList(group) {
+    const lists = pulseCache?.roomingLists || []
+    if (!group) return null
+    const gid = portalGroupId(group)
+    return lists.find(function (r) {
+      return r.groupId === gid ||
+        r.relatedGroupRef === group._id ||
+        r.groupId === (group.groupName || '').replace(/\D/g, '').slice(-6)
+    }) || null
+  }
+
+  function hasArrivalsToday(portals) {
+    const today = todayIso()
+    return (portals || []).some(function (p) {
+      return p.checkIn === today && p.status !== 'cancelled'
+    })
+  }
+
+  function syncArrivalsCardClass(portals) {
+    const card = document.getElementById('card-arrivals')
+    if (!card) return
+    card.classList.toggle('card-today', hasArrivalsToday(portals))
+  }
+
   function roomingStatusText(portal) {
     const core = portal.progressSections?.core ?? portal.progressPercent ?? 0
     if (core >= 80) return 'ready'
@@ -543,41 +587,77 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
   function applyArrivalsToCard(portals) {
     const today = todayIso()
-    const arriving = portals.filter((p) => p.checkIn === today)
-    const list = arriving.length ? arriving : portals.filter((p) => p.checkIn && p.checkIn >= today).slice(0, 4)
+    const arriving = portals.filter(function (p) {
+      return p.checkIn === today && p.status !== 'cancelled'
+    })
+    const upcoming = portals.filter(function (p) {
+      if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
+      const n = daysUntil(p.checkIn)
+      return n >= 1 && n <= 3
+    })
 
-    if (!list.length) {
+    if (!arriving.length && !upcoming.length) {
       CARDS.arrivals.eyebrow = 'Arrivals · ' + fmtDate(today)
       CARDS.arrivals.title = 'No groups today'
       CARDS.arrivals.rows = [['Groups', tag('ok', 'clear'), 'no check-ins scheduled']]
       CARDS.arrivals.note = 'Live data from portals.'
       updateCardDom('arrivals')
+      syncArrivalsCardClass(portals)
       return
     }
 
-    CARDS.arrivals.eyebrow = arriving.length
-      ? 'Arriving today · ' + fmtDate(today)
-      : 'Upcoming arrivals'
-    CARDS.arrivals.title = list.length === 1
-      ? list[0].groupName + ' · ' + (list[0].totalGuests || '—') + ' guests'
-      : list.length + ' groups'
+    if (arriving.length) {
+      const g = arriving[0]
+      const rooming = findRoomingList(g)
+      const roomRows = []
 
-    CARDS.arrivals.rows = list.slice(0, 6).map((p) => [
-      p.groupName || 'Group',
-      fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
-      (p.totalGuests || '—') + ' guests · rooming ' + roomingStatusText(p)
-    ])
+      if (rooming && rooming.rooms) {
+        rooming.rooms.slice(0, 8).forEach(function (rm) {
+          const names = (rm.occupants || []).map(function (o) { return o.name }).join(', ')
+          roomRows.push(['Room ' + rm.roomNumber, rm.roomType, names])
+        })
+      }
 
-    CARDS.arrivals.note = arriving.length
-      ? arriving.length + ' group(s) checking in today.'
-      : 'Next arrivals from live portal data.'
+      CARDS.arrivals.eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
+      CARDS.arrivals.title = (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests'
+      CARDS.arrivals.rows = [
+        ['Группа', g.groupName || g.title || 'Group', ''],
+        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
+        ['Гости', String(g.totalGuests || '—'), 'check-in today'],
+        ['Руминг', rooming && rooming.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
+        ...roomRows
+      ]
+      CARDS.arrivals.note = rooming
+        ? 'Rooming loaded · ' + (rooming.totalOccupants || '—') + ' guests assigned.'
+        : 'Rooming list not loaded yet — ask Rita to pull the latest.'
+    } else {
+      const primary = upcoming[0]
+      const n = daysUntil(primary.checkIn)
+      CARDS.arrivals.eyebrow = upcoming.length === 1
+        ? 'IN ' + n + ' DAYS · ' + fmtDate(primary.checkIn)
+        : 'UPCOMING · 1–3 DAYS'
+      CARDS.arrivals.title = upcoming.length === 1
+        ? (primary.groupName || 'Group')
+        : upcoming.length + ' groups'
+      CARDS.arrivals.rows = upcoming.slice(0, 6).map(function (p) {
+        return [
+          p.groupName || 'Group',
+          fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
+          (p.totalGuests || '—') + ' guests'
+        ]
+      })
+      CARDS.arrivals.note = 'Next arrivals from live portal data.'
+    }
+
     updateCardDom('arrivals')
+    syncArrivalsCardClass(portals)
   }
 
   async function refreshArrivalsCard() {
     const card = document.getElementById('card-arrivals')
     if (card) card.classList.add('loading')
     try {
+      if (!pulseCache) await loadPulseData()
       const portals = portalsCache || await loadPortalsData()
       applyArrivalsToCard(portals)
     } catch (err) {
@@ -619,7 +699,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       return
     }
 
-    field.insertAdjacentHTML('beforeend', renderCard(key, why || null))
+    const portals = pulseCache?.portals || portalsCache || []
+    const isToday = key === 'arrivals' && hasArrivalsToday(portals)
+    field.insertAdjacentHTML('beforeend', renderCard(key, why || null, isToday ? 'card-today' : ''))
     shown.push(key)
 
 
@@ -771,13 +853,39 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       ? cardContext + msg
       : cardContext + '[→ ' + rcpt + '] ' + msg
 
+    const groupContext = key === 'arrivals'
+      ? (pulseCache?.portals || portalsCache || []).find(function (p) {
+        return p.checkIn === todayIso() && p.status !== 'cancelled'
+      })
+      : null
+
+    const cardSpecificContext = {
+      currentCard: cardTitle,
+      ...(groupContext ? {
+        activeGroup: {
+          name: groupContext.groupName || groupContext.title,
+          guests: groupContext.totalGuests,
+          checkIn: groupContext.checkIn,
+          checkOut: groupContext.checkOut,
+          rooming: findRoomingList(groupContext)
+        }
+      } : {})
+    }
+
     try {
       const json = await apiPost('/api/rita-chat', {
-        message: routed,
+        message: rcpt === R ? ('[Карточка: ' + cardTitle + '] ' + msg) : routed,
         history: [],
-        liveData: buildLiveContext()
+        liveData: Object.assign({}, buildLiveContext(), cardSpecificContext)
       })
       logLine(key, 'rita', '<b>Рита:</b> ' + esc(json.reply || 'Приняла.'))
+      if (card) {
+        card.classList.add('has-log', 'expanded')
+        card.scrollIntoView({behavior: 'smooth', block: 'nearest'})
+        if (json.reply && json.reply.length > 200) {
+          card.style.width = Math.min(520, window.innerWidth * 0.4) + 'px'
+        }
+      }
     } catch (err) {
       logLine(key, 'rita', '<b>Рита:</b> ' + esc('Ошибка — ' + err.message))
     } finally {
