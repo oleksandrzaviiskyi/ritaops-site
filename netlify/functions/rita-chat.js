@@ -214,7 +214,14 @@ exports.handler = async (event, context) => {
           fileName: processed.fileName
         })}`
       } catch (err) {
-        return anthropicErrorReply(new Error(`Attachment extraction failed: ${err.message}`))
+        console.error('[rita-chat] PDF extraction error:', err.message, err.stack)
+        return {
+          statusCode: 200,
+          headers: cors,
+          body: JSON.stringify({
+            reply: 'Ошибка обработки PDF: ' + err.message + '. Токен Sanity: ' + (writeToken ? 'есть' : 'НЕТ') + '. Anthropic: ' + (apiKey ? 'есть' : 'НЕТ')
+          })
+        }
       }
     }
 
