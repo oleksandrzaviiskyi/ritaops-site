@@ -65,7 +65,7 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
-.cards-area{flex:1;overflow-y:auto;padding:82px 20px 80px;pointer-events:auto;position:relative;z-index:12;}
+.cards-area{flex:1;overflow:auto;pointer-events:auto;position:relative;z-index:12;min-height:100%;}
 .cards-area::-webkit-scrollbar{width:4px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
 .rita-panel{
@@ -119,8 +119,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .inp-wrap .attach.has-file{border-color:var(--ok);color:var(--ok);}
 .pdf-badge{font-size:11px;color:var(--ok);padding:2px 6px;background:rgba(58,122,85,.08);
   border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex:none;}
-.field{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:13px;align-items:start;}
-body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
+.field{position:relative;width:100%;min-height:100vh;}
 .field-top{display:none!important;}
 .tray{position:fixed;top:88px;left:22px;display:flex;flex-direction:column;gap:6px;z-index:8;pointer-events:auto;}
 .tray-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);
@@ -693,8 +692,18 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
     const portals = pulseCache?.portals || portalsCache || []
     const isToday = key === 'arrivals' && hasArrivalsToday(portals)
+    const cardIndex = shown.length
+    const col = cardIndex % 3
+    const row = Math.floor(cardIndex / 3)
+    const startLeft = 20 + col * 320
+    const startTop = 20 + row * 40
     field.insertAdjacentHTML('beforeend', renderCard(key, why || null, isToday ? 'card-today' : ''))
     shown.push(key)
+    const placedCard = document.getElementById('card-' + key)
+    if (placedCard) {
+      placedCard.style.left = startLeft + 'px'
+      placedCard.style.top = startTop + 'px'
+    }
 
 
     if (key === 'pulse') await refreshPulseCard()
@@ -711,30 +720,41 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     if (!head) return
     let ox = 0, oy = 0, dragging = false
     head.style.cursor = 'move'
+
     head.addEventListener('mousedown', function (e) {
       if (e.target.closest('[data-act]')) return
-      const rect = card.getBoundingClientRect()
-      ox = e.clientX - rect.left
-      oy = e.clientY - rect.top
+      const fieldRect = field.getBoundingClientRect()
+      const cardRect = card.getBoundingClientRect()
+      // convert to field-relative coords
+      card.style.left = (cardRect.left - fieldRect.left + field.parentElement.scrollLeft) + 'px'
+      card.style.top = (cardRect.top - fieldRect.top + field.parentElement.scrollTop) + 'px'
+      ox = e.clientX - cardRect.left
+      oy = e.clientY - cardRect.top
       dragging = true
-      card.style.position = 'fixed'
-      card.style.left = rect.left + 'px'
-      card.style.top = rect.top + 'px'
-      card.style.width = rect.width + 'px'
-      card.style.zIndex = '50'
-      card.style.margin = '0'
+      card.style.zIndex = '60'
+      card.style.width = cardRect.width + 'px'
       e.preventDefault()
     })
+
     document.addEventListener('mousemove', function (e) {
       if (!dragging) return
-      let nx = e.clientX - ox
-      let ny = e.clientY - oy
-      nx = Math.max(0, Math.min(nx, window.innerWidth - card.offsetWidth))
-      ny = Math.max(0, Math.min(ny, window.innerHeight - card.offsetHeight))
+      const fieldRect = field.getBoundingClientRect()
+      const panelW = document.body.getAttribute('data-panel') === 'open'
+        ? (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--panel')) || 440) : 0
+      const maxX = window.innerWidth - panelW - card.offsetWidth - 8
+      let nx = e.clientX - ox - fieldRect.left + field.parentElement.scrollLeft
+      let ny = e.clientY - oy - fieldRect.top + field.parentElement.scrollTop
+      nx = Math.max(8, Math.min(nx, maxX))
+      ny = Math.max(8, ny)
       card.style.left = nx + 'px'
       card.style.top = ny + 'px'
+      // expand canvas if dragged below viewport
+      const bottom = ny + card.offsetHeight + 40
+      if (bottom > field.offsetHeight) field.style.minHeight = bottom + 'px'
     })
+
     document.addEventListener('mouseup', function () {
+      if (dragging) card.style.zIndex = '12'
       dragging = false
     })
   }
