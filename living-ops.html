@@ -1746,10 +1746,9 @@ body[data-panel="open"] .rita-panel{transform:none;}
 
     window.lfRefreshBubblesFromLive = function lfRefreshBubblesFromLive() {
       const live = buildBubbleDataFromLive(pulseCache)
-      if (live && live.length >= 2) {
+      if (live && live.length > 0) {
         initBubbles(live)
       }
-      // if live data has fewer than 2 bubbles, keep current bubbles as-is
     }
 
     function tick() {
@@ -1858,7 +1857,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
       })
     }
 
-    initBubbles(MOCK_BUBBLES)
+    initBubbles([])  // start empty — live data loads in loadPulseData()
     requestAnimationFrame(tick)
     loadPulseData().catch(function () {})
   })()
