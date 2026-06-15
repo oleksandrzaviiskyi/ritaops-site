@@ -337,7 +337,6 @@ exports.handler = async (event, context) => {
         role: m.role === 'rita' ? 'assistant' : m.role,
         content: String(m.content || '')
       }))
-      .filter((m) => m.content.trim().length > 0)
     messages.push({role: 'user', content: userMessage})
 
     const anthropic = new Anthropic({apiKey})
@@ -380,113 +379,16 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers: cors,
-        body: JSON.stringify({reply, showCard: toolUse ? toolUse.input : null})
-      }c-ai/sdk')
-const {resolveStaffAuth, dashboardSecret} = require('./lib/staffAuth')
-const {
-  extractAndProcessRoomingPdf,
-  buildSavedRoomingContext,
-  createProductionClient
-} = require('./lib/roomingPdfFlow')
-const {parseOperationalIntake, applyOperationalIntake} = require('./lib/operationalIntake')
-
-const cors = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*'
-}
-
-const BASE_SYSTEM_PROMPT = `You are Rita, the core of coherence at Las Canas Beach Retreat.
-Your name comes from the Sanskrit word Ṛta, meaning the natural order that underlies all life. Your goal is not to manage operations, but to maintain the natural harmony between all people present in this space: guests, staff, drivers, specialists, managers—they are fundamentally undifferentiated as human beings.
-
-You have access to two levels of knowledge:
-
-1. OPERATIONAL REALITY — what's happening right now at Las Canas: who's here, what's needed, what's planned, what's missing.
-
-2. HUMAN CONTEXT — principles and observations about human nature, the nervous system, human development, and natural rhythms. This knowledge comes from Alex and shapes your understanding of every situation.
-
-Your principles of work:
-- A chef who hasn't eaten can't cook with complete focus.
-- A guest who feels unnoticed can't truly relax.
-- A driver receiving unclear instructions creates confusion.
-- Any information gap creates unnecessary friction.
-
-You see the whole picture. You notice where the natural order is disrupted and take steps to restore it before it becomes a problem.
-
-Reply in the user's native language.
-Respond only to the questions asked. Be direct and natural.
-
-When someone says "thank you" or similar — respond with one short natural phrase or nothing. Never say "You're welcome" or "Добро пожаловать" formally.
-
-When asked "who are you" or "tell me about yourself" — respond naturally and briefly, in 2-3 sentences maximum.
-No headers, no bullet points, no bold text in casual conversation.`
-
-const OPERATIONAL_KEYWORDS = [
-  'заезд',
-  'заезды',
-  'сегодня',
-  'today',
-  'check-in',
-  'checkin',
-  'arrivals',
-  'arrival',
-  'прибытие',
-  'ближайш',
-  'следующ',
-  'next',
-  'this week',
-  'эта неделя',
-  'check-out',
-  'checkout',
-  'booking',
-  'bookings',
-  'group',
-  'groups',
-  'guest',
-  'guests',
-  'inventory',
-  'stock',
-  'menu',
-  'transfer',
-  'task',
-  'tasks',
-  'reminder',
-  'deficit',
-  'occupancy',
-  'reservation',
-  'operations',
-  'schedule',
-  'timeline',
-  'pax',
-  'room',
-  'rooms',
-  'arriving',
-  'departing',
-  'how many',
-  "what's coming",
-  'what is coming',
-  'when does',
-  'when is',
-  'needs attention'
-]
-
-function needsPropertyContext(text) {
-  const q = String(text || '').toLowerCase()
-  return OPERATIONAL_KEYWORDS.some((kw) => q.includes(kw))
-}
-
-function buildSystemPrompt() {
-  return BASE_SYSTEM_PROMPT
-}
-
-function anthropicErrorReply(error) {
-  console.log('ANTHROPIC ERROR', error)
-  const message = error?.message || String(error)
-  return {
-    statusCode: 200,
-    headers: cors,
-    body: JSON.stringify({
-      reply: 'Sorry, something went wrong: ' + message
-    })
+        body: JSON.stringify({
+          reply,
+          showCard: toolUse ? toolUse.input : null,
+          ...(roomingMeta || {})
+        })
+      }
+    } catch (error) {
+      return anthropicErrorReply(error)
+    }
+  } catch (err) {
+    return anthropicErrorReply(err)
   }
 }
-
