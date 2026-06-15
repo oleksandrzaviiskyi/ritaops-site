@@ -1134,11 +1134,13 @@ body[data-panel="open"] .rita-panel{transform:none;}
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
       saveChatHistory()
 
+      // Debug: show what server returned
+      const serverKeys = Object.keys(json).join(', ')
+      if (json.showCards !== undefined || json.showCard !== undefined) {
+        addChatMsg('msg-rita', '🔍 debug: ' + serverKeys + ' | showCards: ' + JSON.stringify(json.showCards || json.showCard).slice(0,120))
+      }
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
-      if (cardsToShow !== undefined && cardsToShow !== null && !cardsToShow.length) {
-        addChatMsg('msg-rita', '<b>Рита:</b> showCards пришёл но пустой: ' + JSON.stringify(cardsToShow).slice(0,100))
-      }
       if (cardsToShow && cardsToShow.length) {
         cardsToShow.forEach(function(sc, i) {
           const key = 'rita_' + Date.now() + '_' + i
