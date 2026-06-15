@@ -146,10 +146,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   cursor:pointer;font-family:inherit;transition:.15s;backdrop-filter:blur(8px);}
 .tray-chip:hover{border-color:var(--orange);color:var(--ink);}
 .tray-chip .d{width:5px;height:5px;border-radius:1.5px;background:var(--orange);}
-.closeall{font-size:12.5px;color:var(--ink-soft);background:rgba(255,253,247,.8);
-  border:1px solid var(--line);border-radius:999px;padding:5px 14px;
-  cursor:pointer;font-family:inherit;transition:.15s;backdrop-filter:blur(8px);}
-.closeall:hover{border-color:var(--orange);color:var(--ink);}
+
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 13px;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   filter:drop-shadow(0 2px 16px rgba(40,30,18,.07));
@@ -213,7 +210,6 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   <div class="cards-area" id="cardsArea">
     <div class="field-top" id="fieldTop" style="display:none;">
       <div class="tray" id="tray"></div>
-      <button class="closeall" id="closeall" type="button">Закрыть все</button>
     </div>
     <div class="field" id="field"></div>
   </div>
@@ -935,7 +931,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     sendMsg(e.target.closest('.card').getAttribute('data-key'))
   })
 
-  document.getElementById('closeall').addEventListener('click', closeAll)
+
 
   /* --- Living Field bubbles + draggable summon --- */
   ;(function initLivingField() {
