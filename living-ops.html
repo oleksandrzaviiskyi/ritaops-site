@@ -1095,34 +1095,36 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
       saveChatHistory()
 
-      // If Rita called show_card — open it on main field
-      if (json.showCard) {
-        const sc = json.showCard
-        const key = 'rita_' + Date.now()
-        CARDS[key] = {
-          eyebrow: sc.eyebrow || 'РИТА',
-          title: sc.title || 'Карточка',
-          span: true,
-          task: false,
-          live: false,
-          recipients: [],
-          rows: (sc.rows || []).map(function(r) {
-            if (Array.isArray(r)) return [String(r[0] || ''), String(r[1] || ''), String(r[2] || '')]
-            return [String(r), '', '']
-          }),
-          note: sc.note || ''
-        }
-        // render card directly without going through wake() guard
-        const cardHtml = renderCard(key, sc.title || 'РИТА', '')
-        field.insertAdjacentHTML('beforeend', cardHtml)
-        shown.push(key)
-        // make draggable
-        const newCard = document.getElementById('card-' + key)
-        if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
-        // close panel after card appears
-        setTimeout(closePanel, 150)
-        // scroll into view
-        if (newCard) newCard.scrollIntoView({behavior: 'smooth', block: 'nearest'})
+      // If Rita called show_cards — open cards on main field
+      const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
+      if (cardsToShow && cardsToShow.length) {
+        cardsToShow.forEach(function(sc, i) {
+          const key = 'rita_' + Date.now() + '_' + i
+          const contactLabel = sc.contact
+            ? sc.contact + (sc.contactPhone ? ' · ' + sc.contactPhone : '')
+            : null
+          CARDS[key] = {
+            eyebrow: sc.eyebrow || 'РИТА',
+            title: sc.title || 'Карточка',
+            span: false,
+            task: false,
+            live: false,
+            recipients: contactLabel ? [R, contactLabel] : [R],
+            rows: (sc.rows || []).map(function(r) {
+              if (Array.isArray(r)) return [String(r[0] || ''), String(r[1] || ''), String(r[2] || '')]
+              return [String(r), '', '']
+            }),
+            note: sc.note || ''
+          }
+          setTimeout(function() {
+            const cardHtml = renderCard(key, null, '')
+            field.insertAdjacentHTML('beforeend', cardHtml)
+            shown.push(key)
+            const newCard = document.getElementById('card-' + key)
+            if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
+            if (i === 0) setTimeout(closePanel, 150)
+          }, i * 120)
+        })
       }
     } catch (err) {
       hideChatTyping()
