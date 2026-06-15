@@ -143,7 +143,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .card.loading .rows{opacity:.55;}
 @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 @keyframes fade{to{opacity:0;transform:translateY(5px) scale(.99);}}
-.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;cursor:move;}
 .eyebrow{font-size:10px;letter-spacing:0.10em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:3px;font-weight:500;}
 .card-head h3{font-weight:520;font-size:16px;letter-spacing:-.03em;color:var(--ink);}
 .ctrls{display:flex;gap:4px;flex:none;}
@@ -722,61 +722,61 @@ body[data-panel="open"] .rita-panel{transform:none;}
   }
 
   function makeDraggableCard(card) {
-    const head = card.querySelector('.card-head')
-    if (!head) return
-    let ox = 0, oy = 0, dragging = false, placeholder = null
-    head.style.cursor = 'grab'
+    // no-op — drag handled globally via field delegation below
+  }
 
-    head.addEventListener('mousedown', function (e) {
+  // Global delegated drag — works for all cards including dynamically added ones
+  ;(function initGlobalDrag() {
+    let dragging = false, dragCard = null, ox = 0, oy = 0, placeholder = null
+
+    field.addEventListener('mousedown', function (e) {
+      const head = e.target.closest('.card-head')
+      if (!head) return
       if (e.target.closest('[data-act]')) return
-      const rect = card.getBoundingClientRect()
-      // create placeholder to hold space
+      dragCard = head.closest('.card')
+      if (!dragCard) return
+      const rect = dragCard.getBoundingClientRect()
       placeholder = document.createElement('div')
-      placeholder.style.cssText = 'width:' + rect.width + 'px;height:' + rect.height + 'px;flex:none;'
-      card.parentNode.insertBefore(placeholder, card.nextSibling)
-      // lift card to fixed
+      placeholder.style.cssText = 'width:' + rect.width + 'px;height:' + rect.height + 'px;flex:none;border-radius:20px;'
+      dragCard.parentNode.insertBefore(placeholder, dragCard.nextSibling)
       ox = e.clientX - rect.left
       oy = e.clientY - rect.top
-      card.style.position = 'fixed'
-      card.style.left = rect.left + 'px'
-      card.style.top = rect.top + 'px'
-      card.style.width = rect.width + 'px'
-      card.style.zIndex = '60'
-      card.style.margin = '0'
+      dragCard.style.position = 'fixed'
+      dragCard.style.left = rect.left + 'px'
+      dragCard.style.top = rect.top + 'px'
+      dragCard.style.width = rect.width + 'px'
+      dragCard.style.zIndex = '60'
+      dragCard.style.margin = '0'
       head.style.cursor = 'grabbing'
       dragging = true
       e.preventDefault()
     })
 
     document.addEventListener('mousemove', function (e) {
-      if (!dragging) return
+      if (!dragging || !dragCard) return
       const panelW = document.body.getAttribute('data-panel') === 'open' ? 440 : 0
-      let nx = e.clientX - ox
-      let ny = e.clientY - oy
-      nx = Math.max(4, Math.min(nx, window.innerWidth - panelW - card.offsetWidth - 4))
-      ny = Math.max(4, ny)
-      card.style.left = nx + 'px'
-      card.style.top = ny + 'px'
+      let nx = Math.max(4, Math.min(e.clientX - ox, window.innerWidth - panelW - dragCard.offsetWidth - 4))
+      let ny = Math.max(4, e.clientY - oy)
+      dragCard.style.left = nx + 'px'
+      dragCard.style.top = ny + 'px'
     })
 
     document.addEventListener('mouseup', function () {
-      if (!dragging) return
+      if (!dragging || !dragCard) return
       dragging = false
-      head.style.cursor = 'grab'
-      // drop back into flow at current screen position — convert fixed to scroll-relative
-      const rect = card.getBoundingClientRect()
-      const ca = document.querySelector('.cards-area')
-      const caRect = ca ? ca.getBoundingClientRect() : {left:0,top:0}
-      card.style.position = 'relative'
-      card.style.left = ''
-      card.style.top = ''
-      card.style.width = ''
-      card.style.zIndex = '12'
-      card.style.margin = ''
+      const head = dragCard.querySelector('.card-head')
+      if (head) head.style.cursor = 'move'
+      dragCard.style.position = 'relative'
+      dragCard.style.left = ''
+      dragCard.style.top = ''
+      dragCard.style.width = ''
+      dragCard.style.zIndex = '12'
+      dragCard.style.margin = ''
       if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder)
       placeholder = null
+      dragCard = null
     })
-  }
+  })()
 
   function resolveCard(key) {
     // transition bubble to stage 2 (flower of life)
