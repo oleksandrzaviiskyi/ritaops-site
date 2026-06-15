@@ -1079,6 +1079,25 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       chatHistory.push({role: 'rita', content: reply})
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
       saveChatHistory()
+
+      // If Rita called show_card — open it on main field
+      if (json.showCard) {
+        const sc = json.showCard
+        const key = 'rita_' + Date.now()
+        CARDS[key] = {
+          eyebrow: sc.eyebrow || 'РИТА',
+          title: sc.title || 'Карточка',
+          span: true,
+          task: false,
+          live: false,
+          rows: (sc.rows || []).map(function(r) {
+            return [r[0] || '', r[1] || '', r[2] || '']
+          }),
+          note: sc.note || ''
+        }
+        closePanel()
+        wake(key, sc.title)
+      }
     } catch (err) {
       hideChatTyping()
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc('Ошибка — ' + err.message))
