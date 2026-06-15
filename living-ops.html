@@ -1228,7 +1228,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
       const today = todayIso()
       ;(cache.portals || []).filter(function (p) {
-        return p.checkIn && p.checkIn >= today
+        return p.checkIn && p.checkIn >= today && p.status !== 'cancelled'
       }).slice(0, 4).forEach(function (p) {
         const pos = nextBubblePos(idx++)
         items.push({
