@@ -186,3 +186,10 @@
   from = "/api/edit-guest"
   to = "/.netlify/functions/edit-guest"
   status = 200
+
+[[redirects]]
+  from = "/api/upload-rooming"
+  to = "/.netlify/functions/upload-rooming"
+  status = 200
+  force = true
+
