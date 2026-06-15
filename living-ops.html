@@ -474,6 +474,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   async function loadPulseData() {
     const data = await apiGet('/api/ops-pulse')
     pulseCache = data
+    if (typeof lfRefreshBubblesFromLive === 'function') lfRefreshBubblesFromLive()
     return data
   }
 
@@ -630,6 +631,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     const i = shown.indexOf(key)
     if (i > -1) shown.splice(i, 1)
     if (shown.length === 0) fieldTop.style.display = 'none'
+    if (typeof lfRestoreBubble === 'function') lfRestoreBubble(key)
   }
 
   function minimize(key) {
@@ -657,6 +659,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     tray.innerHTML = ''
     shown.length = 0
     fieldTop.style.display = 'none'
+    if (typeof lfRestoreAllBubbles === 'function') lfRestoreAllBubbles()
   }
 
   function logLine(key, cls, html) {
@@ -924,9 +927,469 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
   document.getElementById('closeall').addEventListener('click', closeAll)
 
-  document.getElementById('summon').addEventListener('click', function () {
-    document.body.getAttribute('data-panel') === 'open' ? closePanel() : openPanel()
-  })
+  /* --- Living Field bubbles + draggable summon --- */
+  ;(function initLivingField() {
+    const lfStyle = document.createElement('style')
+    lfStyle.textContent = `
+.lf-bubble{position:fixed;border-radius:50%;cursor:grab;z-index:100;touch-action:none;}
+.lf-bubble:active{cursor:grabbing;}
+.lf-ghost{position:fixed;border-radius:50%;pointer-events:none;z-index:99;opacity:.18;display:none;}
+.lf-tt{position:fixed;background:rgba(255,253,247,.97);border:1px solid rgba(40,30,18,.13);border-radius:12px;padding:10px 13px;font-size:12px;line-height:1.5;max-width:200px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;box-shadow:0 4px 18px rgba(40,30,18,.10);}
+.lf-tt-type{font-size:10px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px;}
+.lf-tt-text{color:#3d3730;}
+.lf-tt-dept{font-size:11px;color:#9a8c7c;margin-top:4px;}
+.summon.lf-dragging{transition:none;}
+`
+    document.head.appendChild(lfStyle)
+
+    const MOCK_BUBBLES = [
+      {type: 'concern', size: 72, urgent: true, text: 'Bar: течёт кран', dept: 'Maintenance · 7ч', ax: 0.22, ay: 0.30, cardKey: 'risks'},
+      {type: 'question', size: 54, text: 'EF 371170: Руминг-лист получен?', dept: 'Рита → Reception', ax: 0.44, ay: 0.22, cardKey: 'risks'},
+      {type: 'event', size: 48, text: 'EF группа (38 чел) заезжает 15 июня', dept: 'Groups', ax: 0.30, ay: 0.62, cardKey: 'arrivals'},
+      {type: 'question', size: 46, text: 'Dietary restrictions 372551', dept: 'Рита → Groups', ax: 0.52, ay: 0.54, cardKey: 'risks'}
+    ]
+
+    const TYPE_TO_CARD = {concern: 'risks', 'concern-new': 'risks', question: 'risks', event: 'arrivals'}
+    const zones = []
+    let animT = 0
+    let bubbles = []
+    const bubbleByCard = {}
+
+    const ttEl = document.createElement('div')
+    ttEl.className = 'lf-tt'
+    document.body.appendChild(ttEl)
+
+    function drawBubble(cv, b, t, dim) {
+      const s = b.size
+      const r = s / 2
+      const ctx = cv.getContext('2d')
+      cv.width = s
+      cv.height = s
+      ctx.clearRect(0, 0, s, s)
+      const drawType = b.bubbleType || b.type
+      const COLORS = {
+        concern: {color: '#b83c0d', glow: 'rgba(184,60,13,'},
+        'concern-new': {color: '#a06b0a', glow: 'rgba(160,107,10,'},
+        question: {color: '#d98a2b', glow: 'rgba(217,138,43,'},
+        event: {color: '#3a7a55', glow: 'rgba(58,122,85,'}
+      }
+      const tp = COLORS[drawType] || COLORS.question
+      const br = 0.5 + 0.5 * Math.sin(t * b.bSpeed + b.phase)
+      const ga = dim ? 0.04 : (b.urgent ? 0.26 + 0.15 * br : 0.11 + 0.09 * br)
+      const fa = dim ? 0.02 : (b.urgent ? 0.10 + 0.07 * br : 0.05 + 0.04 * br)
+      const sa = dim ? 0.08 : (b.urgent ? 0.5 + 0.18 * br : 0.25 + 0.13 * br)
+      const h = (n) => Math.round(Math.min(1, Math.max(0, n)) * 255).toString(16).padStart(2, '0')
+      const g = ctx.createRadialGradient(r, r, r * 0.4, r, r, r * 1.1)
+      g.addColorStop(0, tp.glow + ga + ')')
+      g.addColorStop(1, tp.glow + '0)')
+      ctx.beginPath()
+      ctx.arc(r, r, r * 1.1, 0, Math.PI * 2)
+      ctx.fillStyle = g
+      ctx.fill()
+      const f = ctx.createRadialGradient(r * 0.65, r * 0.55, 0, r, r, r)
+      f.addColorStop(0, tp.glow + (fa * 1.5) + ')')
+      f.addColorStop(1, tp.glow + fa + ')')
+      ctx.beginPath()
+      ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+      ctx.fillStyle = f
+      ctx.fill()
+      ctx.lineWidth = 1.2
+      ctx.strokeStyle = tp.color + h(sa)
+      if (drawType === 'concern' || drawType === 'concern-new') {
+        ctx.beginPath()
+        ctx.arc(r, r, r - 1.5, 0.3, Math.PI * 2 - 0.3)
+        ctx.stroke()
+      } else {
+        ctx.beginPath()
+        ctx.arc(r, r, r - 1.5, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+      if (drawType === 'event') {
+        ctx.beginPath()
+        ctx.arc(r, r, 3 + 2 * br, 0, Math.PI * 2)
+        ctx.fillStyle = tp.color
+        ctx.fill()
+      }
+      const SYMS = {concern: '◌', 'concern-new': '◈', question: '◉', event: '·'}
+      const ss = Math.round(s * (dim ? 0.16 : 0.25))
+      ctx.font = ss + 'px serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = tp.color + h(dim ? 0.12 : (b.urgent ? 0.86 : 0.5 + 0.18 * br))
+      ctx.fillText(SYMS[drawType] || '◉', r, r)
+    }
+
+    function updateZones() {
+      zones.length = 0
+      document.querySelectorAll('.card').forEach(function (card) {
+        if (card.style.display === 'none') return
+        const rect = card.getBoundingClientRect()
+        if (!rect.width) return
+        zones.push({
+          id: card.dataset.key,
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2,
+          r: Math.max(rect.width, rect.height) * 0.55
+        })
+      })
+      if (document.body.getAttribute('data-panel') === 'open') {
+        const panel = document.getElementById('ritaPanel')
+        if (panel) {
+          const rect = panel.getBoundingClientRect()
+          zones.push({
+            id: 'rita-panel',
+            cx: rect.left + rect.width / 2,
+            cy: rect.top + rect.height / 2,
+            r: Math.max(rect.width, rect.height) * 0.45
+          })
+        }
+      }
+    }
+
+    function showTT(b, x, y) {
+      const LABELS = {concern: 'Разрыв', 'concern-new': 'Maintenance', question: 'Рита наблюдает', event: 'Событие'}
+      const COLORS = {concern: '#b83c0d', 'concern-new': '#a06b0a', question: '#d98a2b', event: '#3a7a55'}
+      const drawType = b.bubbleType || b.type
+      const c = COLORS[drawType] || '#d98a2b'
+      ttEl.innerHTML = '<div class="lf-tt-type" style="color:' + c + '">' + esc(LABELS[drawType] || '') + '</div>'
+        + '<div class="lf-tt-text">' + esc(b.text) + '</div>'
+        + '<div class="lf-tt-dept">' + esc(b.dept || '') + '</div>'
+      ttEl.style.opacity = '1'
+      posTT(x, y)
+      ttBubble = b
+    }
+
+    function hideTT() {
+      ttEl.style.opacity = '0'
+      ttBubble = null
+    }
+
+    function posTT(x, y) {
+      const vw = window.innerWidth
+      let lx = x + 14
+      let ly = y + 14
+      if (lx + 210 > vw) lx = x - 220
+      if (ly + 90 > window.innerHeight - 20) ly = y - 100
+      ttEl.style.left = lx + 'px'
+      ttEl.style.top = ly + 'px'
+    }
+
+    function openBubbleCard(b) {
+      if (b.open) return
+      b.open = true
+      drawBubble(b.gcv, b, animT, true)
+      b.ghost.style.left = (b.homeX - b.size / 2) + 'px'
+      b.ghost.style.top = (b.homeY - b.size / 2) + 'px'
+      b.ghost.style.display = 'block'
+      b.el.style.visibility = 'hidden'
+      hideTT()
+      const cardKey = b.cardKey || TYPE_TO_CARD[b.type] || 'pulse'
+      if (!bubbleByCard[cardKey]) bubbleByCard[cardKey] = []
+      bubbleByCard[cardKey].push(b)
+      wake(cardKey, b.text)
+    }
+
+    window.lfRestoreBubble = function lfRestoreBubble(cardKey) {
+      const list = bubbleByCard[cardKey]
+      if (!list || !list.length) return
+      list.forEach(function (b) {
+        b.open = false
+        b.ghost.style.display = 'none'
+        b.el.style.visibility = 'visible'
+      })
+      delete bubbleByCard[cardKey]
+    }
+
+    window.lfRestoreAllBubbles = function lfRestoreAllBubbles() {
+      Object.keys(bubbleByCard).forEach(function (key) {
+        lfRestoreBubble(key)
+      })
+    }
+
+    function clearBubbles() {
+      bubbles.forEach(function (b) {
+        if (b.el.parentNode) b.el.parentNode.removeChild(b.el)
+        if (b.ghost.parentNode) b.ghost.parentNode.removeChild(b.ghost)
+      })
+      bubbles = []
+      Object.keys(bubbleByCard).forEach(function (k) { delete bubbleByCard[k] })
+    }
+
+    function nextBubblePos(index) {
+      const cols = 4
+      const col = index % cols
+      const row = Math.floor(index / cols)
+      return {
+        ax: 0.14 + col * 0.16 + (Math.random() * 0.04),
+        ay: 0.18 + row * 0.14 + (Math.random() * 0.04)
+      }
+    }
+
+    function buildBubbleDataFromLive(cache) {
+      if (!cache) return null
+      const items = []
+      let idx = 0
+
+      ;(cache.openQuestions || []).slice(0, 5).forEach(function (q) {
+        const pos = nextBubblePos(idx++)
+        items.push({
+          type: 'question',
+          size: 46 + Math.min(24, String(q.question || '').length * 0.4),
+          text: q.question || 'Open question',
+          dept: 'Рита наблюдает',
+          cardKey: 'risks',
+          sourceId: q._id,
+          ax: pos.ax,
+          ay: pos.ay
+        })
+      })
+
+      ;(cache.openConcerns || []).slice(0, 6).forEach(function (c) {
+        const hours = c.openedAt ? (Date.now() - new Date(c.openedAt).getTime()) / 3600000 : 0
+        const bubbleType = hours >= 6 ? 'concern' : 'concern-new'
+        const place = c.place?.name || c.place?.unitCode || 'Place'
+        const pos = nextBubblePos(idx++)
+        items.push({
+          type: bubbleType === 'concern-new' ? 'concern-new' : 'concern',
+          bubbleType: bubbleType,
+          urgent: hours >= 6,
+          size: hours >= 6 ? 68 : 54,
+          text: place + ': ' + (c.summary || 'open issue'),
+          dept: (hours >= 6 ? 'Maintenance · ' : 'New · ') + Math.max(1, Math.round(hours)) + 'ч',
+          cardKey: 'risks',
+          sourceId: c._id,
+          ax: pos.ax,
+          ay: pos.ay
+        })
+      })
+
+      const today = todayIso()
+      ;(cache.portals || []).filter(function (p) {
+        return p.checkIn && p.checkIn >= today
+      }).slice(0, 4).forEach(function (p) {
+        const pos = nextBubblePos(idx++)
+        items.push({
+          type: 'event',
+          size: 48,
+          text: (p.groupName || p.title || 'Group') + ' (' + (p.totalGuests || '?') + ' guests) · ' + fmtDate(p.checkIn),
+          dept: 'Groups',
+          cardKey: 'arrivals',
+          sourceId: p._id,
+          ax: pos.ax,
+          ay: pos.ay
+        })
+      })
+
+      return items.length ? items : null
+    }
+
+    function spawnBubble(data) {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const el = document.createElement('div')
+      el.className = 'lf-bubble'
+      el.style.width = data.size + 'px'
+      el.style.height = data.size + 'px'
+
+      const cv = document.createElement('canvas')
+      el.appendChild(cv)
+
+      const ghost = document.createElement('div')
+      ghost.className = 'lf-ghost'
+      ghost.style.width = data.size + 'px'
+      ghost.style.height = data.size + 'px'
+      const gcv = document.createElement('canvas')
+      ghost.appendChild(gcv)
+      document.body.appendChild(ghost)
+      document.body.appendChild(el)
+
+      const px = (data.ax || 0.2) * vw
+      const py = (data.ay || 0.3) * vh
+
+      const b = Object.assign({}, data, {
+        el: el,
+        cv: cv,
+        gcv: gcv,
+        ghost: ghost,
+        px: px,
+        py: py,
+        homeX: px,
+        homeY: py,
+        vx: 0,
+        vy: 0,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.4 + Math.random() * 0.3,
+        bSpeed: 1 + Math.random(),
+        amp: 4 + Math.random() * 6,
+        open: false,
+        isDragging: false,
+        didMove: false
+      })
+
+      let dragOx = 0
+      let dragOy = 0
+
+      el.addEventListener('mousedown', function (e) {
+        if (b.open) return
+        b.isDragging = true
+        b.didMove = false
+        dragOx = e.clientX - b.px
+        dragOy = e.clientY - b.py
+        b.vx = 0
+        b.vy = 0
+        hideTT()
+        e.preventDefault()
+      })
+
+      el.addEventListener('mouseenter', function (e) {
+        if (!b.open && !b.isDragging) showTT(b, e.clientX, e.clientY)
+      })
+
+      el.addEventListener('mousemove', function (e) {
+        if (ttBubble === b && !b.isDragging) posTT(e.clientX, e.clientY)
+      })
+
+      el.addEventListener('mouseleave', hideTT)
+
+      el.addEventListener('click', function () {
+        if (b.didMove || b.open) return
+        openBubbleCard(b)
+      })
+
+      document.addEventListener('mousemove', function (e) {
+        if (!b.isDragging) return
+        b.didMove = true
+        b.px = e.clientX - dragOx
+        b.py = e.clientY - dragOy
+        b.homeX = b.px
+        b.homeY = b.py
+        const mg = b.size / 2 + 4
+        const vw2 = window.innerWidth
+        const vh2 = window.innerHeight
+        b.px = Math.max(mg, Math.min(b.px, vw2 - mg))
+        b.py = Math.max(mg, Math.min(b.py, vh2 - mg - 40))
+      })
+
+      document.addEventListener('mouseup', function () {
+        if (!b.isDragging) return
+        b.isDragging = false
+      })
+
+      bubbles.push(b)
+      return b
+    }
+
+    function initBubbles(dataList) {
+      clearBubbles()
+      dataList.forEach(function (d) { spawnBubble(d) })
+    }
+
+    window.lfRefreshBubblesFromLive = function lfRefreshBubblesFromLive() {
+      const live = buildBubbleDataFromLive(pulseCache)
+      initBubbles(live || MOCK_BUBBLES)
+    }
+
+    function tick() {
+      animT += 0.011
+      updateZones()
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      bubbles.forEach(function (b) {
+        if (b.open) {
+          drawBubble(b.gcv, b, animT, true)
+          return
+        }
+        if (b.isDragging) {
+          b.el.style.left = (b.px - b.size / 2) + 'px'
+          b.el.style.top = (b.py - b.size / 2) + 'px'
+          drawBubble(b.cv, b, animT, false)
+          return
+        }
+        const fdx = Math.cos(animT * b.speed * 0.55 + b.phase) * b.amp * 0.3
+        const fdy = Math.sin(animT * b.speed + b.phase) * b.amp
+        let fx = 0
+        let fy = 0
+        zones.forEach(function (z) {
+          const ddx = b.px - z.cx
+          const ddy = b.py - z.cy
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy) || 1
+          const repR = z.r + b.size / 2 + 16
+          if (dist < repR) {
+            const ov = repR - dist
+            fx += (ddx / dist) * ov * 1.4
+            fy += (ddy / dist) * ov * 1.4
+          }
+        })
+        const dhx = b.homeX - b.px
+        const dhy = b.homeY - b.py
+        if (Math.sqrt(dhx * dhx + dhy * dhy) > 2) {
+          fx += dhx * 0.04
+          fy += dhy * 0.04
+        }
+        b.vx = (b.vx + fx) * 0.78
+        b.vy = (b.vy + fy) * 0.78
+        b.px += b.vx
+        b.py += b.vy
+        const mg = b.size / 2 + 4
+        b.px = Math.max(mg, Math.min(b.px, vw - mg))
+        b.py = Math.max(mg, Math.min(b.py, vh - mg - 40))
+        b.el.style.left = (b.px + fdx - b.size / 2) + 'px'
+        b.el.style.top = (b.py + fdy - b.size / 2) + 'px'
+        drawBubble(b.cv, b, animT, false)
+      })
+      requestAnimationFrame(tick)
+    }
+
+    function makeDraggable(el, onClick) {
+      let ox = 0
+      let oy = 0
+      let on = false
+      let moved = false
+      el.addEventListener('mousedown', function (e) {
+        moved = false
+        on = true
+        ox = e.clientX - el.getBoundingClientRect().left
+        oy = e.clientY - el.getBoundingClientRect().top
+        el.classList.add('lf-dragging')
+        e.preventDefault()
+      })
+      document.addEventListener('mousemove', function (e) {
+        if (!on) return
+        moved = true
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        const w = el.offsetWidth
+        const h = el.offsetHeight
+        let nx = e.clientX - ox
+        let ny = e.clientY - oy
+        nx = Math.max(8, Math.min(nx, vw - w - 8))
+        ny = Math.max(8, Math.min(ny, vh - h - 8))
+        el.style.position = 'fixed'
+        el.style.right = 'auto'
+        el.style.bottom = 'auto'
+        el.style.left = nx + 'px'
+        el.style.top = ny + 'px'
+      })
+      document.addEventListener('mouseup', function () {
+        if (on && !moved && onClick) onClick()
+        on = false
+        el.classList.remove('lf-dragging')
+      })
+    }
+
+    const summonBtn = document.getElementById('summon')
+    if (summonBtn) {
+      summonBtn.style.zIndex = '110'
+      makeDraggable(summonBtn, function () {
+        document.body.getAttribute('data-panel') === 'open' ? closePanel() : openPanel()
+      })
+    }
+
+    initBubbles(MOCK_BUBBLES)
+    requestAnimationFrame(tick)
+    loadPulseData().catch(function () {})
+  })()
+
   document.getElementById('closePanel').addEventListener('click', closePanel)
   document.getElementById('panelSend').addEventListener('click', sendChat)
   document.getElementById('panelInput').addEventListener('keydown', function (e) {
@@ -938,7 +1401,6 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
   loadQuestions(false)
   startQuestionsPolling()
-  loadPulseData().catch(function () {})
   loadPortalsData().catch(function () {})
 })()
 </script>
