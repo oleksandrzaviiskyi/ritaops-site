@@ -193,8 +193,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 .composer .send:disabled{opacity:.45;cursor:default;}
 .task-row{margin-top:9px;}
 .resolve{font-size:11.5px;color:var(--ok);background:none;border:1px solid rgba(58,122,85,.28);
-  border-radius:999px;padding:4px 12px;cursor:pointer;font-family:inherit;transition:.14s;}
-.resolve:hover{border-color:var(--ok);}
+  border-radius:999px;padding:6px 16px;cursor:pointer;font-family:inherit;transition:.2s;font-weight:500;}
+.resolve:hover{border-color:var(--ok);background:rgba(58,122,85,.06);}
+.resolve:disabled{opacity:.6;cursor:default;}
 </style>
 </head>
 <body data-state="rest" data-panel="closed" data-qopen="no">
@@ -654,6 +655,34 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     })
   }
 
+  function resolveCard(key) {
+    // transition bubble to stage 2 (flower of life)
+    if (typeof lfSetBubbleResolved === 'function') {
+      lfSetBubbleResolved(key)
+    }
+    // update resolve button UI
+    const card = document.getElementById('card-' + key)
+    if (card) {
+      const btn = card.querySelector('.resolve')
+      if (btn) {
+        btn.textContent = '✓ Решено — цветок жизни'
+        btn.style.color = 'var(--ok)'
+        btn.style.borderColor = 'var(--ok)'
+        btn.disabled = true
+      }
+      // send message to Rita about resolution
+      apiPost('/api/rita-chat', {
+        message: 'Задача закрыта: ' + (CARDS[key]?.title || key),
+        history: [],
+        liveData: buildLiveContext()
+      }).then(function(json) {
+        logLine(key, 'rita', '<b>Рита:</b> ' + esc(json.reply || 'Приняла.'))
+      }).catch(function(){})
+    }
+    // remove card after bubble animation (2.5s)
+    setTimeout(function() { removeCard(key) }, 2500)
+  }
+
   function removeCard(key) {
     const c = document.getElementById('card-' + key)
     const chip = tray.querySelector('[data-key="' + key + '"]')
@@ -727,9 +756,10 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     if (sendBtn) sendBtn.disabled = true
 
     const cardTitle = CARDS[key]?.title || key
+    const cardContext = '[Карточка: ' + cardTitle + '] '
     const routed = rcpt === R
-      ? msg
-      : '[' + cardTitle + ' → ' + rcpt + '] ' + msg
+      ? cardContext + msg
+      : cardContext + '[→ ' + rcpt + '] ' + msg
 
     try {
       const json = await apiPost('/api/rita-chat', {
@@ -955,7 +985,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     const act = btn.getAttribute('data-act')
     if (act === 'min') minimize(key)
     else if (act === 'close') removeCard(key)
-    else if (act === 'resolve') removeCard(key)
+    else if (act === 'resolve') resolveCard(key)
     else if (act === 'send') sendMsg(key)
   })
 
@@ -1244,6 +1274,15 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     window.lfRestoreBubble = function lfRestoreBubble(cardKey) {
       bubbles.forEach(function (b) {
         if (b.open && b._openedCardKey === cardKey) restoreBubble(b)
+      })
+    }
+
+    window.lfSetBubbleResolved = function lfSetBubbleResolved(cardKey) {
+      bubbles.forEach(function (b) {
+        if (b._openedCardKey === cardKey || b.cardKey === cardKey) {
+          b.stage = 2
+          b.stageProgress = 0
+        }
       })
     }
 
