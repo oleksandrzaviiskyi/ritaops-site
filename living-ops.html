@@ -1250,7 +1250,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     }
 
     function showTT(b, x, y) {
-      const LABELS = {concern: 'Разрыв', 'concern-new': 'Maintenance', question: 'Рита наблюдает', event: 'Событие'}
+      const LABELS = {concern: 'Разрыв', 'concern-new': 'Новая задача', question: 'Рита наблюдает', event: 'Заезд'}
       const COLORS = {concern: '#b83c0d', 'concern-new': '#a06b0a', question: '#d98a2b', event: '#3a7a55'}
       const drawType = b.bubbleType || b.type
       const c = COLORS[drawType] || '#d98a2b'
@@ -1376,6 +1376,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         const bubbleType = hours >= 6 ? 'concern' : 'concern-new'
         const place = c.place?.name || c.place?.unitCode || 'Place'
         const pos = nextBubblePos(idx++)
+        // skip concerns that are actually group/arrival info
+        const isGroupInfo = /EF|368297|371|grup|group|pax|habitaci/i.test(c.summary || '')
+        if (isGroupInfo) return
         const isUnit = /bar/i.test(place) || /bar/i.test(c.summary || '')
         const cData = {
           type: bubbleType === 'concern-new' ? 'concern-new' : 'concern',
