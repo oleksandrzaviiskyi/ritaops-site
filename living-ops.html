@@ -315,7 +315,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   async function apiGet(path) {
     const res = await fetch(apiUrl(path), {headers: AUTH_HEADERS})
     const json = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(json.error || res.statusText || 'Request failed')
+    if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + (json.error || json.message || res.statusText || 'Request failed'))
     return json
   }
 
@@ -326,7 +326,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       body: JSON.stringify({...body, staffKey: STAFF_KEY})
     })
     const json = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(json.error || res.statusText || 'Request failed')
+    if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + (json.error || json.message || res.statusText || 'Request failed'))
     return json
   }
 
