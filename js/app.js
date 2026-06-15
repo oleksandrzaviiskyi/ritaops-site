@@ -557,13 +557,30 @@
         btn.disabled = true
       }
       // Save resolved status to Sanity so it persists after reload
+      const allIds = window._cardSourceIds ? JSON.stringify(window._cardSourceIds) : 'не установлен'
       const sourceId = window._cardSourceIds && window._cardSourceIds[key]
+      console.log('[resolve] key:', key, 'sourceId:', sourceId, 'all:', allIds)
       if (sourceId) {
         apiPost('/api/resolve-concern', {id: sourceId})
-          .then(function() {
+          .then(function(r) {
+            console.log('[resolve] success:', r)
             delete window._cardSourceIds[key]
           })
-          .catch(function(e) { console.error('resolve failed:', e) })
+          .catch(function(e) { console.error('[resolve] failed:', e) })
+      } else {
+        // Try to find sourceId from pulseCache directly
+        const concerns = (pulseCache && pulseCache.openConcerns) || []
+        console.log('[resolve] openConcerns from pulseCache:', concerns.map(function(c){return {id:c._id, place:c.place?.name}}))
+        const concern = concerns.find(function(c) {
+          const place = c.place?.name || c.place?.unitCode || ''
+          return CARDS[key] && (CARDS[key].title || '').toLowerCase().includes(place.toLowerCase())
+        }) || concerns[0]
+        if (concern) {
+          console.log('[resolve] found via pulseCache:', concern._id)
+          apiPost('/api/resolve-concern', {id: concern._id})
+            .then(function(r) { console.log('[resolve] success via cache:', r) })
+            .catch(function(e) { console.error('[resolve] cache failed:', e) })
+        }
       }
       // send message to Rita about resolution
       apiPost('/api/rita-chat', {
