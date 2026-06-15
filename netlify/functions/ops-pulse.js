@@ -41,7 +41,7 @@ const RESPONSIBILITY_QUERY = `*[_type == "responsibilityDomain"]{
   "people": relatedPeople[]->{"name": fullName, "role": position->title}
 }`
 
-const PORTALS_QUERY = `*[_type == "groupPortal"] | order(checkIn asc) {
+const PORTALS_QUERY = `*[_type == "groupPortal" && status != "cancelled"] | order(checkIn asc) {
   _id,
   "title": groupName,
   groupName,
