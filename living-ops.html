@@ -1017,6 +1017,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       .slice(0, -1)
       .slice(-6)
       .map((m) => ({role: m.role === 'rita' ? 'rita' : 'user', content: m.content}))
+      .filter((m) => m.content && m.content.trim().length > 0)
 
     try {
       const hasPdf = Boolean(pendingPdfData)
@@ -1047,6 +1048,11 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         } else {
           throw new Error(pdfData.error || 'Ошибка обработки PDF')
         }
+        // save clean message to history (not empty)
+        const pdfMsgForHistory = msg || 'Загрузил руминг-лист'
+        chatHistory.push({role: 'user', content: pdfMsgForHistory})
+        chatHistory.push({role: 'rita', content: json.reply})
+        saveChatHistory()
         // clear PDF
         pendingPdfData = null
         pendingPdfName = null
