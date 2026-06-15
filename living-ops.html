@@ -616,6 +616,43 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     if (key === 'pulse') await refreshPulseCard()
     if (key === 'arrivals') await refreshArrivalsCard()
     if (key === 'risks') await refreshRisksCard()
+
+    // Make card draggable
+    const newCard = document.getElementById('card-' + key)
+    if (newCard) makeDraggableCard(newCard)
+  }
+
+  function makeDraggableCard(card) {
+    const head = card.querySelector('.card-head')
+    if (!head) return
+    let ox = 0, oy = 0, dragging = false
+    head.style.cursor = 'move'
+    head.addEventListener('mousedown', function (e) {
+      if (e.target.closest('[data-act]')) return
+      const rect = card.getBoundingClientRect()
+      ox = e.clientX - rect.left
+      oy = e.clientY - rect.top
+      dragging = true
+      card.style.position = 'fixed'
+      card.style.left = rect.left + 'px'
+      card.style.top = rect.top + 'px'
+      card.style.width = rect.width + 'px'
+      card.style.zIndex = '50'
+      card.style.margin = '0'
+      e.preventDefault()
+    })
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return
+      let nx = e.clientX - ox
+      let ny = e.clientY - oy
+      nx = Math.max(0, Math.min(nx, window.innerWidth - card.offsetWidth))
+      ny = Math.max(0, Math.min(ny, window.innerHeight - card.offsetHeight))
+      card.style.left = nx + 'px'
+      card.style.top = ny + 'px'
+    })
+    document.addEventListener('mouseup', function () {
+      dragging = false
+    })
   }
 
   function removeCard(key) {
