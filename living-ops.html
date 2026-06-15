@@ -1228,8 +1228,10 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
       const today = todayIso()
       ;(cache.portals || []).filter(function (p) {
-        return p.checkIn && p.checkIn >= today && p.status !== 'cancelled'
-      }).slice(0, 4).forEach(function (p) {
+        if (!p.checkIn || p.status === 'cancelled') return false
+        const daysUntil = (new Date(p.checkIn) - new Date(today)) / 86400000
+        return daysUntil >= 0 && daysUntil <= 3
+      }).slice(0, 6).forEach(function (p) {
         const pos = nextBubblePos(idx++)
         items.push({
           type: 'event',
