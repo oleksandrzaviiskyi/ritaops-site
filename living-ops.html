@@ -700,8 +700,14 @@ body[data-panel="open"] .rita-panel{transform:none;}
     shown.push(key)
     const placedCard = document.getElementById('card-' + key)
     if (placedCard) {
-      placedCard.style.left = startLeft + 'px'
-      placedCard.style.top = startTop + 'px'
+      let maxBottom = 20
+      field.querySelectorAll('.card').forEach(function(c) {
+        if (c === placedCard) return
+        const b = parseInt(c.style.top || 0) + c.offsetHeight + 16
+        if (b > maxBottom) maxBottom = b
+      })
+      placedCard.style.left = '20px'
+      placedCard.style.top = maxBottom + 'px'
     }
 
 
@@ -1141,9 +1147,18 @@ body[data-panel="open"] .rita-panel{transform:none;}
             shown.push(key)
             const newCard = document.getElementById('card-' + key)
             if (newCard) {
-              const ci = shown.length - 1
-              newCard.style.left = (20 + (ci % 3) * 320) + 'px'
-              newCard.style.top = (20 + Math.floor(ci / 3) * 40) + 'px'
+              // Find lowest bottom edge of existing cards to stack below
+              let maxBottom = 20
+              field.querySelectorAll('.card').forEach(function(c) {
+                if (c === newCard) return
+                const b = parseInt(c.style.top || 0) + c.offsetHeight + 16
+                if (b > maxBottom) maxBottom = b
+              })
+              newCard.style.left = '20px'
+              newCard.style.top = maxBottom + 'px'
+              // expand canvas
+              const needed = maxBottom + newCard.offsetHeight + 40
+              if (needed > field.offsetHeight) field.style.minHeight = needed + 'px'
               if (typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
             }
             // panel stays open — manager continues dialogue with Rita
