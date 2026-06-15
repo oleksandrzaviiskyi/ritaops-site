@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RITA · Загрузка румингу</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Inter",sans-serif;background:linear-gradient(180deg,#fffdf7 0%,#fff4df 55%,#ffdca6 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.wrap{width:100%;max-width:540px;padding:24px;}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.logo img{width:48px;}
+.logo .name{font-size:18px;font-weight:600;letter-spacing:.12em;color:#111;}
+.logo .sub{font-size:11px;color:#7a6e62;}
+.card{background:rgba(255,253,247,.92);border:1px solid rgba(40,30,18,.13);border-radius:20px;padding:28px;backdrop-filter:blur(14px);}
+h2{font-size:17px;font-weight:500;color:#111;margin-bottom:6px;}
+.desc{font-size:13px;color:#7a6e62;margin-bottom:24px;line-height:1.5;}
+.drop-zone{border:1.5px dashed rgba(40,30,18,.2);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:.2s;background:rgba(255,253,247,.5);margin-bottom:16px;}
+.drop-zone:hover,.drop-zone.over{border-color:#d98a2b;background:rgba(217,138,43,.05);}
+.drop-zone .icon{font-size:32px;margin-bottom:10px;}
+.drop-zone p{font-size:13px;color:#7a6e62;}
+.drop-zone strong{color:#d98a2b;}
+input[type=file]{display:none;}
+.hint-input{width:100%;border:1px solid rgba(40,30,18,.13);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;color:#111;background:rgba(255,253,247,.6);outline:none;margin-bottom:16px;}
+.hint-input:focus{border-color:#d98a2b;}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;background:#111;color:#fffaf0;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:.15s;}
+.btn:hover{opacity:.85;}
+.btn:disabled{opacity:.45;cursor:default;}
+.result{margin-top:20px;padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.6;display:none;}
+.result.ok{background:rgba(58,122,85,.08);border:1px solid rgba(58,122,85,.2);color:#2a6040;}
+.result.err{background:rgba(184,60,13,.08);border:1px solid rgba(184,60,13,.2);color:#8b2010;}
+.file-name{font-size:12px;color:#d98a2b;margin-bottom:12px;display:none;}
+.progress{display:none;text-align:center;padding:12px;font-size:13px;color:#7a6e62;}
+.back{display:inline-block;margin-top:20px;font-size:12px;color:#9a8c7c;text-decoration:none;}
+.back:hover{color:#d98a2b;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <img src="/floating-orange.png" alt="RITA">
+    <div><div class="name">RITA</div><div class="sub">Las Canas Beach Retreat</div></div>
+  </div>
+  <div class="card">
+    <h2>Загрузить руминг-лист</h2>
+    <p class="desc">Выбери PDF с румингом группы. Рита извлечёт данные и сохранит их в базу автоматически.</p>
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">📄</div>
+      <p>Перетащи PDF сюда или <strong>нажми для выбора</strong></p>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf">
+    <div class="file-name" id="fileName"></div>
+    <input class="hint-input" id="groupHint" type="text" placeholder="Подсказка: EF 368297, Prod ID 371048… (необязательно)">
+    <button class="btn" id="uploadBtn" disabled>Загрузить в базу</button>
+    <div class="progress" id="progress">⏳ Рита обрабатывает PDF… это займёт ~20 секунд</div>
+    <div class="result" id="result"></div>
+    <a href="/living-ops.html" class="back">← Вернуться на Living Operations</a>
+  </div>
+</div>
+<script>
+const dropZone = document.getElementById('dropZone')
+const fileInput = document.getElementById('fileInput')
+const fileNameEl = document.getElementById('fileName')
+const uploadBtn = document.getElementById('uploadBtn')
+const progress = document.getElementById('progress')
+const result = document.getElementById('result')
+const groupHint = document.getElementById('groupHint')
+
+let pdfBase64 = null
+let pdfName = null
+
+dropZone.addEventListener('click', () => fileInput.click())
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over') })
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'))
+dropZone.addEventListener('drop', e => {
+  e.preventDefault()
+  dropZone.classList.remove('over')
+  const file = e.dataTransfer.files[0]
+  if (file) loadFile(file)
+})
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadFile(fileInput.files[0])
+})
+
+function loadFile(file) {
+  if (!file.name.endsWith('.pdf')) { alert('Только PDF файлы'); return }
+  pdfName = file.name
+  fileNameEl.textContent = '📎 ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)'
+  fileNameEl.style.display = 'block'
+  const reader = new FileReader()
+  reader.onload = e => {
+    pdfBase64 = e.target.result.split(',')[1]
+    uploadBtn.disabled = false
+    dropZone.querySelector('p').innerHTML = 'Файл выбран. Нажми <strong>Загрузить в базу</strong>'
+  }
+  reader.readAsDataURL(file)
+}
+
+uploadBtn.addEventListener('click', async () => {
+  if (!pdfBase64) return
+  uploadBtn.disabled = true
+  progress.style.display = 'block'
+  result.style.display = 'none'
+
+  try {
+    const res = await fetch('/api/upload-rooming', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer rita2026'
+      },
+      body: JSON.stringify({
+        pdfData: pdfBase64,
+        fileName: pdfName,
+        groupHint: groupHint.value.trim()
+      })
+    })
+    const data = await res.json()
+    progress.style.display = 'none'
+
+    if (data.ok) {
+      result.className = 'result ok'
+      result.innerHTML = '✅ <strong>Сохранено!</strong><br>'
+        + 'Группа: ' + (data.groupName || '—') + '<br>'
+        + 'Комнат: ' + (data.totalRooms || '—') + ' · Гостей: ' + (data.totalGuests || '—') + '<br>'
+        + (data.roomingListId ? 'ID: ' + data.roomingListId : '')
+    } else if (data.unmatched) {
+      result.className = 'result err'
+      result.innerHTML = '⚠️ <strong>Группа не найдена</strong><br>' + (data.message || 'Добавь подсказку с Prod ID группы')
+    } else {
+      result.className = 'result err'
+      result.innerHTML = '❌ ' + (data.error || 'Ошибка')
+    }
+    result.style.display = 'block'
+    uploadBtn.disabled = false
+  } catch (err) {
+    progress.style.display = 'none'
+    result.className = 'result err'
+    result.innerHTML = '❌ ' + err.message
+    result.style.display = 'block'
+    uploadBtn.disabled = false
+  }
+})
+</script>
+</body>
+</html>
