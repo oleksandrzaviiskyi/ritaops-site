@@ -1010,13 +1010,15 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       .map((m) => ({role: m.role === 'rita' ? 'rita' : 'user', content: m.content}))
 
     try {
-      const pdfPayload = pendingPdfData ? {
+      const hasPdf = Boolean(pendingPdfData)
+      const pdfPayload = hasPdf ? {
         pdf: { base64Data: pendingPdfData, fileName: pendingPdfName || 'rooming.pdf' }
       } : {}
+      // when PDF present — skip liveData to stay within Netlify 6MB limit
       const json = await apiPost('/api/rita-chat', {
         message: msg || 'Обработай прикреплённый руминг-лист и сохрани в базу.',
-        history: recentHistory,
-        liveData: buildLiveContext(),
+        history: hasPdf ? [] : recentHistory,
+        liveData: hasPdf ? {} : buildLiveContext(),
         ...pdfPayload
       })
       // clear PDF after send
