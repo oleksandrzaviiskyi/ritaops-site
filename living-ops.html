@@ -65,7 +65,7 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
-.cards-area{flex:1;overflow:auto;pointer-events:auto;position:relative;z-index:12;min-height:100%;}
+.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;}
 .cards-area::-webkit-scrollbar{width:4px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
 .rita-panel{
@@ -119,7 +119,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .inp-wrap .attach.has-file{border-color:var(--ok);color:var(--ok);}
 .pdf-badge{font-size:11px;color:var(--ok);padding:2px 6px;background:rgba(58,122,85,.08);
   border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex:none;}
-.field{position:relative;width:100%;min-height:100vh;}
+.field{position:relative;width:100%;min-height:100%;padding-bottom:60px;}
 .field-top{display:none!important;}
 .tray{position:fixed;top:88px;left:22px;display:flex;flex-direction:column;gap:6px;z-index:8;pointer-events:auto;}
 .tray-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);
@@ -701,14 +701,15 @@ body[data-panel="open"] .rita-panel{transform:none;}
     shown.push(key)
     const placedCard = document.getElementById('card-' + key)
     if (placedCard) {
-      let maxBottom = 20
+      let maxBottom = 80
       field.querySelectorAll('.card').forEach(function(c) {
         if (c === placedCard) return
-        const b = parseInt(c.style.top || 0) + c.offsetHeight + 16
+        const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
         if (b > maxBottom) maxBottom = b
       })
       placedCard.style.left = '20px'
       placedCard.style.top = maxBottom + 'px'
+      field.style.minHeight = (maxBottom + 300) + 'px'
     }
 
 
@@ -1125,9 +1126,9 @@ body[data-panel="open"] .rita-panel{transform:none;}
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
       if (cardsToShow && cardsToShow.length) {
         // Calculate starting Y from existing cards
-        let nextY = 20
+        let nextY = 80  // start below logo
         field.querySelectorAll('.card').forEach(function(c) {
-          const b = parseInt(c.style.top || 0) + (c.offsetHeight || 200) + 16
+          const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
           if (b > nextY) nextY = b
         })
 
