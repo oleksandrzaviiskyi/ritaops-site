@@ -1134,9 +1134,10 @@ body[data-panel="open"] .rita-panel{transform:none;}
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
       saveChatHistory()
 
-      // showCards debug removed
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
+      // Always show debug so we can see what's happening
+      addChatMsg('msg-rita', '📦 сервер вернул: ' + (cardsToShow ? cardsToShow.length + ' карточек' : 'null') + ' | ключи: ' + Object.keys(json).join(', '))
       if (cardsToShow && cardsToShow.length) {
         cardsToShow.forEach(function(sc, i) {
           const key = 'rita_' + Date.now() + '_' + i
