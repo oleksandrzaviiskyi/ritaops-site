@@ -411,14 +411,14 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       rows: [['Balance', '…', ''], ['Field', '…', '']],
       note: ''
     },
-    room5a: {
-      eyebrow: 'Unit concern',
-      title: 'Unit 5A · Bar area',
+    bar: {
+      eyebrow: 'Maintenance',
+      title: 'Bar · кран',
       span: false,
       task: true,
       live: true,
       recipients: [R, 'Maintenance'],
-      rows: [['Status', tag('attention', 'open'), 'active concern']],
+      rows: [['Место', 'Bar', ''], ['Проблема', tag('attention', 'течёт кран'), 'обслуживание не начато']],
       note: ''
     }
   }
@@ -1338,7 +1338,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         const bubbleType = hours >= 6 ? 'concern' : 'concern-new'
         const place = c.place?.name || c.place?.unitCode || 'Place'
         const pos = nextBubblePos(idx++)
-        const isUnit = /5A|Bar/i.test(place) || /bar/i.test(c.summary || '')
+        const isUnit = /bar/i.test(place) || /bar/i.test(c.summary || '')
         const cData = {
           type: bubbleType === 'concern-new' ? 'concern-new' : 'concern',
           bubbleType: bubbleType,
@@ -1346,7 +1346,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           size: hours >= 6 ? 64 : 54,
           text: place + ': ' + (c.summary || 'open issue'),
           dept: (hours >= 6 ? 'Maintenance · ' : 'New · ') + Math.max(1, Math.round(hours)) + 'ч',
-          cardKey: isUnit ? 'room5a' : 'risks',
+          cardKey: isUnit ? 'bar' : 'risks',
           sourceId: c._id,
           status: c.status || 'open',
           openedAt: c.openedAt || null,
