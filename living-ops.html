@@ -597,12 +597,25 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         })
       }
 
+      // Find group leader — first single room occupant
+      const leaderRoom = rooming && rooming.rooms ? rooming.rooms.find(function(rm) {
+        return rm.occupants && rm.occupants.length === 1
+      }) : null
+      const leaderName = leaderRoom ? (leaderRoom.occupants[0].name || '') : ''
+      const contactPhone = g.contactPhone || ''
+      const leaderLabel = leaderName
+        ? leaderName + (contactPhone ? ' · ' + contactPhone : '')
+        : 'Group Leader'
+      CARDS.arrivals.recipients = [R, leaderLabel]
+      CARDS.arrivals.groupLeader = {name: leaderName, phone: contactPhone}
+
       CARDS.arrivals.eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
       CARDS.arrivals.title = (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests'
       CARDS.arrivals.rows = [
         ['Группа', g.groupName || g.title || 'Group', ''],
         ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
         ['Гости', String(g.totalGuests || '—'), 'check-in today'],
+        ['Лидер', leaderName || '—', contactPhone ? '📞 ' + contactPhone : ''],
         ['Руминг', rooming && rooming.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
         ...roomRows
       ]
