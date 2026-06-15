@@ -250,15 +250,20 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   // Load chat history from localStorage
   let chatHistory = []
   try {
-    const saved = localStorage.getItem('rita_chat_history')
+    const saved = localStorage.getItem('rita_chat_history_v2')
     if (saved) {
       const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed)) chatHistory = parsed.slice(-30)
+      if (Array.isArray(parsed)) {
+        // filter out empty messages
+        chatHistory = parsed
+          .filter(function(m) { return m && m.content && String(m.content).trim().length > 0 })
+          .slice(-30)
+      }
     }
   } catch(e) {}
 
   function saveChatHistory() {
-    try { localStorage.setItem('rita_chat_history', JSON.stringify(chatHistory.slice(-30))) } catch(e) {}
+    try { localStorage.setItem('rita_chat_history_v2', JSON.stringify(chatHistory.slice(-30))) } catch(e) {}
   }
   let questionsTimer = null
   let pulseCache = null
