@@ -1140,7 +1140,12 @@ body[data-panel="open"] .rita-panel{transform:none;}
             field.insertAdjacentHTML('beforeend', cardHtml)
             shown.push(key)
             const newCard = document.getElementById('card-' + key)
-            if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
+            if (newCard) {
+              const ci = shown.length - 1
+              newCard.style.left = (20 + (ci % 3) * 320) + 'px'
+              newCard.style.top = (20 + Math.floor(ci / 3) * 40) + 'px'
+              if (typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
+            }
             // panel stays open — manager continues dialogue with Rita
           }, i * 120)
         })
