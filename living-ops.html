@@ -247,7 +247,19 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   const R = 'Рите'
   const QUESTIONS_POLL_MS = 60000
 
+  // Load chat history from localStorage
   let chatHistory = []
+  try {
+    const saved = localStorage.getItem('rita_chat_history')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed)) chatHistory = parsed.slice(-30)
+    }
+  } catch(e) {}
+
+  function saveChatHistory() {
+    try { localStorage.setItem('rita_chat_history', JSON.stringify(chatHistory.slice(-30))) } catch(e) {}
+  }
   let questionsTimer = null
   let pulseCache = null
   let portalsCache = null
@@ -871,6 +883,23 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     return el
   }
 
+  function restoreChatHistory() {
+    if (!chatHistory.length) return
+    // render saved messages into chatArea (skip the default greeting)
+    chatArea.innerHTML = ''
+    chatHistory.forEach(function(m) {
+      const cls = m.role === 'rita' ? 'msg-rita' : 'msg-you'
+      const html = m.role === 'rita'
+        ? '<b>Рита:</b> ' + esc(m.content)
+        : esc(m.content)
+      const el = document.createElement('div')
+      el.className = cls
+      el.innerHTML = html
+      chatArea.appendChild(el)
+    })
+    chatArea.scrollTop = chatArea.scrollHeight
+  }
+
   function showChatTyping() {
     const el = addChatMsg('msg-rita', '<b>Рита:</b> ···')
     el.id = 'chatTyping'
@@ -969,6 +998,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
     chatHistory.push({role: 'user', content: msg})
     addChatMsg('msg-you', esc(msg))
+    saveChatHistory()
     inp.value = ''
     inp.style.height = 'auto'
     if (sendBtn) sendBtn.disabled = true
@@ -1002,6 +1032,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       const reply = json.reply || 'Приняла.'
       chatHistory.push({role: 'rita', content: reply})
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc(reply))
+      saveChatHistory()
     } catch (err) {
       hideChatTyping()
       addChatMsg('msg-rita', '<b>Рита:</b> ' + esc('Ошибка — ' + err.message))
@@ -1714,6 +1745,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       reader.readAsDataURL(file)
     })
   }
+
+  // Restore chat history from localStorage
+  restoreChatHistory()
 
   document.getElementById('closePanel').addEventListener('click', closePanel)
   document.getElementById('panelSend').addEventListener('click', sendChat)
