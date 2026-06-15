@@ -1137,13 +1137,6 @@ body[data-panel="open"] .rita-panel{transform:none;}
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
       if (cardsToShow && cardsToShow.length) {
-        // Calculate starting Y from existing cards
-        let nextY = 80  // start below logo
-        field.querySelectorAll('.card').forEach(function(c) {
-          const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
-          if (b > nextY) nextY = b
-        })
-
         cardsToShow.forEach(function(sc, i) {
           const key = 'rita_' + Date.now() + '_' + i
           const contactLabel = sc.contact
@@ -1162,32 +1155,20 @@ body[data-panel="open"] .rita-panel{transform:none;}
             }),
             note: sc.note || ''
           }
-          const cardY = nextY + i * 220
           setTimeout(function() {
-            try {
-              const cardHtml = renderCard(key, null, '')
-              if (!cardHtml) { console.error('renderCard returned empty for', key, CARDS[key]); return }
-              field.insertAdjacentHTML('beforeend', cardHtml)
-              shown.push(key)
-              const newCard = document.getElementById('card-' + key)
-              if (newCard) {
-                newCard.style.left = '20px'
-                newCard.style.top = cardY + 'px'
-                newCard.style.display = 'block'
-                newCard.style.visibility = 'visible'
-                if (typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
-              } else {
-                console.error('card element not found after insert:', 'card-' + key)
-              }
-            } catch(e) { console.error('showCards error:', e, key, CARDS[key]) }
+            const cardHtml = renderCard(key, null, '')
+            field.insertAdjacentHTML('beforeend', cardHtml)
+            shown.push(key)
+            const newCard = document.getElementById('card-' + key)
+            if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
           }, i * 80)
         })
 
-        // scroll to show new cards
+        // scroll to top to show new cards (they're in flow now)
         setTimeout(function() {
           const ca = document.querySelector('.cards-area')
-          if (ca) ca.scrollTo({top: nextY - 40, behavior: 'smooth'})
-        }, cardsToShow.length * 80 + 100)
+          if (ca) ca.scrollTo({top: 0, behavior: 'smooth'})
+        }, cardsToShow.length * 80 + 200)
       }
     } catch (err) {
       hideChatTyping()
