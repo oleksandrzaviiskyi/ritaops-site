@@ -557,12 +557,12 @@
         btn.disabled = true
       }
       // Save resolved status to Sanity so it persists after reload
-      const bubble = (typeof bubbles !== 'undefined' ? bubbles : [])
-        .find(function(b) { return b.cardKey === key || b._openedCardKey === key })
-      const sourceId = bubble && bubble.sourceId
+      const sourceId = window._cardSourceIds && window._cardSourceIds[key]
       if (sourceId) {
         apiPost('/api/resolve-concern', {id: sourceId})
-          .then(function() { console.log('concern resolved in Sanity:', sourceId) })
+          .then(function() {
+            delete window._cardSourceIds[key]
+          })
           .catch(function(e) { console.error('resolve failed:', e) })
       }
       // send message to Rita about resolution
@@ -1467,6 +1467,12 @@
 
         if (document.body.getAttribute('data-panel') === 'open') {
           closePanel()
+        }
+
+        // Store sourceId so resolveCard can find it
+        if (b.sourceId) {
+          window._cardSourceIds = window._cardSourceIds || {}
+          window._cardSourceIds[cardKey] = b.sourceId
         }
 
         if (typeof wake === 'function') {
