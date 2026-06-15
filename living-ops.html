@@ -132,8 +132,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 13px;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   filter:drop-shadow(0 2px 16px rgba(40,30,18,.07));
-  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:relative;overflow:hidden;
-  transition:max-height .3s ease,box-shadow .2s;}
+  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:absolute;overflow:hidden;z-index:12;width:300px;}
 .card.expanded{box-shadow:0 8px 32px rgba(40,30,18,.12);}
 .card.card-today{border-color:rgba(217,138,43,.35);border-width:1.5px;}
 .card.card-today .eyebrow{color:var(--orange);}
