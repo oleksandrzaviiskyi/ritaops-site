@@ -935,11 +935,20 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         return 'Building ' + b.buildingNumber + ' (' + (b.suiteCategory || '') + ')'
       })
 
+    const sharedSpaces = (p.places || [])
+      .filter(function (pl) {
+        return ['restaurant', 'bar', 'outdoor-area', 'practice-space', 'event-space', 'pool'].indexOf(pl.type) > -1
+      })
+      .map(function (pl) {
+        return pl.name + ' (' + pl.type + ')' + (pl.capacity ? ' · вместимость ' + pl.capacity : '')
+      })
+
     return {
       property: 'Las Canas Beach Retreat',
       balanceStatus: p.pulse?.balanceStatus || null,
       coherenceStatement: p.pulse?.coherenceStatement || null,
       buildings: buildings,
+      sharedSpaces: sharedSpaces,
       unitDetails: unitDetails,
       openConcernsCount: (p.openConcerns || []).length,
       openConcerns: (p.openConcerns || []).map(function (c) {
