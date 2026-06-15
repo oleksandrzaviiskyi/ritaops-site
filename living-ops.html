@@ -1122,7 +1122,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
             shown.push(key)
             const newCard = document.getElementById('card-' + key)
             if (newCard && typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
-            if (i === 0) setTimeout(closePanel, 150)
+            // panel stays open — manager continues dialogue with Rita
           }, i * 120)
         })
       }
