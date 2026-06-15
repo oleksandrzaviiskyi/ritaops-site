@@ -1136,6 +1136,9 @@ body[data-panel="open"] .rita-panel{transform:none;}
 
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
+      if (cardsToShow !== undefined && cardsToShow !== null && !cardsToShow.length) {
+        addChatMsg('msg-rita', '<b>Рита:</b> showCards пришёл но пустой: ' + JSON.stringify(cardsToShow).slice(0,100))
+      }
       if (cardsToShow && cardsToShow.length) {
         cardsToShow.forEach(function(sc, i) {
           const key = 'rita_' + Date.now() + '_' + i
