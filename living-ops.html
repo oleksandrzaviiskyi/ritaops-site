@@ -92,34 +92,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .panel-head .close-p{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);
   background:rgba(255,253,247,.5);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-family:inherit;transition:.15s;}
 .panel-head .close-p:hover{border-color:var(--orange);color:var(--ink);}
-.q-section{flex:none;border-bottom:1px solid var(--line-soft);padding:12px 14px;}
-.q-toggle{
-  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-  background:none;border:none;cursor:pointer;font-family:inherit;
-  font-size:12.5px;font-weight:500;color:var(--ink-soft);letter-spacing:0.06em;
-  padding:2px 0;
-}
-.q-toggle .arr{font-size:11px;transition:transform .18s;display:inline-block;}
-body[data-qopen="yes"] .q-toggle .arr{transform:rotate(90deg);}
-.q-list{display:none;flex-direction:column;gap:4px;margin-top:10px;}
-body[data-qopen="yes"] .q-list{display:flex;}
-.q-empty{font-size:12.5px;color:var(--ink-faint);padding:6px 2px;line-height:1.45;}
-.q-item{
-  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-  background:rgba(255,253,247,.5);border:1px solid var(--line);border-radius:10px;
-  padding:9px 12px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink);
-  transition:border-color .15s;
-}
-.q-item:hover{border-color:var(--orange);}
-.q-item .qdot{width:6px;height:6px;border-radius:2px;background:var(--orange);flex:none;animation:breathe 4.5s ease-in-out infinite;}
-@keyframes breathe{0%,100%{opacity:.3;}50%{opacity:1;}}
-.q-quick{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;}
-.q-quick-label{width:100%;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:2px;}
-.q-quick button{
-  font-size:11.5px;color:var(--ink-soft);background:rgba(255,253,247,.55);
-  border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;font-family:inherit;transition:.14s;
-}
-.q-quick button:hover{border-color:var(--orange);color:var(--ink);}
+
 .chat-area{flex:1;overflow-y:auto;padding:14px 14px 0;display:flex;flex-direction:column;gap:10px;}
 .chat-area::-webkit-scrollbar{width:3px;}
 .chat-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
@@ -212,7 +185,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 .resolve:disabled{opacity:.6;cursor:default;}
 </style>
 </head>
-<body data-state="rest" data-panel="closed" data-qopen="no">
+<body data-state="rest" data-panel="closed">
 
 <div class="tray" id="tray"></div>
 <div class="corner-logo">
@@ -237,21 +210,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       <button class="close-p" id="closePanel" type="button" aria-label="Close panel">×</button>
     </div>
 
-    <div class="q-section">
-      <button class="q-toggle" id="qToggle" type="button">
-        <span class="arr">›</span> ВОПРОСЫ РИТЫ <span id="qCount"></span>
-      </button>
-      <div class="q-list" id="qList"></div>
-      <div class="q-quick" id="qQuick">
-        <div class="q-quick-label">Открыть область</div>
-        <button type="button" data-q="arrivals">Заезды сегодня</button>
-        <button type="button" data-q="kitchen">Ресторан и бар</button>
-        <button type="button" data-q="purchase">Закупки</button>
-        <button type="button" data-q="responsibility">Кто что несёт</button>
-        <button type="button" data-q="risks">Зона риска</button>
-        <button type="button" data-q="pulse">Как мы сегодня</button>
-      </div>
-    </div>
+
 
     <div class="chat-area" id="chatArea">
       <div class="msg-rita"><b>Рита:</b> Доброе утро. Открой область слева или задай вопрос — я на связи.</div>
@@ -295,8 +254,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
   const field = document.getElementById('field')
   const tray = document.getElementById('tray')
   const fieldTop = {style: {display: ''}}
-  const qList = document.getElementById('qList')
-  const qCount = document.getElementById('qCount')
+
   const chatArea = document.getElementById('chatArea')
   const shown = []
 
@@ -1052,65 +1010,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     }
   }
 
-  function renderQuestions(questions) {
-    qCount.textContent = questions.length ? '(' + questions.length + ')' : ''
-    if (!questions.length) {
-      qList.innerHTML = '<p class="q-empty">No open questions right now.</p>'
-      return
-    }
-    qList.innerHTML = questions.map(function (q) {
-      return '<button type="button" class="q-item" data-question-id="' + esc(q._id) + '">'
-        + '<span class="qdot"></span>' + esc(q.question) + '</button>'
-    }).join('')
-  }
 
-  async function loadQuestions(silent) {
-    try {
-      const json = await apiGet('/api/rita-questions')
-      renderQuestions(json.questions || [])
-    } catch (err) {
-      if (!silent) {
-        qList.innerHTML = '<p class="q-empty">' + esc(err.message) + '</p>'
-      }
-    }
-  }
 
-  function startQuestionsPolling() {
-    if (questionsTimer) clearInterval(questionsTimer)
-    questionsTimer = setInterval(function () {
-      loadQuestions(true)
-    }, QUESTIONS_POLL_MS)
-  }
 
-  document.getElementById('qToggle').addEventListener('click', function () {
-    const open = document.body.getAttribute('data-qopen') === 'yes'
-    document.body.setAttribute('data-qopen', open ? 'no' : 'yes')
-  })
-
-  qList.addEventListener('click', function (e) {
-    const btn = e.target.closest('.q-item')
-    if (!btn || !btn.dataset.questionId) return
-    const text = btn.textContent.trim()
-    wake('risks', text)
-    document.body.setAttribute('data-qopen', 'no')
-    openPanel()
-  })
-
-  document.getElementById('qQuick').addEventListener('click', function (e) {
-    const btn = e.target.closest('button[data-q]')
-    if (!btn) return
-    const key = btn.getAttribute('data-q')
-    const labels = {
-      arrivals: 'Заезды сегодня',
-      kitchen: 'Ресторан и бар',
-      purchase: 'Закупки',
-      responsibility: 'Кто что несёт',
-      risks: 'Зона риска',
-      pulse: 'Как мы сегодня'
-    }
-    wake(key, 'Рита открывает · ' + (labels[key] || key))
-    document.body.setAttribute('data-qopen', 'no')
-  })
 
   field.addEventListener('click', function (e) {
     const btn = e.target.closest('[data-act]')
@@ -1824,8 +1726,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     // Shift+Enter = new line
   })
 
-  loadQuestions(false)
-  startQuestionsPolling()
+
   loadPortalsData().catch(function () {})
 })()
 </script>
