@@ -416,9 +416,10 @@ body[data-panel="open"] .rita-panel{transform:none;}
   }
 
   function rowHtml(r) {
-    const v = isTag(r[1]) ? r[1] : esc(r[1])
-    const s = r[2] ? ' <small>· ' + (isTag(r[2]) ? r[2] : esc(r[2])) + '</small>' : ''
-    return '<div class="row"><div class="k">' + esc(r[0]) + '</div><div class="v">' + v + s + '</div></div>'
+    if (!Array.isArray(r) || !r.length) return ''
+    const v = isTag(r[1]) ? r[1] : esc(String(r[1] || ''))
+    const s = r[2] ? ' <small>· ' + (isTag(r[2]) ? r[2] : esc(String(r[2]))) + '</small>' : ''
+    return '<div class="row"><div class="k">' + esc(String(r[0] || '')) + '</div><div class="v">' + v + s + '</div></div>'
   }
 
   function renderCard(key, why, extraClass) {
@@ -1152,15 +1153,22 @@ body[data-panel="open"] .rita-panel{transform:none;}
           field.style.minHeight = (cardY + 300) + 'px'
 
           setTimeout(function() {
-            const cardHtml = renderCard(key, null, '')
-            field.insertAdjacentHTML('beforeend', cardHtml)
-            shown.push(key)
-            const newCard = document.getElementById('card-' + key)
-            if (newCard) {
-              newCard.style.left = '20px'
-              newCard.style.top = cardY + 'px'
-              if (typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
-            }
+            try {
+              const cardHtml = renderCard(key, null, '')
+              if (!cardHtml) { console.error('renderCard returned empty for', key, CARDS[key]); return }
+              field.insertAdjacentHTML('beforeend', cardHtml)
+              shown.push(key)
+              const newCard = document.getElementById('card-' + key)
+              if (newCard) {
+                newCard.style.left = '20px'
+                newCard.style.top = cardY + 'px'
+                newCard.style.display = 'block'
+                newCard.style.visibility = 'visible'
+                if (typeof makeDraggableCard === 'function') makeDraggableCard(newCard)
+              } else {
+                console.error('card element not found after insert:', 'card-' + key)
+              }
+            } catch(e) { console.error('showCards error:', e, key, CARDS[key]) }
           }, i * 80)
         })
 
