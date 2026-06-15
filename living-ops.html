@@ -172,7 +172,8 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 .composer{display:flex;align-items:center;gap:6px;margin-top:11px;
   border:1px solid var(--line);border-radius:10px;padding:5px 5px 5px 9px;
   background:rgba(255,253,247,.45);}
-.composer select{border:none;background:none;font-family:inherit;font-size:11.5px;color:var(--ink-soft);outline:none;max-width:110px;cursor:pointer;}
+.composer select{border:none;background:none;font-family:inherit;font-size:11.5px;color:var(--ink-soft);outline:none;max-width:160px;cursor:pointer;}
+.composer .leader-tag{font-size:10px;color:var(--ok);background:rgba(58,122,85,.1);border-radius:4px;padding:1px 5px;margin-left:2px;}
 .composer input{flex:1;border:none;background:none;outline:none;font-family:inherit;font-size:12.5px;color:var(--ink);min-width:0;}
 .composer input::placeholder{color:var(--ink-faint);}
 .composer .send{flex:none;width:26px;height:26px;border-radius:7px;border:none;
@@ -426,7 +427,8 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     const d = CARDS[key]
     if (!d) return ''
     const rows = d.rows.map(rowHtml).join('')
-    const opts = d.recipients.map((r) => '<option>' + esc(r) + '</option>').join('')
+    const recipients = d.recipients || [R]
+    const opts = recipients.map((r) => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('')
     let h = '<div class="card' + (why ? ' woken' : '') + (extraClass ? ' ' + extraClass : '') + '" id="card-' + key + '" data-key="' + key + '">'
     h += '<div class="card-head"><div>'
     if (d.eyebrow) h += '<div class="eyebrow">' + esc(d.eyebrow) + '</div>'
