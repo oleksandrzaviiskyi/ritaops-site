@@ -556,6 +556,15 @@
         btn.style.borderColor = 'var(--ok)'
         btn.disabled = true
       }
+      // Save resolved status to Sanity so it persists after reload
+      const bubble = (typeof bubbles !== 'undefined' ? bubbles : [])
+        .find(function(b) { return b.cardKey === key || b._openedCardKey === key })
+      const sourceId = bubble && bubble.sourceId
+      if (sourceId) {
+        apiPost('/api/resolve-concern', {id: sourceId})
+          .then(function() { console.log('concern resolved in Sanity:', sourceId) })
+          .catch(function(e) { console.error('resolve failed:', e) })
+      }
       // send message to Rita about resolution
       apiPost('/api/rita-chat', {
         message: 'Задача закрыта: ' + (CARDS[key]?.title || key),
