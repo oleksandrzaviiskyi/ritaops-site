@@ -1122,10 +1122,16 @@ body[data-panel="open"] .rita-panel{transform:none;}
         const fileInput = document.getElementById('panelFile')
         if (fileInput) fileInput.value = ''
       } else {
+        // Build compact liveData — omit heavy unitDetails when history is long
+        const fullLive = buildLiveContext()
+        const payloadSize = JSON.stringify({message: msg, history: recentHistory}).length
+        const liveData = payloadSize > 8000
+          ? {portals: fullLive.portals, today: fullLive.today, sharedSpaces: fullLive.sharedSpaces, staff: fullLive.staff}
+          : fullLive
         json = await apiPost('/api/rita-chat', {
           message: msg,
           history: recentHistory,
-          liveData: buildLiveContext()
+          liveData
         })
       }
       hideChatTyping()
@@ -1136,8 +1142,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 
       // If Rita called show_cards — open cards on main field
       const cardsToShow = json.showCards || (json.showCard ? [json.showCard] : null)
-      // Always show debug so we can see what's happening
-      addChatMsg('msg-rita', '📦 сервер вернул: ' + (cardsToShow ? cardsToShow.length + ' карточек' : 'null') + ' | ключи: ' + Object.keys(json).join(', '))
+
       if (cardsToShow && cardsToShow.length) {
         cardsToShow.forEach(function(sc, i) {
           const key = 'rita_' + Date.now() + '_' + i
