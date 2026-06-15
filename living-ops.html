@@ -137,6 +137,13 @@ body[data-qopen="yes"] .q-list{display:flex;}
   color:#fffaf0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:.15s;}
 .inp-wrap .go:hover{opacity:.8;}
 .inp-wrap .go:disabled{opacity:.45;cursor:default;}
+.inp-wrap .attach{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);
+  background:none;color:var(--ink-soft);cursor:pointer;font-size:14px;display:flex;align-items:center;
+  justify-content:center;font-family:inherit;transition:.15s;flex:none;}
+.inp-wrap .attach:hover{border-color:var(--orange);color:var(--orange);}
+.inp-wrap .attach.has-file{border-color:var(--ok);color:var(--ok);}
+.pdf-badge{font-size:11px;color:var(--ok);padding:2px 6px;background:rgba(58,122,85,.08);
+  border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex:none;}
 .field{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:13px;align-items:start;}
 body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
 .field-top{display:none!important;}
@@ -244,9 +251,12 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     </div>
 
     <div class="panel-input">
+      <input type="file" id="panelFile" accept=".pdf" style="display:none">
       <div class="inp-wrap">
         <span class="rdot"></span>
+        <span class="pdf-badge" id="pdfBadge" style="display:none"></span>
         <input id="panelInput" type="text" placeholder="Спросить Риту…" autocomplete="off">
+        <button class="attach" id="panelAttach" type="button" title="Прикрепить PDF">📎</button>
         <button class="go" id="panelSend" type="button" aria-label="Send">→</button>
       </div>
     </div>
@@ -880,11 +890,14 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     }
   }
 
+  let pendingPdfData = null
+  let pendingPdfName = null
+
   async function sendChat() {
     const inp = document.getElementById('panelInput')
     const sendBtn = document.getElementById('panelSend')
     const msg = inp.value.trim()
-    if (!msg) return
+    if (!msg && !pendingPdfData) return
 
     chatHistory.push({role: 'user', content: msg})
     addChatMsg('msg-you', esc(msg))
@@ -898,11 +911,24 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       .map((m) => ({role: m.role === 'rita' ? 'rita' : 'user', content: m.content}))
 
     try {
+      const pdfPayload = pendingPdfData ? {
+        pdf: { base64Data: pendingPdfData, fileName: pendingPdfName || 'rooming.pdf' }
+      } : {}
       const json = await apiPost('/api/rita-chat', {
-        message: msg,
+        message: msg || 'Обработай прикреплённый руминг-лист и сохрани в базу.',
         history: recentHistory,
-        liveData: buildLiveContext()
+        liveData: buildLiveContext(),
+        ...pdfPayload
       })
+      // clear PDF after send
+      pendingPdfData = null
+      pendingPdfName = null
+      const badge = document.getElementById('pdfBadge')
+      const attachBtn = document.getElementById('panelAttach')
+      if (badge) { badge.style.display = 'none'; badge.textContent = '' }
+      if (attachBtn) attachBtn.classList.remove('has-file')
+      const fileInput = document.getElementById('panelFile')
+      if (fileInput) fileInput.value = ''
       hideChatTyping()
       const reply = json.reply || 'Приняла.'
       chatHistory.push({role: 'rita', content: reply})
@@ -1645,6 +1671,33 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     requestAnimationFrame(tick)
     loadPulseData().catch(function () {})
   })()
+
+  // PDF attach button
+  const panelAttachBtn = document.getElementById('panelAttach')
+  const panelFileInput = document.getElementById('panelFile')
+  const pdfBadgeEl = document.getElementById('pdfBadge')
+
+  if (panelAttachBtn && panelFileInput) {
+    panelAttachBtn.addEventListener('click', function() {
+      panelFileInput.click()
+    })
+    panelFileInput.addEventListener('change', function() {
+      const file = panelFileInput.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = function(e) {
+        // extract base64 (remove data:...;base64, prefix)
+        pendingPdfData = e.target.result.split(',')[1]
+        pendingPdfName = file.name
+        panelAttachBtn.classList.add('has-file')
+        if (pdfBadgeEl) {
+          pdfBadgeEl.textContent = file.name.slice(0, 20)
+          pdfBadgeEl.style.display = 'inline-block'
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
 
   document.getElementById('closePanel').addEventListener('click', closePanel)
   document.getElementById('panelSend').addEventListener('click', sendChat)
