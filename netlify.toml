@@ -193,3 +193,9 @@
   status = 200
   force = true
 
+
+[[redirects]]
+  from = "/api/resolve-concern"
+  to = "/.netlify/functions/resolve-concern"
+  status = 200
+  force = true
