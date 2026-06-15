@@ -985,13 +985,13 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     document.head.appendChild(lfStyle)
 
     const MOCK_BUBBLES = [
-      {type: 'concern', cardKey: 'room5a', size: 64, urgent: true,
+      {type: 'concern', cardKey: 'room5a', size: 64, urgent: true, status: 'open', stage: 0, openedAt: null,
         text: 'Bar: течёт кран — обслуживание не начато', dept: 'Maintenance · 7ч', ax: 0.22, ay: 0.30},
-      {type: 'question', cardKey: 'risks', size: 54,
+      {type: 'question', cardKey: 'risks', size: 54, status: 'open', stage: 0, openedAt: null,
         text: 'EF 371170: Руминг-лист получен?', dept: 'Рита → Reception', ax: 0.50, ay: 0.22},
-      {type: 'event', cardKey: 'arrivals', size: 48,
+      {type: 'event', cardKey: 'arrivals', size: 48, status: 'open', stage: 0, openedAt: null,
         text: 'EF группа (38 чел) заезжает 15 июня', dept: 'Groups', ax: 0.30, ay: 0.62},
-      {type: 'question', cardKey: 'purchase', size: 46,
+      {type: 'question', cardKey: 'purchase', size: 46, status: 'open', stage: 0, openedAt: null,
         text: 'Dietary restrictions 372551 — данных нет', dept: 'Рита → Groups', ax: 0.68, ay: 0.54}
     ]
 
@@ -1005,64 +1005,149 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     document.body.appendChild(ttEl)
     let ttBubble = null
 
+    const NP = 80
+
+    function getBubbleStage(data) {
+      if (data.status === 'resolved') return 2
+      if (data.openedAt) {
+        const hours = (Date.now() - new Date(data.openedAt).getTime()) / 3600000
+        if (hours > 4) return 1
+      }
+      return 0
+    }
+
+    function initParticles(b) {
+      b.particles = []
+      const R_f = b.size * 0.38
+
+      const flowerCenters = [{x: 0, y: 0}]
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2 - Math.PI / 2
+        flowerCenters.push({x: R_f * Math.cos(a), y: R_f * Math.sin(a)})
+      }
+      const ppp = Math.floor(NP / 7)
+      const flowerPts = []
+      for (const c of flowerCenters) {
+        for (let j = 0; j < ppp; j++) {
+          const a = j / ppp * Math.PI * 2
+          flowerPts.push({x: c.x + R_f * Math.cos(a), y: c.y + R_f * Math.sin(a)})
+        }
+      }
+      while (flowerPts.length < NP) flowerPts.push({x: 0, y: 0})
+
+      for (let i = 0; i < NP; i++) {
+        const angle = Math.random() * Math.PI * 2
+        const r = Math.random() * b.size * 0.9
+        const sa = (i / NP) * Math.PI * 6
+        const sr = b.size * 0.1 + (i / NP) * b.size * 0.7
+
+        b.particles.push({
+          px: Math.cos(angle) * r,
+          py: Math.sin(angle) * r,
+          vx: 0, vy: 0,
+          chaosX: (Math.random() - 0.5) * b.size * 1.6,
+          chaosY: (Math.random() - 0.5) * b.size * 1.6,
+          spiralX: sr * Math.cos(sa),
+          spiralY: sr * Math.sin(sa),
+          flowerX: flowerPts[i].x,
+          flowerY: flowerPts[i].y,
+          size: 1.0 + Math.random() * 1.8,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.4 + Math.random() * 0.5
+        })
+      }
+      b.stageProgress = 0
+      b.resolveProgress = 0
+    }
+
     function drawBubble(cv, b, t, dim) {
-      const s = b.size
-      const r = s / 2
+      if (!b.particles) return
+
+      const half = b.size * 1.5
       const ctx = cv.getContext('2d')
-      cv.width = s
-      cv.height = s
-      ctx.clearRect(0, 0, s, s)
-      const drawType = b.bubbleType || b.type
-      const COLORS = {
-        concern: {color: '#b83c0d', glow: 'rgba(184,60,13,'},
-        'concern-new': {color: '#a06b0a', glow: 'rgba(160,107,10,'},
-        question: {color: '#d98a2b', glow: 'rgba(217,138,43,'},
-        event: {color: '#3a7a55', glow: 'rgba(58,122,85,'}
+      cv.width = b.size * 3
+      cv.height = b.size * 3
+      ctx.clearRect(0, 0, cv.width, cv.height)
+
+      const STAGE_COLORS = [
+        {r: 184, g: 60, b: 13},
+        {r: 160, g: 107, b: 10},
+        {r: 29, g: 158, b: 117}
+      ]
+      const col = STAGE_COLORS[b.stage] || STAGE_COLORS[0]
+
+      b.stageProgress = Math.min(1, b.stageProgress + 0.006)
+      const ease = b.stageProgress < 0.5
+        ? 2 * b.stageProgress * b.stageProgress
+        : 1 - Math.pow(-2 * b.stageProgress + 2, 2) / 2
+
+      if (b.stage === 2 && b.stageProgress > 0.85) {
+        b.resolveProgress = Math.min(1, b.resolveProgress + 0.004)
+        if (b.resolveProgress >= 1) {
+          b.shouldRemove = true
+          return
+        }
       }
-      const tp = COLORS[drawType] || COLORS.question
-      const br = 0.5 + 0.5 * Math.sin(t * b.bSpeed + b.phase)
-      const ga = dim ? 0.04 : (b.urgent ? 0.26 + 0.15 * br : 0.11 + 0.09 * br)
-      const fa = dim ? 0.02 : (b.urgent ? 0.10 + 0.07 * br : 0.05 + 0.04 * br)
-      const sa = dim ? 0.08 : (b.urgent ? 0.5 + 0.18 * br : 0.25 + 0.13 * br)
-      const h = (n) => Math.round(Math.min(1, Math.max(0, n)) * 255).toString(16).padStart(2, '0')
-      const g = ctx.createRadialGradient(r, r, r * 0.4, r, r, r * 1.1)
-      g.addColorStop(0, tp.glow + ga + ')')
-      g.addColorStop(1, tp.glow + '0)')
-      ctx.beginPath()
-      ctx.arc(r, r, r * 1.1, 0, Math.PI * 2)
-      ctx.fillStyle = g
-      ctx.fill()
-      const f = ctx.createRadialGradient(r * 0.65, r * 0.55, 0, r, r, r)
-      f.addColorStop(0, tp.glow + (fa * 1.5) + ')')
-      f.addColorStop(1, tp.glow + fa + ')')
-      ctx.beginPath()
-      ctx.arc(r, r, r - 1, 0, Math.PI * 2)
-      ctx.fillStyle = f
-      ctx.fill()
-      ctx.lineWidth = 1.2
-      ctx.strokeStyle = tp.color + h(sa)
-      if (drawType === 'concern' || drawType === 'concern-new') {
-        ctx.beginPath()
-        ctx.arc(r, r, r - 1.5, 0.3, Math.PI * 2 - 0.3)
-        ctx.stroke()
-      } else {
-        ctx.beginPath()
-        ctx.arc(r, r, r - 1.5, 0, Math.PI * 2)
-        ctx.stroke()
+
+      const globalAlpha = dim
+        ? 0.15
+        : (b.stage === 2 ? (1 - b.resolveProgress * 0.9) : 1)
+
+      ctx.save()
+      ctx.globalAlpha = globalAlpha
+
+      if (b.stage === 2 && ease > 0.3) {
+        const R_f = b.size * 0.38
+        const centers = [{x: 0, y: 0}]
+        for (let i = 0; i < 6; i++) {
+          const a = i / 6 * Math.PI * 2 - Math.PI / 2
+          centers.push({x: R_f * Math.cos(a), y: R_f * Math.sin(a)})
+        }
+        ctx.strokeStyle = 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (ease * 0.25) + ')'
+        ctx.lineWidth = 0.6
+        for (const c of centers) {
+          ctx.beginPath()
+          ctx.arc(half + c.x, half + c.y, R_f, 0, Math.PI * 2)
+          ctx.stroke()
+        }
       }
-      if (drawType === 'event') {
+
+      for (const p of b.particles) {
+        const br = 0.5 + 0.5 * Math.sin(t * p.speed + p.phase)
+
+        let tx, ty
+        if (b.stage === 0) {
+          tx = p.chaosX + Math.sin(t * p.speed * 1.3 + p.phase) * (1 - ease) * b.size * 0.3
+          ty = p.chaosY + Math.cos(t * p.speed + p.phase) * (1 - ease) * b.size * 0.3
+        } else if (b.stage === 1) {
+          tx = p.spiralX * ease + p.chaosX * (1 - ease)
+          ty = p.spiralY * ease + p.chaosY * (1 - ease)
+          tx += Math.sin(t * p.speed + p.phase) * (1 - ease) * b.size * 0.15
+          ty += Math.cos(t * p.speed + p.phase) * (1 - ease) * b.size * 0.15
+        } else {
+          tx = p.flowerX * ease + p.spiralX * (1 - ease)
+          ty = p.flowerY * ease + p.spiralY * (1 - ease)
+        }
+
+        p.vx += (tx - p.px) * 0.07
+        p.vy += (ty - p.py) * 0.07
+        p.vx *= 0.82
+        p.vy *= 0.82
+        p.px += p.vx
+        p.py += p.vy
+
+        const alpha = dim ? 0.12 : (b.stage === 2
+          ? 0.2 + 0.7 * ease + 0.1 * br
+          : 0.3 + 0.3 * br)
+        const size = p.size * (b.stage === 2 ? (0.7 + 0.5 * ease) : 1)
+
         ctx.beginPath()
-        ctx.arc(r, r, 3 + 2 * br, 0, Math.PI * 2)
-        ctx.fillStyle = tp.color
+        ctx.arc(half + p.px, half + p.py, size, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + alpha + ')'
         ctx.fill()
       }
-      const SYMS = {concern: '◌', 'concern-new': '◈', question: '◉', event: '·'}
-      const ss = Math.round(s * (dim ? 0.18 : 0.32))
-      ctx.font = ss + 'px serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillStyle = tp.color + h(dim ? 0.12 : (b.urgent ? 0.86 : 0.5 + 0.18 * br))
-      ctx.fillText(SYMS[drawType] || '◉', r, r)
+
+      ctx.restore()
     }
 
     function updateZones() {
@@ -1193,16 +1278,20 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
       ;(cache.openQuestions || []).slice(0, 5).forEach(function (q) {
         const pos = nextBubblePos(idx++)
-        items.push({
+        const qData = {
           type: 'question',
           size: Math.max(54, 46 + Math.min(24, String(q.question || '').length * 0.4)),
           text: q.question || 'Open question',
           dept: 'Рита наблюдает',
           cardKey: 'risks',
           sourceId: q._id,
+          status: 'open',
+          openedAt: q.openedAt || null,
           ax: pos.ax,
           ay: pos.ay
-        })
+        }
+        qData.stage = getBubbleStage(qData)
+        items.push(qData)
       })
 
       ;(cache.openConcerns || []).slice(0, 6).forEach(function (c) {
@@ -1211,7 +1300,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         const place = c.place?.name || c.place?.unitCode || 'Place'
         const pos = nextBubblePos(idx++)
         const isUnit = /5A|Bar/i.test(place) || /bar/i.test(c.summary || '')
-        items.push({
+        const cData = {
           type: bubbleType === 'concern-new' ? 'concern-new' : 'concern',
           bubbleType: bubbleType,
           urgent: hours >= 6,
@@ -1220,9 +1309,13 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           dept: (hours >= 6 ? 'Maintenance · ' : 'New · ') + Math.max(1, Math.round(hours)) + 'ч',
           cardKey: isUnit ? 'room5a' : 'risks',
           sourceId: c._id,
+          status: c.status || 'open',
+          openedAt: c.openedAt || null,
           ax: pos.ax,
           ay: pos.ay
-        })
+        }
+        cData.stage = getBubbleStage(cData)
+        items.push(cData)
       })
 
       const today = todayIso()
@@ -1239,6 +1332,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           dept: 'Groups',
           cardKey: 'arrivals',
           sourceId: p._id,
+          status: 'open',
+          openedAt: null,
+          stage: 0,
           ax: pos.ax,
           ay: pos.ay
         })
@@ -1250,18 +1346,21 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
     function spawnBubble(data) {
       const vw = window.innerWidth
       const vh = window.innerHeight
+      const canvasSize = data.size * 3
       const el = document.createElement('div')
       el.className = 'lf-bubble'
-      el.style.width = data.size + 'px'
-      el.style.height = data.size + 'px'
+      el.style.width = canvasSize + 'px'
+      el.style.height = canvasSize + 'px'
 
       const cv = document.createElement('canvas')
+      cv.width = canvasSize
+      cv.height = canvasSize
       el.appendChild(cv)
 
       const ghost = document.createElement('div')
       ghost.className = 'lf-ghost'
-      ghost.style.width = data.size + 'px'
-      ghost.style.height = data.size + 'px'
+      ghost.style.width = canvasSize + 'px'
+      ghost.style.height = canvasSize + 'px'
       const gcv = document.createElement('canvas')
       ghost.appendChild(gcv)
       document.body.appendChild(ghost)
@@ -1269,6 +1368,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
 
       const px = (data.ax || 0.2) * vw
       const py = (data.ay || 0.3) * vh
+      const half = data.size * 1.5
 
       const b = Object.assign({}, data, {
         id: 'bubble-' + (++bubbleIdCounter),
@@ -1286,10 +1386,14 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         speed: 0.4 + Math.random() * 0.3,
         bSpeed: 1 + Math.random(),
         amp: 4 + Math.random() * 6,
+        stage: data.stage !== undefined ? data.stage : getBubbleStage(data),
         open: false,
         isDragging: false,
-        didMove: false
+        didMove: false,
+        shouldRemove: false
       })
+
+      initParticles(b)
 
       let dragOx = 0
       let dragOy = 0
@@ -1320,10 +1424,12 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         if (b.didMove) return
         if (b.open) return
         b.open = true
+        b.stage = Math.max(b.stage, 1)
+        b.stageProgress = 0
 
         drawBubble(b.gcv, b, animT, true)
-        b.ghost.style.left = (b.px - b.size / 2) + 'px'
-        b.ghost.style.top = (b.py - b.size / 2) + 'px'
+        b.ghost.style.left = (b.px - half) + 'px'
+        b.ghost.style.top = (b.py - half) + 'px'
         b.ghost.style.display = 'block'
         b.el.style.visibility = 'hidden'
         hideTT()
@@ -1358,7 +1464,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         b.py = e.clientY - dragOy
         b.homeX = b.px
         b.homeY = b.py
-        const mg = b.size / 2 + 4
+        const mg = half + 4
         const vw2 = window.innerWidth
         const vh2 = window.innerHeight
         b.px = Math.max(mg, Math.min(b.px, vw2 - mg))
@@ -1369,6 +1475,9 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         if (!b.isDragging) return
         b.isDragging = false
       })
+
+      el.style.left = (px - half) + 'px'
+      el.style.top = (py - half) + 'px'
 
       bubbles.push(b)
       return b
@@ -1392,16 +1501,27 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
       updateZones()
       const vw = window.innerWidth
       const vh = window.innerHeight
-      bubbles.forEach(function (b) {
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        const b = bubbles[i]
+        const half = b.size * 1.5
+        const mg = half + 4
+
+        if (b.shouldRemove) {
+          b.el.remove()
+          if (b.ghost) b.ghost.remove()
+          bubbles.splice(i, 1)
+          continue
+        }
+
         if (b.open) {
           drawBubble(b.gcv, b, animT, true)
-          return
+          continue
         }
         if (b.isDragging) {
-          b.el.style.left = (b.px - b.size / 2) + 'px'
-          b.el.style.top = (b.py - b.size / 2) + 'px'
+          b.el.style.left = (b.px - half) + 'px'
+          b.el.style.top = (b.py - half) + 'px'
           drawBubble(b.cv, b, animT, false)
-          return
+          continue
         }
         const fdx = Math.cos(animT * b.speed * 0.55 + b.phase) * b.amp * 0.3
         const fdy = Math.sin(animT * b.speed + b.phase) * b.amp
@@ -1411,7 +1531,7 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
           const ddx = b.px - z.cx
           const ddy = b.py - z.cy
           const dist = Math.sqrt(ddx * ddx + ddy * ddy) || 1
-          const repR = z.r + b.size / 2 + 16
+          const repR = z.r + half + 16
           if (dist < repR) {
             const ov = repR - dist
             fx += (ddx / dist) * ov * 1.4
@@ -1428,13 +1548,12 @@ body[data-panel="open"] .field{grid-template-columns:repeat(auto-fill,minmax(260
         b.vy = (b.vy + fy) * 0.78
         b.px += b.vx
         b.py += b.vy
-        const mg = b.size / 2 + 4
         b.px = Math.max(mg, Math.min(b.px, vw - mg))
         b.py = Math.max(mg, Math.min(b.py, vh - mg - 40))
-        b.el.style.left = (b.px + fdx - b.size / 2) + 'px'
-        b.el.style.top = (b.py + fdy - b.size / 2) + 'px'
+        b.el.style.left = (b.px + fdx - half) + 'px'
+        b.el.style.top = (b.py + fdy - half) + 'px'
         drawBubble(b.cv, b, animT, false)
-      })
+      }
       requestAnimationFrame(tick)
     }
 
