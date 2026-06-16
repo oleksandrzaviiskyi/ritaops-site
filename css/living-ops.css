@@ -56,7 +56,7 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
-.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;}
+.cards-area{flex:1;overflow:auto;pointer-events:auto;position:relative;z-index:12;height:100%;}
 .cards-area::-webkit-scrollbar{width:4px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
 .rita-panel{
@@ -69,7 +69,10 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
   transition:transform .28s cubic-bezier(.2,.7,.2,1);
   pointer-events:none;
   position:relative;
+  width:0;
+  overflow:hidden;
 }
+body[data-panel="open"] .rita-panel{width:var(--panel);}
 body[data-panel="open"] .rita-panel{
   background:var(--surface);
   border-left:1px solid var(--line);
