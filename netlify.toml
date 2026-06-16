@@ -18,6 +18,12 @@
   status = 200
 
 [[redirects]]
+  from = "/api/poster-sync"
+  to = "/.netlify/functions/poster-sync"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/ops-pulse"
   to = "/.netlify/functions/ops-pulse"
   status = 200
