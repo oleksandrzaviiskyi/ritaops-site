@@ -347,7 +347,7 @@
     const checkingOut = portals.filter(function(p) { return p.checkOut === today && p.checkIn < today && p.status !== 'cancelled' })
     const upcoming    = portals.filter(function(p) {
       if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
-      var n = daysUntil(p.checkIn); return n >= 1 && n <= 3
+      var n = daysUntil(p.checkIn); return n >= 1 && n <= 5
     })
 
     const activeGroup = arriving[0] || inHouse[0] || checkingOut[0]
@@ -1391,7 +1391,7 @@
       ;(cache.portals || []).filter(function (p) {
         if (!p.checkIn || p.status === 'cancelled') return false
         const daysAway = (new Date(p.checkIn) - new Date(today)) / 86400000
-        const arriving = daysAway >= 0 && daysAway <= 3
+        const arriving = daysAway >= 0 && daysAway <= 5
         const inHouse  = p.checkIn < today && p.checkOut >= today
         return arriving || inHouse
       }).slice(0, 6).forEach(function (p) {
@@ -1409,7 +1409,7 @@
               : fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
           cardKey: 'arrivals',
           status: isCheckout ? 'checkout' : isInHouse || isArriving ? 'inhouse' : 'arriving',
-          bubbleStage: isCheckout ? 1 : (isInHouse || isArriving ? 2 : 0),
+          bubbleStage: isCheckout ? 1 : (isInHouse || isArriving ? 1 : 0),
           ax: pos.ax,
           ay: pos.ay
         })
