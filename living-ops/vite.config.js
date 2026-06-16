@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  base: '/living-ops-app/',
   build: {
-    outDir: 'dist',
+    outDir: '../living-ops-app',
     emptyOutDir: true
   },
   server: {
