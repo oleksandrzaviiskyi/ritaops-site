@@ -464,7 +464,17 @@
         const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
         if (b > maxBottom) maxBottom = b
       })
-      // card flows naturally in column layout
+      // position card on absolute canvas
+      var cardBottom = 20
+      field.querySelectorAll('.card').forEach(function(c) {
+        if (c === placedCard) return
+        var t = parseInt(c.style.top || 0)
+        var h = c.offsetHeight || 260
+        if (t + h + 16 > cardBottom) cardBottom = t + h + 16
+      })
+      placedCard.style.left = '20px'
+      placedCard.style.top = cardBottom + 'px'
+      field.style.minHeight = (cardBottom + 300) + 'px'
     }
 
 
@@ -522,9 +532,15 @@
       dragging = false
       const head = dragCard.querySelector('.card-head')
       if (head) head.style.cursor = 'move'
-      dragCard.style.position = 'relative'
-      dragCard.style.left = ''
-      dragCard.style.top = ''
+      // convert fixed position back to absolute inside field
+      const fieldRect = field.getBoundingClientRect()
+      const ca = document.querySelector('.cards-area')
+      const scrollTop = ca ? ca.scrollTop : 0
+      const nx = parseFloat(dragCard.style.left) - fieldRect.left
+      const ny = parseFloat(dragCard.style.top) - fieldRect.top + scrollTop
+      dragCard.style.position = 'absolute'
+      dragCard.style.left = Math.max(0, nx) + 'px'
+      dragCard.style.top = Math.max(0, ny) + 'px'
       dragCard.style.width = ''
       dragCard.style.zIndex = '12'
       dragCard.style.margin = ''
