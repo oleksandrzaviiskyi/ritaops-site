@@ -56,7 +56,7 @@ body[data-panel="open"] .summon{opacity:0;pointer-events:none;transition:opacity
 .summon .dot{width:9px;height:9px;border-radius:50%;background:#4caf50;flex:none;}
 .summon .lbl{font-size:14px;font-weight:500;letter-spacing:0.08em;color:#fffaf0;}
 .layout{position:fixed;inset:0;z-index:1;display:flex;pointer-events:none;}
-.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;padding:80px 20px 80px 20px;}
+.cards-area{flex:1;overflow-y:auto;overflow-x:hidden;pointer-events:auto;position:relative;z-index:12;height:100%;}
 .cards-area::-webkit-scrollbar{width:4px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
 .rita-panel{
@@ -110,7 +110,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .inp-wrap .attach.has-file{border-color:var(--ok);color:var(--ok);}
 .pdf-badge{font-size:11px;color:var(--ok);padding:2px 6px;background:rgba(58,122,85,.08);
   border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;flex:none;}
-.field{position:relative;min-height:100vh;min-width:100%;}
+.field{position:relative;min-height:100%;width:100%;padding:80px 20px 60px 20px;}
 .field-top{display:none!important;}
 .tray{position:fixed;top:88px;left:22px;display:flex;flex-direction:column;gap:6px;z-index:8;pointer-events:auto;}
 .tray-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);
@@ -123,8 +123,8 @@ body[data-panel="open"] .rita-panel{transform:none;}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 13px;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   filter:drop-shadow(0 2px 16px rgba(40,30,18,.07));
-  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:relative;overflow:hidden;z-index:12;
-  width:300px;flex:none;transition:box-shadow .2s;}
+  animation:rise .36s cubic-bezier(.2,.7,.2,1) both;position:absolute;overflow:hidden;z-index:12;
+  width:300px;transition:box-shadow .2s;}
 .card.expanded{box-shadow:0 8px 32px rgba(40,30,18,.12);}
 .card.card-today{border-color:rgba(217,138,43,.35);border-width:1.5px;}
 .card.card-today .eyebrow{color:var(--orange);}
