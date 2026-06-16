@@ -1359,8 +1359,27 @@
       const today = todayIso()
       ;(cache.portals || []).filter(function (p) {
         if (!p.checkIn || p.status === 'cancelled') return false
-        const daysUntil = (new Date(p.checkIn) - new Date(today)) / 86400000
-        return daysUntil >= 0 && daysUntil <= 3
+        const daysAway = (new Date(p.checkIn) - new Date(today)) / 86400000
+        const arriving = daysAway >= 0 && daysAway <= 3
+        const inHouse  = p.checkIn < today && p.checkOut >= today
+        return arriving || inHouse
+      }).slice(0, 6).forEach(function (p) {
+        const isInHouse  = p.checkIn < today && p.checkOut >= today
+        const isCheckout = p.checkOut === today && isInHouse
+        const pos = nextBubblePos(idx++)
+        items.push({
+          type: 'event',
+          size: isInHouse ? 54 : 48,
+          text: (p.groupName || p.title || 'Group') + ' · ' + (p.totalGuests || '—') + ' guests',
+          dept: isCheckout ? 'checkout today'
+              : isInHouse  ? 'in house · until ' + fmtDate(p.checkOut)
+              : fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
+          cardKey: 'arrivals',
+          status: isInHouse ? 'inhouse' : 'arriving',
+          bubbleStage: isCheckout ? 1 : (isInHouse ? 2 : 0),
+          ax: pos.ax,
+          ay: pos.ay
+        })
       }).slice(0, 6).forEach(function (p) {
         const pos = nextBubblePos(idx++)
         items.push({
