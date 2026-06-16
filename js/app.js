@@ -236,10 +236,22 @@
   }
 
   async function loadPulseData() {
-    const data = await apiGet('/api/ops-pulse')
-    pulseCache = data
-    if (typeof lfRefreshBubblesFromLive === 'function') lfRefreshBubblesFromLive()
-    return data
+    try {
+      console.log('[RITA] calling ops-pulse...')
+      const data = await apiGet('/api/ops-pulse')
+      console.log('[RITA] ops-pulse response keys:', Object.keys(data || {}))
+      pulseCache = data
+      console.log('[RITA] portals:', (data.portals || []).length, 'concerns:', (data.openConcerns || []).length)
+      if (typeof lfRefreshBubblesFromLive === 'function') {
+        console.log('[RITA] calling lfRefreshBubblesFromLive')
+        lfRefreshBubblesFromLive()
+      } else {
+        console.log('[RITA] lfRefreshBubblesFromLive NOT FOUND on window')
+      }
+      return data
+    } catch(err) {
+      console.error('[RITA] loadPulseData ERROR:', err.message, err)
+    }
   }
 
   function applyPulseToCard(data) {
