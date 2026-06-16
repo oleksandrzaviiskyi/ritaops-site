@@ -1392,19 +1392,21 @@
         const inHouse  = p.checkIn < today && p.checkOut >= today
         return arriving || inHouse
       }).slice(0, 6).forEach(function (p) {
-        const isInHouse  = p.checkIn < today && p.checkOut >= today
-        const isCheckout = p.checkOut === today && isInHouse
+        const isCheckout = p.checkOut === today
+        const isInHouse  = p.checkIn <= today && p.checkOut > today && !isCheckout
+        const isArriving = p.checkIn === today && !isCheckout
         const pos = nextBubblePos(idx++)
         items.push({
           type: 'event',
-          size: isInHouse ? 54 : 48,
+          size: isInHouse || isArriving ? 54 : 48,
           text: (p.groupName || p.title || 'Group') + ' · ' + (p.totalGuests || '—') + ' guests',
-          dept: isCheckout ? 'checkout today'
-              : isInHouse  ? 'in house · until ' + fmtDate(p.checkOut)
+          dept: isCheckout  ? 'checkout today · ' + fmtDate(p.checkOut)
+              : isInHouse   ? 'in house · until ' + fmtDate(p.checkOut)
+              : isArriving  ? 'arrived today · until ' + fmtDate(p.checkOut)
               : fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
           cardKey: 'arrivals',
-          status: isInHouse ? 'inhouse' : 'arriving',
-          bubbleStage: isCheckout ? 1 : (isInHouse ? 2 : 0),
+          status: isCheckout ? 'checkout' : isInHouse || isArriving ? 'inhouse' : 'arriving',
+          bubbleStage: isCheckout ? 1 : (isInHouse || isArriving ? 2 : 0),
           ax: pos.ax,
           ay: pos.ay
         })
