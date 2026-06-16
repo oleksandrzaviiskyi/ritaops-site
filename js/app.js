@@ -1569,6 +1569,8 @@
 
     window.lfRefreshBubblesFromLive = function lfRefreshBubblesFromLive() {
       const live = buildBubbleDataFromLive(pulseCache)
+      console.log('[RITA bubbles] pulseCache:', pulseCache ? Object.keys(pulseCache) : 'NULL')
+      console.log('[RITA bubbles] live items:', live ? live.length : 'NULL', live)
       if (live && live.length > 0) {
         initBubbles(live)
       }
