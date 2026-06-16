@@ -1257,6 +1257,12 @@
       b.el.style.visibility = 'visible'
       b.vx = 0
       b.vy = 0
+      // restore original stage immediately — no animation delay
+      var origStage = b.data ? (b.data.bubbleStage !== undefined ? b.data.bubbleStage : 0) : 0
+      if (b.stage !== origStage) {
+        b.stage = origStage
+        b.stageProgress = 1  // jump to final state immediately
+      }
       const zi = zones.findIndex(function (z) { return z.id === b.id })
       if (zi > -1) zones.splice(zi, 1)
     }
@@ -1470,6 +1476,7 @@
         amp: 4 + Math.random() * 6,
         stage: data.bubbleStage !== undefined ? data.bubbleStage : (data.stage !== undefined ? data.stage : getBubbleStage(data)),
         open: false,
+        data: data,
         isDragging: false,
         didMove: false,
         shouldRemove: false
@@ -1506,8 +1513,10 @@
         if (b.didMove) return
         if (b.open) return
         b.open = true
+        var prevStage = b.stage
         b.stage = Math.max(b.stage, 1)
-        b.stageProgress = 0
+        // only reset progress if stage actually changed
+        if (b.stage !== prevStage) b.stageProgress = 0
 
         drawBubble(b.gcv, b, animT, true)
         b.ghost.style.left = (b.px - half) + 'px'
