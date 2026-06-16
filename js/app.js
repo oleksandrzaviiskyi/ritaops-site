@@ -1461,7 +1461,7 @@
         speed: 0.4 + Math.random() * 0.3,
         bSpeed: 1 + Math.random(),
         amp: 4 + Math.random() * 6,
-        stage: data.stage !== undefined ? data.stage : getBubbleStage(data),
+        stage: data.bubbleStage !== undefined ? data.bubbleStage : (data.stage !== undefined ? data.stage : getBubbleStage(data)),
         open: false,
         isDragging: false,
         didMove: false,
