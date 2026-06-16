@@ -1,71 +1,10 @@
 [build]
-  command = "npm install && cd living-ops && npm install && npm run build"
+  command = ""
   publish = "dist-living-ops"
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
-
-# Dev target for legacy HTML pages (keep working during transition)
-[[redirects]]
-  from = "/living-ops-legacy"
-  to = "/living-ops.html"
-  status = 200
-
-[[redirects]]
-  from = "/living"
-  to = "/"
-  status = 200
-
-[[redirects]]
-  from = "/portal/*"
-  to = "/organizer.html"
-  status = 200
-
-[[redirects]]
-  from = "/pulse"
-  to = "/pulse.html"
-  status = 200
-
-[[redirects]]
-  from = "/ops"
-  to = "/pulse"
-  status = 301
-
-[[redirects]]
-  from = "/arrivals"
-  to = "/ops.html"
-  status = 200
-
-[[redirects]]
-  from = "/messages"
-  to = "/messages.html"
-  status = 200
-
-[[redirects]]
-  from = "/login"
-  to = "/login.html"
-  status = 200
-
-[[redirects]]
-  from = "/groups"
-  to = "/pulse"
-  status = 301
-
-[[redirects]]
-  from = "/group-portal/lascanasbeachretreat"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/dashboard"
-  to = "/group-portal/lascanasbeachretreat"
-  status = 301
-
-[[redirects]]
-  from = "/ops/group"
-  to = "/ops-group.html"
-  status = 200
 
 [[redirects]]
   from = "/api/portal"
@@ -85,16 +24,6 @@
 [[redirects]]
   from = "/join/:code"
   to = "/.netlify/functions/join?code=:code"
-  status = 200
-
-[[redirects]]
-  from = "/guest/*"
-  to = "/guest.html"
-  status = 200
-
-[[redirects]]
-  from = "/edit/*"
-  to = "/edit-guest.html"
   status = 200
 
 [[redirects]]
@@ -213,7 +142,7 @@
   status = 200
   force = true
 
-# SPA fallback — all unmatched routes served by React app
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
