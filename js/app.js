@@ -1600,11 +1600,24 @@
 
     window.lfRefreshBubblesFromLive = function lfRefreshBubblesFromLive() {
       const live = buildBubbleDataFromLive(pulseCache)
-      console.log('[RITA bubbles] pulseCache:', pulseCache ? Object.keys(pulseCache) : 'NULL')
-      console.log('[RITA bubbles] live items:', live ? live.length : 'NULL', live)
-      if (live && live.length > 0) {
-        initBubbles(live)
-      }
+      if (!live || !live.length) return
+
+      // Remember which bubbles are currently open (card is visible)
+      const openKeys = {}
+      bubbles.forEach(function(b) {
+        if (b.open && b.cardKey) openKeys[b.cardKey] = true
+      })
+
+      initBubbles(live)
+
+      // Restore open state — hide bubbles whose cards are still open
+      bubbles.forEach(function(b) {
+        if (openKeys[b.cardKey]) {
+          b.open = true
+          b.el.style.display = 'none'
+          b.ghost.style.display = 'none'
+        }
+      })
     }
 
     function tick() {
