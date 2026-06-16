@@ -1195,17 +1195,30 @@
       })
       zones.length = 0
       bubbleZones.forEach(function (z) { zones.push(z) })
+      // Add each open card as avoidance zone
       document.querySelectorAll('.card').forEach(function (card) {
         if (card.style.display === 'none') return
         const rect = card.getBoundingClientRect()
         if (!rect.width) return
         zones.push({
-          id: card.dataset.key,
+          id: 'card-' + (card.id || Math.random()),
           cx: rect.left + rect.width / 2,
           cy: rect.top + rect.height / 2,
-          r: Math.max(rect.width, rect.height) * 0.55
+          r: Math.max(rect.width, rect.height) * 0.7
         })
       })
+      // Also treat the whole cards-area left portion as avoidance when cards open
+      var cardsArea = document.getElementById('cardsArea')
+      var openCards = document.querySelectorAll('.card')
+      if (cardsArea && openCards.length > 0) {
+        var car = cardsArea.getBoundingClientRect()
+        zones.push({
+          id: 'cards-area-block',
+          cx: car.left + car.width / 2,
+          cy: car.top + car.height / 2,
+          r: car.width * 0.5
+        })
+      }
       if (document.body.getAttribute('data-panel') === 'open') {
         const panel = document.getElementById('ritaPanel')
         if (panel) {
@@ -1254,7 +1267,7 @@
     function restoreBubble(b) {
       b.open = false
       b.ghost.style.display = 'none'
-      b.el.style.visibility = 'visible'
+      b.el.style.display = 'block'
       b.vx = 0
       b.vy = 0
       // restore original stage immediately — no animation delay
@@ -1521,8 +1534,8 @@
         drawBubble(b.gcv, b, animT, true)
         b.ghost.style.left = (b.px - half) + 'px'
         b.ghost.style.top = (b.py - half) + 'px'
-        b.ghost.style.display = 'block'
-        b.el.style.visibility = 'hidden'
+        b.ghost.style.display = 'none'
+        b.el.style.display = 'none'
         hideTT()
 
         const cardKey = b.cardKey || b.type
