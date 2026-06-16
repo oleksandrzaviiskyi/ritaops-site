@@ -1,62 +1,40 @@
 # RITA Living Operations — React + Vite
 
-This is the React + Vite rewrite of `living-ops.html`.
+## Build
 
-## Structure
+Netlify builds from `living-ops/` directory:
 
 ```
-living-ops/
-  src/
-    main.jsx              # Entry point
-    App.jsx               # Root component
-    hooks/
-      useStore.js         # Global state (no Redux, lightweight singleton)
-      useApi.js           # API calls + live data builders
-      useChat.js          # Rita chat + PDF upload logic
-    components/
-      BubblesLayer.jsx    # Vanilla JS bubble engine (canvas), mounted via useEffect
-      CardsArea.jsx       # Cards field
-      Card.jsx            # Individual card with drag, log, composer
-      cardUpdaters.js     # Pure functions: applyPulseToCard, applyArrivalsToCard, applyRisksToCard
-      RitaPanel.jsx       # Rita slide-in panel with chat
-      Tray.jsx            # Minimized card chips
-      CornerLogo.jsx      # Logo top-left
-      SummonButton.jsx    # Draggable RITA button
-    data/
-      cards.js            # Static card definitions
-    utils/
-      api.js              # apiGet, apiPost, helpers
-    styles/
-      living-ops.css      # All CSS (identical to original)
-  index.html
-  vite.config.js
-  package.json
+base = "living-ops"
+command = "npm install && npm run build"
+publish = "dist"
+functions = "../netlify/functions"
 ```
 
-## What’s preserved
-
-- **Bubble engine** — entire canvas/particle system is vanilla JS in `BubblesLayer.jsx`, unchanged from original
-- **Card drag** — mousedown/move/up drag on card-head, same logic
-- **Rita panel** — slide-in chat, PDF upload, history in localStorage
-- **Live data** — `ops-pulse` + `portals` API calls, same transformations
-- **Netlify functions** — not touched, all redirects kept
-
-## Dev
+## Local dev
 
 ```bash
 cd living-ops
 npm install
 npm run dev
+# API: run netlify dev from root
 ```
 
-For API calls to work locally: run `netlify dev` from root instead.
+## Source
 
-## Build
-
-```bash
-cd living-ops
-npm run build
-# outputs to ../dist-living-ops
+```
+living-ops/
+  src/
+    main.jsx
+    App.jsx
+    hooks/         # useStore, useApi, useChat
+    components/    # BubblesLayer, Card, RitaPanel, Tray, etc
+    data/cards.js
+    utils/api.js
+    styles/living-ops.css
+  index.html
+  vite.config.js
+  package.json
 ```
 
-Netlify builds automatically via `netlify.toml`.
+Netlify functions are in `/netlify/functions/` — not touched.
