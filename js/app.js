@@ -1399,15 +1399,37 @@
         const isInHouse  = p.checkIn <= today && p.checkOut > today && !isCheckout
         const isArriving = p.checkIn === today && !isCheckout
         const pos = nextBubblePos(idx++)
+        // unique card key per group
+        const gKey = 'group_' + (p.groupId || p._id || p.groupName || 'g').replace(/[^a-zA-Z0-9]/g, '_')
+        // create dynamic CARDS entry for this group
+        CARDS[gKey] = {
+          eyebrow: isCheckout ? 'CHECKOUT TODAY · ' + fmtDate(today)
+                 : isInHouse  ? 'IN HOUSE · ' + fmtDate(today)
+                 : isArriving ? 'IN HOUSE · ' + fmtDate(today)
+                 : 'IN ' + Math.round((new Date(p.checkIn) - new Date(today)) / 86400000) + ' DAYS · ' + fmtDate(p.checkIn),
+          title: (p.groupName || 'Group') + ' · ' + (p.totalGuests || '—') + ' guests',
+          span: false,
+          task: false,
+          live: true,
+          recipients: ['Рите', 'Group Leader'],
+          rows: [
+            ['Группа', p.groupName || 'Group', ''],
+            ['Даты', fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
+              isCheckout ? 'checkout today' : isInHouse || isArriving ? 'until ' + fmtDate(p.checkOut) : ''],
+            ['Гости', String(p.totalGuests || '—'), '']
+          ],
+          note: '',
+          _portalData: p
+        }
         items.push({
           type: 'event',
           size: isInHouse || isArriving ? 54 : 48,
           text: (p.groupName || p.title || 'Group') + ' · ' + (p.totalGuests || '—') + ' guests',
           dept: isCheckout  ? 'checkout today · ' + fmtDate(p.checkOut)
               : isInHouse   ? 'in house · until ' + fmtDate(p.checkOut)
-              : isArriving  ? 'arrived today · until ' + fmtDate(p.checkOut)
+              : isArriving  ? 'in house · until ' + fmtDate(p.checkOut)
               : fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
-          cardKey: 'arrivals',
+          cardKey: gKey,
           status: isCheckout ? 'checkout' : isInHouse || isArriving ? 'inhouse' : 'arriving',
           bubbleStage: isCheckout ? 1 : (isInHouse || isArriving ? 1 : 0),
           ax: pos.ax,
