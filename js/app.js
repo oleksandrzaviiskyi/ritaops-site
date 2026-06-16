@@ -465,7 +465,7 @@
         if (b > maxBottom) maxBottom = b
       })
       // position card on absolute canvas
-      var cardBottom = 20
+      var cardBottom = 0
       field.querySelectorAll('.card').forEach(function(c) {
         if (c === placedCard) return
         var t = parseInt(c.style.top || 0)
