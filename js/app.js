@@ -329,38 +329,73 @@
 
   function applyArrivalsToCard(portals) {
     const today = todayIso()
+
+    // 1. Groups arriving today
     const arriving = portals.filter(function (p) {
       return p.checkIn === today && p.status !== 'cancelled'
     })
-    const upcoming = portals.filter(function (p) {
-      if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
-      const n = daysUntil(p.checkIn)
-      return n >= 1 && n <= 3
+
+    // 2. Groups currently in house (checked in before today, not yet checked out)
+    const inHouse = portals.filter(function (p) {
+      return p.checkIn < today && p.checkOut >= today && p.status !== 'cancelled'
     })
 
-    if (!arriving.length && !upcoming.length) {
-      CARDS.arrivals.eyebrow = 'Arrivals · ' + fmtDate(today)
-      CARDS.arrivals.title = 'No groups today'
-      CARDS.arrivals.rows = [['Groups', tag('ok', 'clear'), 'no check-ins scheduled']]
-      CARDS.arrivals.note = 'Live data from portals.'
-      updateCardDom('arrivals')
-      syncArrivalsCardClass(portals)
+    // 3. Groups checking out today
+    const checkingOut = portals.filter(function (p) {
+      return p.checkOut === today && p.status !== 'cancelled'
+    })
+
+    // 4. Upcoming (1-3 days)
+    const upcoming = portals.filter(function (p) {
+      if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
+      return daysUntil(p.checkIn) >= 1 && daysUntil(p.checkIn) <= 3
+    })
+
+    // Priority: arriving today > in house > checking out today > upcoming
+    const activeGroup = arriving[0] || inHouse[0] || checkingOut[0]
+
+    // If no active or upcoming groups — hide arrivals card
+    if (!activeGroup && !upcoming.length) {
+      // Remove arrivals card from field if shown
+      const card = document.getElementById('card-arrivals')
+      if (card) {
+        card.classList.add('closing')
+        setTimeout(function() {
+          card.remove()
+          const idx = shown.indexOf('arrivals')
+          if (idx > -1) shown.splice(idx, 1)
+        }, 300)
+      }
       return
     }
 
-    if (arriving.length) {
-      const g = arriving[0]
+    if (activeGroup) {
+      const g = activeGroup
+      const isArriving = g.checkIn === today
+      const isCheckingOut = g.checkOut === today && g.checkIn < today
+      const isInHouse = g.checkIn < today && g.checkOut > today
+
+      let eyebrow, statusNote
+      if (isArriving) {
+        eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
+        statusNote = 'check-in today'
+      } else if (isCheckingOut) {
+        eyebrow = 'CHECKOUT TODAY · ' + fmtDate(today)
+        statusNote = 'checkout today'
+      } else {
+        eyebrow = 'IN HOUSE · ' + fmtDate(today)
+        statusNote = 'until ' + fmtDate(g.checkOut)
+      }
+
       const rooming = findRoomingList(g)
       const roomRows = []
-
       if (rooming && rooming.rooms) {
         rooming.rooms.slice(0, 8).forEach(function (rm) {
           const names = (rm.occupants || []).map(function (o) { return o.name }).join(', ')
-          roomRows.push(['Room ' + rm.roomNumber, rm.roomType, names])
+          roomRows.push(['Room ' + (rm.roomNumber || ''), rm.roomType || '', names])
         })
       }
 
-      // Find group leader — first single room occupant
       const leaderRoom = rooming && rooming.rooms ? rooming.rooms.find(function(rm) {
         return rm.occupants && rm.occupants.length === 1
       }) : null
@@ -370,38 +405,32 @@
         ? leaderName + (contactPhone ? ' · ' + contactPhone : '')
         : 'Group Leader'
       CARDS.arrivals.recipients = [R, leaderLabel]
-      CARDS.arrivals.groupLeader = {name: leaderName, phone: contactPhone}
 
-      CARDS.arrivals.eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
+      CARDS.arrivals.eyebrow = eyebrow
       CARDS.arrivals.title = (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests'
       CARDS.arrivals.rows = [
         ['Группа', g.groupName || g.title || 'Group', ''],
-        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
-        ['Гости', String(g.totalGuests || '—'), 'check-in today'],
+        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), statusNote],
+        ['Гости', String(g.totalGuests || '—'), ''],
         ['Лидер', leaderName || '—', contactPhone ? '📞 ' + contactPhone : ''],
         ['Руминг', rooming && rooming.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
         ...roomRows
       ]
       CARDS.arrivals.note = rooming
-        ? 'Rooming loaded · ' + (rooming.totalOccupants || '—') + ' guests assigned.'
-        : 'Rooming list not loaded yet — ask Rita to pull the latest.'
+        ? 'Rooming loaded · ' + (rooming.totalOccupants || g.totalGuests || '—') + ' guests assigned.'
+        : 'Rooming list not loaded.'
+
     } else {
+      // Only upcoming groups
       const primary = upcoming[0]
       const n = daysUntil(primary.checkIn)
-      CARDS.arrivals.eyebrow = upcoming.length === 1
-        ? 'IN ' + n + ' DAYS · ' + fmtDate(primary.checkIn)
-        : 'UPCOMING · 1–3 DAYS'
-      CARDS.arrivals.title = upcoming.length === 1
-        ? (primary.groupName || 'Group')
-        : upcoming.length + ' groups'
-      CARDS.arrivals.rows = upcoming.slice(0, 6).map(function (p) {
-        return [
-          p.groupName || 'Group',
-          fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
-          (p.totalGuests || '—') + ' guests'
-        ]
+      CARDS.arrivals.eyebrow = 'IN ' + n + ' DAYS · ' + fmtDate(primary.checkIn)
+      CARDS.arrivals.title = primary.groupName || 'Group'
+      CARDS.arrivals.rows = upcoming.slice(0, 4).map(function (p) {
+        return [p.groupName || 'Group', fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut), (p.totalGuests || '—') + ' guests']
       })
       CARDS.arrivals.note = 'Next arrivals from live portal data.'
+      CARDS.arrivals.recipients = [R]
     }
 
     updateCardDom('arrivals')
@@ -2048,38 +2077,73 @@
 
   function applyArrivalsToCard(portals) {
     const today = todayIso()
+
+    // 1. Groups arriving today
     const arriving = portals.filter(function (p) {
       return p.checkIn === today && p.status !== 'cancelled'
     })
-    const upcoming = portals.filter(function (p) {
-      if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
-      const n = daysUntil(p.checkIn)
-      return n >= 1 && n <= 3
+
+    // 2. Groups currently in house (checked in before today, not yet checked out)
+    const inHouse = portals.filter(function (p) {
+      return p.checkIn < today && p.checkOut >= today && p.status !== 'cancelled'
     })
 
-    if (!arriving.length && !upcoming.length) {
-      CARDS.arrivals.eyebrow = 'Arrivals · ' + fmtDate(today)
-      CARDS.arrivals.title = 'No groups today'
-      CARDS.arrivals.rows = [['Groups', tag('ok', 'clear'), 'no check-ins scheduled']]
-      CARDS.arrivals.note = 'Live data from portals.'
-      updateCardDom('arrivals')
-      syncArrivalsCardClass(portals)
+    // 3. Groups checking out today
+    const checkingOut = portals.filter(function (p) {
+      return p.checkOut === today && p.status !== 'cancelled'
+    })
+
+    // 4. Upcoming (1-3 days)
+    const upcoming = portals.filter(function (p) {
+      if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
+      return daysUntil(p.checkIn) >= 1 && daysUntil(p.checkIn) <= 3
+    })
+
+    // Priority: arriving today > in house > checking out today > upcoming
+    const activeGroup = arriving[0] || inHouse[0] || checkingOut[0]
+
+    // If no active or upcoming groups — hide arrivals card
+    if (!activeGroup && !upcoming.length) {
+      // Remove arrivals card from field if shown
+      const card = document.getElementById('card-arrivals')
+      if (card) {
+        card.classList.add('closing')
+        setTimeout(function() {
+          card.remove()
+          const idx = shown.indexOf('arrivals')
+          if (idx > -1) shown.splice(idx, 1)
+        }, 300)
+      }
       return
     }
 
-    if (arriving.length) {
-      const g = arriving[0]
+    if (activeGroup) {
+      const g = activeGroup
+      const isArriving = g.checkIn === today
+      const isCheckingOut = g.checkOut === today && g.checkIn < today
+      const isInHouse = g.checkIn < today && g.checkOut > today
+
+      let eyebrow, statusNote
+      if (isArriving) {
+        eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
+        statusNote = 'check-in today'
+      } else if (isCheckingOut) {
+        eyebrow = 'CHECKOUT TODAY · ' + fmtDate(today)
+        statusNote = 'checkout today'
+      } else {
+        eyebrow = 'IN HOUSE · ' + fmtDate(today)
+        statusNote = 'until ' + fmtDate(g.checkOut)
+      }
+
       const rooming = findRoomingList(g)
       const roomRows = []
-
       if (rooming && rooming.rooms) {
         rooming.rooms.slice(0, 8).forEach(function (rm) {
           const names = (rm.occupants || []).map(function (o) { return o.name }).join(', ')
-          roomRows.push(['Room ' + rm.roomNumber, rm.roomType, names])
+          roomRows.push(['Room ' + (rm.roomNumber || ''), rm.roomType || '', names])
         })
       }
 
-      // Find group leader — first single room occupant
       const leaderRoom = rooming && rooming.rooms ? rooming.rooms.find(function(rm) {
         return rm.occupants && rm.occupants.length === 1
       }) : null
@@ -2089,38 +2153,32 @@
         ? leaderName + (contactPhone ? ' · ' + contactPhone : '')
         : 'Group Leader'
       CARDS.arrivals.recipients = [R, leaderLabel]
-      CARDS.arrivals.groupLeader = {name: leaderName, phone: contactPhone}
 
-      CARDS.arrivals.eyebrow = 'ARRIVING TODAY · ' + fmtDate(today)
+      CARDS.arrivals.eyebrow = eyebrow
       CARDS.arrivals.title = (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests'
       CARDS.arrivals.rows = [
         ['Группа', g.groupName || g.title || 'Group', ''],
-        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
-        ['Гости', String(g.totalGuests || '—'), 'check-in today'],
+        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), statusNote],
+        ['Гости', String(g.totalGuests || '—'), ''],
         ['Лидер', leaderName || '—', contactPhone ? '📞 ' + contactPhone : ''],
         ['Руминг', rooming && rooming.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
         ...roomRows
       ]
       CARDS.arrivals.note = rooming
-        ? 'Rooming loaded · ' + (rooming.totalOccupants || '—') + ' guests assigned.'
-        : 'Rooming list not loaded yet — ask Rita to pull the latest.'
+        ? 'Rooming loaded · ' + (rooming.totalOccupants || g.totalGuests || '—') + ' guests assigned.'
+        : 'Rooming list not loaded.'
+
     } else {
+      // Only upcoming groups
       const primary = upcoming[0]
       const n = daysUntil(primary.checkIn)
-      CARDS.arrivals.eyebrow = upcoming.length === 1
-        ? 'IN ' + n + ' DAYS · ' + fmtDate(primary.checkIn)
-        : 'UPCOMING · 1–3 DAYS'
-      CARDS.arrivals.title = upcoming.length === 1
-        ? (primary.groupName || 'Group')
-        : upcoming.length + ' groups'
-      CARDS.arrivals.rows = upcoming.slice(0, 6).map(function (p) {
-        return [
-          p.groupName || 'Group',
-          fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
-          (p.totalGuests || '—') + ' guests'
-        ]
+      CARDS.arrivals.eyebrow = 'IN ' + n + ' DAYS · ' + fmtDate(primary.checkIn)
+      CARDS.arrivals.title = primary.groupName || 'Group'
+      CARDS.arrivals.rows = upcoming.slice(0, 4).map(function (p) {
+        return [p.groupName || 'Group', fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut), (p.totalGuests || '—') + ' guests']
       })
       CARDS.arrivals.note = 'Next arrivals from live portal data.'
+      CARDS.arrivals.recipients = [R]
     }
 
     updateCardDom('arrivals')
