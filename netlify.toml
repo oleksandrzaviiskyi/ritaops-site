@@ -1,19 +1,25 @@
 [build]
-  command = ""
-  publish = "dist-living-ops"
-  functions = "netlify/functions"
+  base = "living-ops"
+  command = "npm install && npm run build"
+  publish = "dist"
+  functions = "../netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
 
 [[redirects]]
-  from = "/api/portal"
-  to = "/.netlify/functions/portal"
+  from = "/api/ops-pulse"
+  to = "/.netlify/functions/ops-pulse"
   status = 200
 
 [[redirects]]
   from = "/api/portals"
   to = "/.netlify/functions/portals"
+  status = 200
+
+[[redirects]]
+  from = "/api/portal"
+  to = "/.netlify/functions/portal"
   status = 200
 
 [[redirects]]
@@ -44,11 +50,6 @@
 [[redirects]]
   from = "/api/cancel-group"
   to = "/.netlify/functions/cancel-group"
-  status = 200
-
-[[redirects]]
-  from = "/api/ops-pulse"
-  to = "/.netlify/functions/ops-pulse"
   status = 200
 
 [[redirects]]
