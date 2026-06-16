@@ -476,17 +476,15 @@
         const b = parseInt(c.style.top || 0) + (c.offsetHeight || 220) + 16
         if (b > maxBottom) maxBottom = b
       })
-      // position card on absolute canvas
-      var cardBottom = 0
-      field.querySelectorAll('.card').forEach(function(c) {
-        if (c === placedCard) return
-        var t = parseInt(c.style.top || 0)
-        var h = c.offsetHeight || 260
-        if (t + h + 16 > cardBottom) cardBottom = t + h + 16
-      })
-      placedCard.style.left = '20px'
-      placedCard.style.top = cardBottom + 'px'
-      field.style.minHeight = (cardBottom + 300) + 'px'
+      // position cards in grid: 3 columns
+      var cardCount = field.querySelectorAll('.card').length - 1
+      var gcol = cardCount % 3
+      var grow = Math.floor(cardCount / 3)
+      var cardL = 20 + gcol * 320
+      var cardT = 20 + grow * 320
+      placedCard.style.left = cardL + 'px'
+      placedCard.style.top = cardT + 'px'
+      field.style.minHeight = (cardT + 400) + 'px'
     }
 
 
@@ -503,61 +501,48 @@
     // no-op — drag handled globally via field delegation below
   }
 
-  // Global delegated drag — works for all cards including dynamically added ones
+  // Global delegated drag — absolute positioning throughout
   ;(function initGlobalDrag() {
-    let dragging = false, dragCard = null, ox = 0, oy = 0, placeholder = null
+    let dragging = false, dragCard = null, startX = 0, startY = 0, startLeft = 0, startTop = 0
 
-    field.addEventListener('mousedown', function (e) {
+    document.addEventListener('mousedown', function (e) {
       const head = e.target.closest('.card-head')
       if (!head) return
       if (e.target.closest('[data-act]')) return
       dragCard = head.closest('.card')
       if (!dragCard) return
-      const rect = dragCard.getBoundingClientRect()
-      placeholder = document.createElement('div')
-      placeholder.style.cssText = 'width:' + rect.width + 'px;height:' + rect.height + 'px;flex:none;border-radius:20px;'
-      dragCard.parentNode.insertBefore(placeholder, dragCard.nextSibling)
-      ox = e.clientX - rect.left
-      oy = e.clientY - rect.top
-      dragCard.style.position = 'fixed'
-      dragCard.style.left = rect.left + 'px'
-      dragCard.style.top = rect.top + 'px'
-      dragCard.style.width = rect.width + 'px'
+      // card must be absolute — record start positions
+      startX = e.clientX
+      startY = e.clientY
+      startLeft = parseInt(dragCard.style.left) || 0
+      startTop = parseInt(dragCard.style.top) || 0
       dragCard.style.zIndex = '60'
-      dragCard.style.margin = '0'
-      head.style.cursor = 'grabbing'
+      dragCard.style.cursor = 'grabbing'
       dragging = true
       e.preventDefault()
     })
 
     document.addEventListener('mousemove', function (e) {
       if (!dragging || !dragCard) return
-      const panelW = document.body.getAttribute('data-panel') === 'open' ? 440 : 0
-      let nx = Math.max(4, Math.min(e.clientX - ox, window.innerWidth - panelW - dragCard.offsetWidth - 4))
-      let ny = Math.max(4, e.clientY - oy)
-      dragCard.style.left = nx + 'px'
-      dragCard.style.top = ny + 'px'
+      var dx = e.clientX - startX
+      var dy = e.clientY - startY
+      var ca = document.querySelector('.cards-area')
+      var panelW = document.body.getAttribute('data-panel') === 'open' ? 440 : 0
+      var maxL = window.innerWidth - panelW - dragCard.offsetWidth - 8
+      var newL = Math.max(0, Math.min(startLeft + dx, maxL))
+      var newT = Math.max(0, startTop + dy)
+      dragCard.style.left = newL + 'px'
+      dragCard.style.top = newT + 'px'
+      // expand canvas
+      var needed = newT + dragCard.offsetHeight + 40
+      if (needed > field.offsetHeight) field.style.minHeight = needed + 'px'
     })
 
     document.addEventListener('mouseup', function () {
       if (!dragging || !dragCard) return
-      dragging = false
-      const head = dragCard.querySelector('.card-head')
-      if (head) head.style.cursor = 'move'
-      // convert fixed position back to absolute inside field
-      const fieldRect = field.getBoundingClientRect()
-      const ca = document.querySelector('.cards-area')
-      const scrollTop = ca ? ca.scrollTop : 0
-      const nx = parseFloat(dragCard.style.left) - fieldRect.left
-      const ny = parseFloat(dragCard.style.top) - fieldRect.top + scrollTop
-      dragCard.style.position = 'absolute'
-      dragCard.style.left = Math.max(0, nx) + 'px'
-      dragCard.style.top = Math.max(0, ny) + 'px'
-      dragCard.style.width = ''
       dragCard.style.zIndex = '12'
-      dragCard.style.margin = ''
-      if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder)
-      placeholder = null
+      dragCard.style.cursor = ''
+      dragging = false
       dragCard = null
     })
   })()
