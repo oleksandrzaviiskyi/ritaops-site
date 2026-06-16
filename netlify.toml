@@ -1,7 +1,21 @@
 [build]
-  command = "npm install"
-  publish = "."
+  command = "npm install && cd living-ops && npm install && npm run build"
+  publish = "dist-living-ops"
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Dev target for legacy HTML pages (keep working during transition)
+[[redirects]]
+  from = "/living-ops-legacy"
+  to = "/living-ops.html"
+  status = 200
+
+[[redirects]]
+  from = "/living"
+  to = "/"
+  status = 200
 
 [[redirects]]
   from = "/portal/*"
@@ -193,9 +207,14 @@
   status = 200
   force = true
 
-
 [[redirects]]
   from = "/api/resolve-concern"
   to = "/.netlify/functions/resolve-concern"
   status = 200
   force = true
+
+# SPA fallback — all unmatched routes served by React app
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
