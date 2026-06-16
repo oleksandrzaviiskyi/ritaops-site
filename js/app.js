@@ -1408,21 +1408,6 @@
           ax: pos.ax,
           ay: pos.ay
         })
-      }).slice(0, 6).forEach(function (p) {
-        const pos = nextBubblePos(idx++)
-        items.push({
-          type: 'event',
-          size: 48,
-          text: (p.groupName || p.title || 'Group') + ' (' + (p.totalGuests || '?') + ' guests) · ' + fmtDate(p.checkIn),
-          dept: 'Groups',
-          cardKey: 'arrivals',
-          sourceId: p._id,
-          status: 'open',
-          openedAt: null,
-          stage: 0,
-          ax: pos.ax,
-          ay: pos.ay
-        })
       })
 
       return items.length ? items : null
