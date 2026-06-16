@@ -1731,5 +1731,12 @@
   })
 
 
+  // Boot: load portals + pulse data, start polling
   loadPortalsData().catch(function () {})
+  loadPulseData().catch(function () {})
+
+  // Poll every 60 seconds to refresh bubbles and cards
+  setInterval(function () {
+    loadPulseData().catch(function () {})
+  }, 60000)
 })()
