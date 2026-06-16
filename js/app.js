@@ -1236,7 +1236,10 @@
     }
 
     function showTT(b, x, y) {
-      const LABELS = {concern: 'Разрыв', 'concern-new': 'Новая задача', question: 'Рита наблюдает', event: 'Заезд'}
+      const eventLabel = b.status === 'inhouse' ? 'В доме'
+                       : b.status === 'checkout' ? 'Выезд сегодня'
+                       : 'Заезд'
+      const LABELS = {concern: 'Разрыв', 'concern-new': 'Новая задача', question: 'Рита наблюдает', event: eventLabel}
       const COLORS = {concern: '#b83c0d', 'concern-new': '#a06b0a', question: '#d98a2b', event: '#3a7a55'}
       const drawType = b.bubbleType || b.type
       const c = COLORS[drawType] || '#d98a2b'
