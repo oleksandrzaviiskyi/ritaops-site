@@ -151,6 +151,7 @@ body[data-panel="open"] .rita-panel{transform:none;}
   cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
   font-family:inherit;transition:.14s;}
 .ic:hover{border-color:var(--orange);color:var(--ink);}
+.ic[data-act="min"]{display:none;}
 .why{font-size:11.5px;color:var(--orange);margin:7px 0 1px;line-height:1.4;font-weight:500;}
 .rows{margin-top:11px;display:flex;flex-direction:column;}
 .row{display:flex;align-items:baseline;gap:8px;padding:4px 0;border-top:1px solid var(--line-soft);}
