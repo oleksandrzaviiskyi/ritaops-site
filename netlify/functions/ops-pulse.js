@@ -26,13 +26,19 @@ const PULSE_QUERY = `*[_id == "lasCanasPulse.lcbr"][0]{
   "lastSyncedAt": coherence.lastSyncedAt
 }`
 
-const PEOPLE_QUERY = `*[_type == "people"]{
+// Fix: include fullName explicitly + schedules so Rita knows every person
+const PEOPLE_QUERY = `*[_type == "people"] | order(fullName asc) {
   _id,
   "name": fullName,
-  "role": position->title,
+  fullName,
+  "role": coalesce(position->title, role),
   department->{code, titleEn},
   position->{title},
-  personCategory
+  personCategory,
+  workScheduleRegular,
+  workScheduleGroups,
+  lunchTime,
+  active
 }`
 
 const RESPONSIBILITY_QUERY = `*[_type == "responsibilityDomain"]{
@@ -79,8 +85,6 @@ function deptDetailsFromTasks(openTasks) {
   return list
 }
 
-// Найти дни смены групп (выезд одной + заезд другой в тот же день)
-// Возвращает события которые наступают ровно через 2 дня
 function findGroupTurnovers(portals) {
   if (!portals || portals.length < 2) return []
 
@@ -91,9 +95,8 @@ function findGroupTurnovers(portals) {
   targetDate.setDate(targetDate.getDate() + 2)
   const targetIso = targetDate.toISOString().slice(0, 10)
 
-  // Собираем все даты выездов и заездов
-  const checkouts = new Map() // date -> [group]
-  const checkins = new Map()  // date -> [group]
+  const checkouts = new Map()
+  const checkins = new Map()
 
   for (const portal of portals) {
     if (portal.checkOut) {
@@ -108,7 +111,6 @@ function findGroupTurnovers(portals) {
 
   const turnovers = []
 
-  // Ищем дни где есть и выезд и заезд
   for (const [date, outGroups] of checkouts) {
     if (checkins.has(date) && date === targetIso) {
       const inGroups = checkins.get(date)
