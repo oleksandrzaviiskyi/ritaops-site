@@ -127,7 +127,6 @@ export default function RitaPanel() {
             }}
           />
           <button
-            className="attach"
             id="panelAttach"
             type="button"
             title="Прикрепить PDF"
