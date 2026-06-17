@@ -41,7 +41,6 @@ function buildLiveContext(pulseCache, portalsCache) {
       summary: c.summary,
       openedAt: c.openedAt
     })),
-    // Fix: use fullName as primary, name as fallback — передаём ВСЕХ без ограничений
     people: (p.people || []).map(person => ({
       name: person.fullName || person.name || '',
       role: person.role || person.position?.title || '',
@@ -69,7 +68,9 @@ function buildLiveContext(pulseCache, portalsCache) {
         (rm.occupants || []).map(o => o.name).join(', ')
       ).join(' | ')
     })),
-    openQuestions: (p.openQuestions || []).map(q => q.question)
+    openQuestions: (p.openQuestions || []).map(q => q.question),
+    // Booking stats from lcbrBooking
+    bookingStats: p.bookingStats || null
   }
 }
 
