@@ -102,10 +102,12 @@ export default function Card({ cardKey, hidden }) {
       if (!dragging) return
       dragging = false
       head.style.cursor = 'move'
-      card.style.position = 'relative'
-      card.style.left = ''
-      card.style.top = ''
-      card.style.width = ''
+      const finalLeft = parseInt(card.style.left)
+      const finalTop = parseInt(card.style.top)
+      card.style.position = 'fixed'
+      card.style.left = finalLeft + 'px'
+      card.style.top = finalTop + 'px'
+      card.style.width = card.offsetWidth + 'px'
       card.style.zIndex = '12'
       card.style.margin = ''
       if (placeholder?.parentNode) placeholder.parentNode.removeChild(placeholder)
