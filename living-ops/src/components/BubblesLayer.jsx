@@ -357,7 +357,7 @@ function initBubbleEngine() {
       items.push({
         type: 'event', size: 48,
         text: (p.groupName || p.title || 'Group') + ' (' + (p.totalGuests || '?') + ' guests) · ' + fmtDate(p.checkIn),
-        dept: 'Groups', cardKey: 'arrivals', sourceId: p._id, status: 'open',
+        dept: 'Groups', cardKey: 'arrivals-' + (p._id || p.groupId || p.groupName), sourceId: p._id, status: 'open',
         openedAt: null, stage: 0, ax: pos.ax, ay: pos.ay
       })
     })

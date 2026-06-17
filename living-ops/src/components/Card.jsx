@@ -33,7 +33,8 @@ export default function Card({ cardKey, hidden }) {
 
   const baseCards = getInitialCards()
   const dynamicCards = window.__dynamicCards || {}
-  const initialDef = baseCards[cardKey] || dynamicCards[cardKey] || {
+  const baseKey = cardKey.startsWith('arrivals-') ? 'arrivals' : cardKey
+  const initialDef = baseCards[baseKey] || dynamicCards[cardKey] || {
     eyebrow: cardKey,
     title: cardKey,
     rows: [],
@@ -137,7 +138,7 @@ export default function Card({ cardKey, hidden }) {
 
         if (cardKey === 'pulse') {
           setCardData(d => applyPulseToCard(d, cache))
-        } else if (cardKey === 'arrivals') {
+        } else if (baseKey === 'arrivals') {
           const result = applyArrivalsToCard(initialDef, cache, portals)
           setCardData(result.data)
           setIsToday(result.isToday)
@@ -162,7 +163,7 @@ export default function Card({ cardKey, hidden }) {
 
   useEffect(() => {
     if (!initialDef.live || !portalsCache || !pulseCache) return
-    if (cardKey === 'arrivals') {
+    if (baseKey === 'arrivals') {
       const result = applyArrivalsToCard(initialDef, pulseCache, portalsCache)
       setCardData(result.data)
       setIsToday(result.isToday)
