@@ -79,6 +79,52 @@ function deptDetailsFromTasks(openTasks) {
   return list
 }
 
+// Найти дни смены групп (выезд одной + заезд другой в тот же день)
+// Возвращает события которые наступают ровно через 2 дня
+function findGroupTurnovers(portals) {
+  if (!portals || portals.length < 2) return []
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const targetDate = new Date(today)
+  targetDate.setDate(targetDate.getDate() + 2)
+  const targetIso = targetDate.toISOString().slice(0, 10)
+
+  // Собираем все даты выездов и заездов
+  const checkouts = new Map() // date -> [group]
+  const checkins = new Map()  // date -> [group]
+
+  for (const portal of portals) {
+    if (portal.checkOut) {
+      if (!checkouts.has(portal.checkOut)) checkouts.set(portal.checkOut, [])
+      checkouts.get(portal.checkOut).push(portal)
+    }
+    if (portal.checkIn) {
+      if (!checkins.has(portal.checkIn)) checkins.set(portal.checkIn, [])
+      checkins.get(portal.checkIn).push(portal)
+    }
+  }
+
+  const turnovers = []
+
+  // Ищем дни где есть и выезд и заезд
+  for (const [date, outGroups] of checkouts) {
+    if (checkins.has(date) && date === targetIso) {
+      const inGroups = checkins.get(date)
+      turnovers.push({
+        date,
+        checkingOut: outGroups.map(g => g.groupName || g.title),
+        checkingIn: inGroups.map(g => g.groupName || g.title),
+        totalGuestsOut: outGroups.reduce((s, g) => s + (g.totalGuests || 0), 0),
+        totalGuestsIn: inGroups.reduce((s, g) => s + (g.totalGuests || 0), 0)
+      })
+    }
+  }
+
+  return turnovers
+}
+
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return {statusCode: 204, headers: cors}
@@ -122,6 +168,7 @@ exports.handler = async (event, context) => {
     }))
 
     const field = buildFieldPulse(places || [], concernsRaw || [])
+    const groupTurnovers = findGroupTurnovers(portals || [])
 
     return {
       statusCode: 200,
@@ -136,7 +183,8 @@ exports.handler = async (event, context) => {
         portals: portals || [],
         roomingLists: roomingLists || [],
         openQuestions: openQuestions || [],
-        openConcerns: openConcerns || []
+        openConcerns: openConcerns || [],
+        groupTurnovers
       })
     }
   } catch (err) {
