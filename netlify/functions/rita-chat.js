@@ -54,52 +54,14 @@ No headers, no bullet points, no bold text in casual conversation.
 Действие: по одной карточке на каждую группу.`
 
 const OPERATIONAL_KEYWORDS = [
-  'заезд',
-  'заезды',
-  'сегодня',
-  'today',
-  'check-in',
-  'checkin',
-  'arrivals',
-  'arrival',
-  'прибытие',
-  'ближайш',
-  'следующ',
-  'next',
-  'this week',
-  'эта неделя',
-  'check-out',
-  'checkout',
-  'booking',
-  'bookings',
-  'group',
-  'groups',
-  'guest',
-  'guests',
-  'inventory',
-  'stock',
-  'menu',
-  'transfer',
-  'task',
-  'tasks',
-  'reminder',
-  'deficit',
-  'occupancy',
-  'reservation',
-  'operations',
-  'schedule',
-  'timeline',
-  'pax',
-  'room',
-  'rooms',
-  'arriving',
-  'departing',
-  'how many',
-  "what's coming",
-  'what is coming',
-  'when does',
-  'when is',
-  'needs attention'
+  'заезд', 'заезды', 'сегодня', 'today', 'check-in', 'checkin', 'arrivals', 'arrival',
+  'прибытие', 'ближайш', 'следующ', 'next', 'this week', 'эта неделя', 'check-out',
+  'checkout', 'booking', 'bookings', 'group', 'groups', 'guest', 'guests', 'inventory',
+  'stock', 'menu', 'transfer', 'task', 'tasks', 'reminder', 'deficit', 'occupancy',
+  'reservation', 'operations', 'schedule', 'timeline', 'pax', 'room', 'rooms',
+  'arriving', 'departing', 'how many', "what's coming", 'what is coming',
+  'when does', 'when is', 'needs attention', 'сотрудник', 'персонал', 'staff',
+  'кто работает', 'расписание', 'график'
 ]
 
 function needsPropertyContext(text) {
@@ -132,43 +94,17 @@ exports.handler = async (event, context) => {
     return {statusCode: 405, headers: cors, body: JSON.stringify({error: 'Method not allowed'})}
   }
 
-  console.log('AUTH DEBUG', {
-    headers: JSON.stringify(event.headers),
-    queryParams: JSON.stringify(event.queryStringParameters),
-    hasBody: !!event.body
-  })
-
   try {
     const parsedBody = JSON.parse(event.body || '{}')
 
-    console.log('BODY RECEIVED', JSON.stringify(parsedBody).slice(0, 400))
-
-    console.log('AUTH CHECK', {
-      authHeader: event.headers.authorization || event.headers.Authorization || 'MISSING',
-      keyParam: event.queryStringParameters?.key || 'MISSING',
-      staffKeyInBody: parsedBody?.staffKey || 'MISSING',
-      dashboardSecretSet: Boolean(dashboardSecret())
-    })
-
     let auth
     if (!dashboardSecret()) {
-      console.warn('[ritaops] DASHBOARD_SECRET not set — allowing request through (temporary bypass)')
       auth = {authorized: true, method: 'open'}
     } else {
       auth = resolveStaffAuth(event, parsedBody, context)
     }
 
     const anthropicKeyPresent = Boolean((process.env.ANTHROPIC_API_KEY || '').trim())
-
-    console.log('[ritaops] rita-chat auth', {
-      method: auth.method || 'none',
-      authorized: auth.authorized,
-      anthropicKeyPresent,
-      hasBearer: Boolean(
-        (event.headers?.authorization || event.headers?.Authorization || '').match(/^Bearer\s+/i)
-      ),
-      hasStaffKey: Boolean(parsedBody?.staffKey || event.queryStringParameters?.key)
-    })
 
     if (!auth.authorized) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
@@ -235,7 +171,7 @@ exports.handler = async (event, context) => {
           statusCode: 200,
           headers: cors,
           body: JSON.stringify({
-            reply: 'Ошибка обработки PDF: ' + err.message + '. Токен Sanity: ' + (writeToken ? 'есть' : 'НЕТ') + '. Anthropic: ' + (apiKey ? 'есть' : 'НЕТ')
+            reply: 'Ошибка обработки PDF: ' + err.message
           })
         }
       }
@@ -269,10 +205,7 @@ exports.handler = async (event, context) => {
             statusCode: 200,
             headers: cors,
             body: JSON.stringify({
-              reply:
-                intake.reply ||
-                intake.needsClarification ||
-                'Поняла.',
+              reply: intake.reply || intake.needsClarification || 'Поняла.',
               operational: true,
               ...(applyResult || {}),
               ...(roomingMeta || {})
@@ -284,23 +217,18 @@ exports.handler = async (event, context) => {
       }
     }
 
-    console.log('LIVE DATA', JSON.stringify(liveData).slice(0, 200))
-    console.log('[ritaops] inject property context', needsPropertyContext(message))
-
     let systemPrompt = buildSystemPrompt(message)
     if (liveData && Object.keys(liveData).length) {
       const d = liveData
       let ctx = '\n\n--- LIVE DATA FROM SANITY (Las Canas Beach Retreat) ---\n'
       if (d.buildings?.length) ctx += 'BUILDINGS: ' + d.buildings.join(' · ') + '\n'
       if (d.sharedSpaces?.length) {
-        ctx += 'SHARED SPACES (pool, restaurant, bar, palapa, beach deck, fire pit etc):\n'
+        ctx += 'SHARED SPACES:\n'
         d.sharedSpaces.forEach((s) => { ctx += '  - ' + s + '\n' })
       }
       if (d.unitDetails?.length) {
         ctx += 'UNIT BED CONFIGURATIONS:\n'
-        d.unitDetails.forEach((u) => {
-          ctx += '  - ' + u + '\n'
-        })
+        d.unitDetails.forEach((u) => { ctx += '  - ' + u + '\n' })
       }
       if (d.balanceStatus) ctx += 'BALANCE STATUS: ' + d.balanceStatus + '\n'
       if (d.coherenceStatement) ctx += 'PULSE NOTE: ' + d.coherenceStatement + '\n'
@@ -311,10 +239,15 @@ exports.handler = async (event, context) => {
           ctx += '  - ' + c.place + ': ' + (c.summary || 'open issue') + '\n'
         })
       }
+      // Fix: передаём ВСЕХ сотрудников без ограничений
       if (d.people?.length) {
-        ctx += 'PEOPLE:\n'
-        d.people.slice(0, 20).forEach((person) => {
-          ctx += '  - ' + person.name + (person.role ? ' · ' + person.role : '') + (person.department ? ' · ' + person.department : '') + '\n'
+        ctx += 'STAFF (' + d.people.length + ' people):\n'
+        d.people.forEach((person) => {
+          ctx += '  - ' + (person.name || person.fullName) +
+            (person.role ? ' · ' + person.role : '') +
+            (person.department ? ' · ' + person.department : '') +
+            (person.workScheduleRegular ? ' · schedule: ' + person.workScheduleRegular : '') +
+            '\n'
         })
       }
       if (d.responsibilities?.length) {
@@ -337,12 +270,10 @@ exports.handler = async (event, context) => {
       }
       if (d.openQuestions?.length) {
         ctx += 'OPEN QUESTIONS FOR STAFF:\n'
-        d.openQuestions.forEach((q) => {
-          ctx += '  - ' + q + '\n'
-        })
+        d.openQuestions.forEach((q) => { ctx += '  - ' + q + '\n' })
       }
       ctx += '--- END LIVE DATA ---\n'
-      ctx += 'Use this data to answer questions about Las Canas. This IS the real database — answer from it directly and confidently.\n'
+      ctx += 'IMPORTANT: This IS the real database. Answer ONLY from this data. If a person or item is not listed here, say so directly — do not invent or guess.\n'
       systemPrompt += ctx
     }
 
@@ -356,13 +287,6 @@ exports.handler = async (event, context) => {
     messages.push({role: 'user', content: userMessage})
 
     const anthropic = new Anthropic({apiKey})
-
-    console.log('CONTEXT SENT TO AI', JSON.stringify({
-      systemPromptLength: systemPrompt.length,
-      liveDataInPrompt: systemPrompt.includes('Liranzo') ||
-                        JSON.stringify(liveData).includes('Liranzo'),
-      liveDataKeys: Object.keys(liveData || {})
-    }))
 
     try {
       const response = await anthropic.messages.create({
@@ -386,8 +310,8 @@ exports.handler = async (event, context) => {
                     eyebrow: {type: 'string'},
                     rows: {type: 'array', items: {type: 'array', items: {type: 'string'}}},
                     note: {type: 'string'},
-                    contact: {type: 'string', description: 'Имя лидера группы для меню выбора'},
-                    contactPhone: {type: 'string', description: 'Телефон лидера'}
+                    contact: {type: 'string'},
+                    contactPhone: {type: 'string'}
                   },
                   required: ['title', 'rows']
                 }
