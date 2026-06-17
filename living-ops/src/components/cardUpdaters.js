@@ -51,8 +51,77 @@ function hasArrivalsToday(portals) {
   return (portals || []).some(p => p.checkIn === today && p.status !== 'cancelled')
 }
 
-export function applyArrivalsToCard(prev, pulseCache, portals) {
+function buildTodayGroupCard(prev, g, pulseCache, isToday) {
   const today = todayIso()
+  const rooming = findRoomingList(g, pulseCache)
+  const roomRows = []
+  if (rooming?.rooms) {
+    rooming.rooms.slice(0, 8).forEach(rm => {
+      const names = (rm.occupants || []).map(o => o.name).join(', ')
+      roomRows.push(['Room ' + rm.roomNumber, rm.roomType, names])
+    })
+  }
+  const leaderRoom = rooming?.rooms?.find(rm => rm.occupants?.length === 1)
+  const leaderName = leaderRoom ? (leaderRoom.occupants[0].name || '') : ''
+  const contactPhone = g.contactPhone || ''
+
+  return {
+    isToday,
+    data: {
+      ...prev,
+      eyebrow: 'ARRIVING TODAY · ' + fmtDate(today),
+      title: (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests',
+      rows: [
+        ['Группа', g.groupName || g.title || 'Group', ''],
+        ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
+        ['Гости', String(g.totalGuests || '—'), 'check-in today'],
+        ['Лидер', leaderName || '—', contactPhone ? '📞 ' + contactPhone : ''],
+        ['Руминг', rooming?.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
+        ...roomRows
+      ],
+      note: rooming
+        ? 'Rooming loaded · ' + (rooming.totalOccupants || '—') + ' guests assigned.'
+        : 'Rooming list not loaded yet — ask Rita to pull the latest.',
+      recipients: [R, leaderName ? leaderName + (contactPhone ? ' · ' + contactPhone : '') : 'Group Leader']
+    }
+  }
+}
+
+function buildUpcomingGroupCard(prev, p) {
+  const n = daysUntil(p.checkIn)
+  return {
+    isToday: false,
+    data: {
+      ...prev,
+      eyebrow: 'IN ' + n + ' DAYS · ' + fmtDate(p.checkIn),
+      title: p.groupName || 'Group',
+      rows: [[
+        p.groupName || 'Group',
+        fmtDate(p.checkIn) + ' → ' + fmtDate(p.checkOut),
+        (p.totalGuests || '—') + ' guests'
+      ]],
+      note: 'Next arrivals from live portal data.'
+    }
+  }
+}
+
+export function applyArrivalsToCard(prev, pulseCache, portals, specificPortalId = null) {
+  const today = todayIso()
+
+  if (specificPortalId) {
+    const portal = portals.find(p => p._id === specificPortalId)
+    if (portal) {
+      if (portal.checkIn === today && portal.status !== 'cancelled') {
+        return buildTodayGroupCard(prev, portal, pulseCache, true)
+      }
+      const n = daysUntil(portal.checkIn)
+      if (portal.checkIn && portal.checkIn > today && n >= 1 && n <= 3 && portal.status !== 'cancelled') {
+        return buildUpcomingGroupCard(prev, portal)
+      }
+      return buildTodayGroupCard(prev, portal, pulseCache, portal.checkIn === today)
+    }
+  }
+
   const arriving = portals.filter(p => p.checkIn === today && p.status !== 'cancelled')
   const upcoming = portals.filter(p => {
     if (!p.checkIn || p.checkIn <= today || p.status === 'cancelled') return false
@@ -76,39 +145,7 @@ export function applyArrivalsToCard(prev, pulseCache, portals) {
   }
 
   if (arriving.length) {
-    const g = arriving[0]
-    const rooming = findRoomingList(g, pulseCache)
-    const roomRows = []
-    if (rooming?.rooms) {
-      rooming.rooms.slice(0, 8).forEach(rm => {
-        const names = (rm.occupants || []).map(o => o.name).join(', ')
-        roomRows.push(['Room ' + rm.roomNumber, rm.roomType, names])
-      })
-    }
-    const leaderRoom = rooming?.rooms?.find(rm => rm.occupants?.length === 1)
-    const leaderName = leaderRoom ? (leaderRoom.occupants[0].name || '') : ''
-    const contactPhone = g.contactPhone || ''
-
-    return {
-      isToday,
-      data: {
-        ...prev,
-        eyebrow: 'ARRIVING TODAY · ' + fmtDate(today),
-        title: (g.groupName || g.title || 'Group') + ' · ' + (g.totalGuests || '—') + ' guests',
-        rows: [
-          ['Группа', g.groupName || g.title || 'Group', ''],
-          ['Даты', fmtDate(g.checkIn) + ' → ' + fmtDate(g.checkOut), ''],
-          ['Гости', String(g.totalGuests || '—'), 'check-in today'],
-          ['Лидер', leaderName || '—', contactPhone ? '📞 ' + contactPhone : ''],
-          ['Руминг', rooming?.rooms ? rooming.rooms.length + ' комнат' : tag('attention', 'не загружен'), ''],
-          ...roomRows
-        ],
-        note: rooming
-          ? 'Rooming loaded · ' + (rooming.totalOccupants || '—') + ' guests assigned.'
-          : 'Rooming list not loaded yet — ask Rita to pull the latest.',
-        recipients: [R, leaderName ? leaderName + (contactPhone ? ' · ' + contactPhone : '') : 'Group Leader']
-      }
-    }
+    return buildTodayGroupCard(prev, arriving[0], pulseCache, isToday)
   }
 
   const primary = upcoming[0]
