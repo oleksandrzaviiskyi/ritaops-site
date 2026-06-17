@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { apiGet, tag, fmtDate, formatBalance, todayIso } from '../utils/api.js'
 import { actions, useStore } from './useStore.js'
 
@@ -27,7 +26,7 @@ function buildLiveContext(pulseCache, portalsCache) {
 
   const sharedSpaces = (p.places || [])
     .filter(pl => ['restaurant', 'bar', 'outdoor-area', 'practice-space', 'event-space', 'pool'].includes(pl.type))
-    .map(pl => pl.name + ' (' + pl.type + ')' + (pl.capacity ? ' · вместимость ' + pl.capacity : ''))
+    .map(pl => pl.name + ' (' + pl.type + ')' + (pl.capacity ? ' · ' + pl.capacity : ''))
 
   return {
     property: 'Las Canas Beach Retreat',
@@ -42,11 +41,13 @@ function buildLiveContext(pulseCache, portalsCache) {
       summary: c.summary,
       openedAt: c.openedAt
     })),
+    // Fix: use fullName as primary, name as fallback — передаём ВСЕХ без ограничений
     people: (p.people || []).map(person => ({
-      name: person.name,
-      role: person.role,
-      department: person.department?.titleEn || null
-    })),
+      name: person.fullName || person.name || '',
+      role: person.role || person.position?.title || '',
+      department: person.department?.titleEn || null,
+      workScheduleRegular: person.workScheduleRegular || null
+    })).filter(p => p.name),
     responsibilities: (p.responsibilities || []).map(r => ({
       domain: r.title,
       authority: r.authorityLevel,
@@ -81,7 +82,6 @@ export function useApi() {
   async function loadPulseData() {
     const data = await apiGet('/api/ops-pulse')
     actions.setPulseCache(data)
-    // Trigger bubble refresh
     if (typeof window.lfRefreshBubblesFromLive === 'function') {
       window.lfRefreshBubblesFromLive()
     }
