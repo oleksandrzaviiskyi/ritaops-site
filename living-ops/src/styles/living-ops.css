@@ -32,7 +32,8 @@ body::before{
   mask-image:radial-gradient(circle at 50% 42%,black,transparent 78%);
   -webkit-mask-image:radial-gradient(circle at 50% 42%,black,transparent 78%);
 }
-.corner-logo{position:fixed;top:18px;left:22px;display:flex;align-items:center;gap:10px;z-index:10;}
+/* z-index: 2 — ниже карточек (12) и пузырей (6) */
+.corner-logo{position:fixed;top:18px;left:22px;display:flex;align-items:center;gap:10px;z-index:2;}
 .corner-logo img{
   width:68px;height:auto;flex:none;
   animation:float 7s ease-in-out infinite;
