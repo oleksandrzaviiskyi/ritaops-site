@@ -2,8 +2,6 @@ import { useEffect } from 'react'
 import { actions } from '../hooks/useStore.js'
 import { fmtDate, todayIso } from '../utils/api.js'
 
-// This component mounts vanilla JS bubble engine into document.body
-// The entire bubble canvas system is kept as-is from the original app.js
 export default function BubblesLayer() {
   useEffect(() => {
     initBubbleEngine()
@@ -13,7 +11,6 @@ export default function BubblesLayer() {
 }
 
 function initBubbleEngine() {
-  // Inject bubble styles
   const lfStyle = document.createElement('style')
   lfStyle.textContent = `
 .lf-bubble{position:fixed;border-radius:50%;cursor:grab;z-index:8;touch-action:none;}
@@ -106,7 +103,11 @@ function initBubbleEngine() {
       { r: 160, g: 107, b: 10 },
       { r: 29, g: 158, b: 117 }
     ]
-    const col = STAGE_COLORS[b.stage] || STAGE_COLORS[0]
+    // turnover bubble — purple
+    const isTurnover = b.type === 'turnover'
+    const col = isTurnover
+      ? { r: 107, g: 63, b: 160 }
+      : (STAGE_COLORS[b.stage] || STAGE_COLORS[0])
     b.stageProgress = Math.min(1, b.stageProgress + 0.006)
     const ease = b.stageProgress < 0.5
       ? 2 * b.stageProgress * b.stageProgress
@@ -194,8 +195,20 @@ function initBubbleEngine() {
   }
 
   function showTT(b, x, y) {
-    const LABELS = { concern: 'Разрыв', 'concern-new': 'Новая задача', question: 'Рита наблюдает', event: 'Заезд' }
-    const COLORS = { concern: '#b83c0d', 'concern-new': '#a06b0a', question: '#d98a2b', event: '#3a7a55' }
+    const LABELS = {
+      concern: 'Разрыв',
+      'concern-new': 'Новая задача',
+      question: 'Рита наблюдает',
+      event: 'Заезд',
+      turnover: 'Смена групп'
+    }
+    const COLORS = {
+      concern: '#b83c0d',
+      'concern-new': '#a06b0a',
+      question: '#d98a2b',
+      event: '#3a7a55',
+      turnover: '#6b3fa0'
+    }
     const drawType = b.bubbleType || b.type
     const c = COLORS[drawType] || '#d98a2b'
     ttEl.innerHTML =
@@ -284,6 +297,25 @@ function initBubbleEngine() {
     if (!cache) return null
     const items = []
     let idx = 0
+
+    // Смена групп — фиолетовый пузырь
+    ;(cache.groupTurnovers || []).forEach(t => {
+      const pos = nextBubblePos(idx++)
+      items.push({
+        type: 'turnover',
+        size: 58,
+        text: 'Смена групп ' + fmtDate(t.date) + ' — нужен доп. персонал для уборки. Позвони Мириан.',
+        dept: 'Выезд: ' + t.checkingOut.join(', ') + ' · Заезд: ' + t.checkingIn.join(', '),
+        cardKey: 'arrivals',
+        sourceId: 'turnover-' + t.date,
+        status: 'open',
+        openedAt: null,
+        stage: 1,
+        ax: pos.ax,
+        ay: pos.ay
+      })
+    })
+
     ;(cache.openQuestions || []).slice(0, 5).forEach(q => {
       const pos = nextBubblePos(idx++)
       const qData = {
@@ -294,6 +326,7 @@ function initBubbleEngine() {
       qData.stage = getBubbleStage(qData)
       items.push(qData)
     })
+
     ;(cache.openConcerns || []).slice(0, 6).forEach(c => {
       const hours = c.openedAt ? (Date.now() - new Date(c.openedAt).getTime()) / 3600000 : 0
       const bubbleType = hours >= 6 ? 'concern' : 'concern-new'
@@ -313,6 +346,7 @@ function initBubbleEngine() {
       cData.stage = getBubbleStage(cData)
       items.push(cData)
     })
+
     const today = todayIso()
     ;(cache.portals || []).filter(p => {
       if (!p.checkIn || p.status === 'cancelled') return false
@@ -327,6 +361,7 @@ function initBubbleEngine() {
         openedAt: null, stage: 0, ax: pos.ax, ay: pos.ay
       })
     })
+
     return items.length ? items : null
   }
 
@@ -386,7 +421,6 @@ function initBubbleEngine() {
       if (document.body.getAttribute('data-panel') === 'open') {
         window.__ritaActions?.closePanel()
       }
-      // Wake card via React store
       window.__ritaActions?.wakeCard(cardKey, b.text)
       setTimeout(() => {
         const ca = document.getElementById('cardsArea')
@@ -456,10 +490,9 @@ function initBubbleEngine() {
     requestAnimationFrame(tick)
   }
 
-  initBubbles([])  // start empty — live data loads after
+  initBubbles([])
   requestAnimationFrame(tick)
 
-  // Load live pulse data
   import('../utils/api.js').then(({ apiGet }) => {
     apiGet('/api/ops-pulse').then(data => {
       window.__pulseCache = data
