@@ -272,6 +272,17 @@ exports.handler = async (event, context) => {
         ctx += 'OPEN QUESTIONS FOR STAFF:\n'
         d.openQuestions.forEach((q) => { ctx += '  - ' + q + '\n' })
       }
+      if (d.bookingStats) {
+        const bs = d.bookingStats
+        ctx += 'BOOKING DATABASE STATS:\n'
+        ctx += '  Total bookings in DB: ' + bs.total + '\n'
+        ctx += '  Past: ' + bs.past + ' · Current: ' + bs.current + ' · Future: ' + bs.future + '\n'
+        ctx += '  Future breakdown: ' + bs.futureGroups + ' groups, ' + bs.futureIndividual + ' individual, ' + bs.futureGuests + ' total guests\n'
+        ctx += '  Next 90 days: ' + bs.next90.bookings + ' bookings (' + bs.next90.groups + ' groups, ' + bs.next90.individual + ' individual, ' + bs.next90.guests + ' guests)\n'
+        if (bs.bySource) {
+          ctx += '  By source: ' + Object.entries(bs.bySource).map(([k, v]) => k + ': ' + v).join(', ') + '\n'
+        }
+      }
       ctx += '--- END LIVE DATA ---\n'
       ctx += 'IMPORTANT: This IS the real database. Answer ONLY from this data. If a person or item is not listed here, say so directly — do not invent or guess.\n'
       systemPrompt += ctx
