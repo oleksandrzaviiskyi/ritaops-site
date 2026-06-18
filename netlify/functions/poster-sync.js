@@ -30,11 +30,10 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Запрашиваем параллельно: склады, ингредиенты с остатками, категории
-    const [storages, ingredients, categories] = await Promise.all([
+    // Запрашиваем параллельно: склады и ингредиенты с остатками
+    const [storages, ingredients] = await Promise.all([
       posterGet('storage.getStorages'),
-      posterGet('storage.getIngredients'),
-      posterGet('menu.getCategories')
+      posterGet('menu.getIngredients')
     ])
 
     // Группируем ингредиенты по складам
