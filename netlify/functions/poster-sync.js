@@ -35,6 +35,7 @@ exports.handler = async (event) => {
       posterGet('storage.getStorages'),
       posterGet('menu.getIngredients')
     ])
+    console.log('INGREDIENTS SAMPLE:', JSON.stringify((ingredients || []).slice(0, 2)))
 
     // Группируем ингредиенты по складам
     const byStorage = {}
