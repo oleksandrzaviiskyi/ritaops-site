@@ -29,6 +29,11 @@
   status = 200
 
 [[redirects]]
+  from = "/guest/:slug"
+  to = "/guest.html"
+  status = 200
+
+[[redirects]]
   from = "/groups"
   to = "/portals-list.html"
   status = 200
