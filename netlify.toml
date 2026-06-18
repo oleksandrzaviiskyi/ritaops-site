@@ -24,6 +24,11 @@
   status = 200
 
 [[redirects]]
+  from = "/group-portal/:slug"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
   from = "/portal/:slug"
   to = "/portal.html"
   status = 200
