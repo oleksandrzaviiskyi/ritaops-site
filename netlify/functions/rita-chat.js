@@ -283,6 +283,22 @@ exports.handler = async (event, context) => {
           ctx += '  By source: ' + Object.entries(bs.bySource).map(([k, v]) => k + ': ' + v).join(', ') + '\n'
         }
       }
+      if (d.posterInventory?.storages?.length) {
+        ctx += 'POSTER POS INVENTORY:\n'
+        d.posterInventory.storages.forEach(s => {
+          if (s.items?.length) {
+            ctx += '  ' + s.name + ':\n'
+            s.items.forEach(i => {
+              ctx += '    - ' + i.name + ': ' + i.inStock + ' ' + i.unit +
+                (i.minStock > 0 ? ' (min: ' + i.minStock + ')' : '') +
+                (i.needsReorder ? ' ⚠️ NEEDS REORDER' : '') + '\n'
+            })
+          }
+        })
+        if (d.posterInventory.needsReorder?.length) {
+          ctx += '  NEEDS REORDER: ' + d.posterInventory.needsReorder.map(i => i.name).join(', ') + '\n'
+        }
+      }
       ctx += '--- END LIVE DATA ---\n'
       ctx += 'IMPORTANT: This IS the real database. Answer ONLY from this data. If a person or item is not listed here, say so directly — do not invent or guess.\n'
       systemPrompt += ctx
