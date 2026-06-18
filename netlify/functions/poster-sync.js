@@ -9,8 +9,9 @@ const cors = {
   'Cache-Control': 'no-store'
 }
 
-async function posterGet(method) {
-  const url = `${POSTER_BASE}/${method}?token=${POSTER_TOKEN}`
+async function posterGet(method, extraParams = {}) {
+  const params = new URLSearchParams({token: POSTER_TOKEN, ...extraParams})
+  const url = `${POSTER_BASE}/${method}?${params}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Poster API error: ${res.status} ${method}`)
   const json = await res.json()
@@ -34,7 +35,7 @@ exports.handler = async (event) => {
 
     const storageItems = await Promise.all(
       (storages || []).map(s =>
-        posterGet(`storage.getStorageLeftovers&storage_id=${s.storage_id}`)
+        posterGet('storage.getStorageLeftovers', {storage_id: s.storage_id})
           .then(items => ({storageId: s.storage_id, name: s.storage_name, items: items || []}))
           .catch(() => ({storageId: s.storage_id, name: s.storage_name, items: []}))
       )
