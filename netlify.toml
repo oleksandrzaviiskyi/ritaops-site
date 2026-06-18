@@ -17,6 +17,22 @@
   to = "/living-ops-app/index.html"
   status = 200
 
+# Group portal pages
+[[redirects]]
+  from = "/ops/group"
+  to = "/ops-group.html"
+  status = 200
+
+[[redirects]]
+  from = "/portal/:slug"
+  to = "/portal.html"
+  status = 200
+
+[[redirects]]
+  from = "/groups"
+  to = "/portals-list.html"
+  status = 200
+
 [[redirects]]
   from = "/api/poster-sync"
   to = "/.netlify/functions/poster-sync"
