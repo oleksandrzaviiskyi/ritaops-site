@@ -120,24 +120,28 @@ async function getPosterInventory() {
     const storagesRes = await fetch(`${base}/storage.getStorages?token=${token}`)
     const storagesData = await storagesRes.json()
     const storages = storagesData.response || []
+    console.log('[poster] storages:', JSON.stringify(storages.slice(0, 2)))
 
     // Получаем остатки по каждому складу
     const storageItems = await Promise.all(
       storages.map(s =>
         fetch(`${base}/storage.getStorageLeftovers?token=${token}&storage_id=${s.storage_id}`)
           .then(r => r.json())
-          .then(d => ({
-            storageId: String(s.storage_id),
-            name: s.storage_name,
-            items: (d.response || []).map(i => ({
-              id: String(i.ingredient_id),
-              name: i.ingredient_name,
-              unit: i.ingredient_unit,
-              inStock: parseFloat(i.ingredient_left || 0),
-              minStock: parseFloat(i.limit_value || 0),
-              needsReorder: parseFloat(i.ingredient_left || 0) <= parseFloat(i.limit_value || 0) && parseFloat(i.limit_value || 0) > 0
-            }))
-          }))
+          .then(d => {
+            console.log('[poster] storage leftovers raw:', JSON.stringify((d.response || []).slice(0, 2)))
+            return {
+              storageId: String(s.storage_id),
+              name: s.storage_name,
+              items: (d.response || []).map(i => ({
+                id: String(i.ingredient_id),
+                name: i.ingredient_name,
+                unit: i.ingredient_unit,
+                inStock: parseFloat(i.ingredient_left || 0),
+                minStock: parseFloat(i.limit_value || 0),
+                needsReorder: parseFloat(i.ingredient_left || 0) <= parseFloat(i.limit_value || 0) && parseFloat(i.limit_value || 0) > 0
+              }))
+            }
+          })
           .catch(() => ({storageId: String(s.storage_id), name: s.storage_name, items: []}))
       )
     )
