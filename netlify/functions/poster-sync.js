@@ -30,46 +30,31 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Запрашиваем параллельно: склады и ингредиенты с остатками
-    const [storages, ingredients] = await Promise.all([
-      posterGet('storage.getStorages'),
-      posterGet('menu.getIngredients')
-    ])
-    console.log('INGREDIENTS SAMPLE:', JSON.stringify((ingredients || []).slice(0, 2)))
+    const storages = await posterGet('storage.getStorages')
 
-    // Группируем ингредиенты по складам
-    const byStorage = {}
-    for (const item of ingredients || []) {
-      const storageId = item.storage_id || 'main'
-      if (!byStorage[storageId]) byStorage[storageId] = []
-      byStorage[storageId].push({
-        id: item.ingredient_id,
-        name: item.ingredient_name,
-        unit: item.ingredient_unit,
-        inStock: parseFloat(item.ingredient_left || 0),
-        minStock: parseFloat(item.ingredient_limit || 0),
-        needsReorder: parseFloat(item.ingredient_left || 0) <= parseFloat(item.ingredient_limit || 0)
-      })
-    }
+    const storageItems = await Promise.all(
+      (storages || []).map(s =>
+        posterGet(`storage.getStorageLeftovers&storage_id=${s.storage_id}`)
+          .then(items => ({storageId: s.storage_id, name: s.storage_name, items: items || []}))
+          .catch(() => ({storageId: s.storage_id, name: s.storage_name, items: []}))
+      )
+    )
 
-    // Строим итоговый список по складам
-    const result = (storages || []).map(s => ({
-      storageId: s.storage_id,
-      name: s.storage_name,
-      items: byStorage[s.storage_id] || []
-    }))
-
-    // Список всего что нужно дозакупить
-    const needsReorder = (ingredients || [])
-      .filter(i => parseFloat(i.ingredient_left || 0) <= parseFloat(i.ingredient_limit || 0))
-      .map(i => ({
+    const result = storageItems.map(s => ({
+      storageId: s.storageId,
+      name: s.name,
+      items: (s.items || []).map(i => ({
         id: i.ingredient_id,
         name: i.ingredient_name,
         unit: i.ingredient_unit,
         inStock: parseFloat(i.ingredient_left || 0),
-        minStock: parseFloat(i.ingredient_limit || 0),
-        shortage: parseFloat(i.ingredient_limit || 0) - parseFloat(i.ingredient_left || 0)
+        minStock: parseFloat(i.limit_value || 0),
+        needsReorder: parseFloat(i.ingredient_left || 0) <= parseFloat(i.limit_value || 0)
       }))
+    }))
+
+    const needsReorder = result
+      .flatMap(s => s.items.filter(i => i.needsReorder && i.minStock > 0))
 
     return {
       statusCode: 200,
