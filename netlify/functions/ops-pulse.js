@@ -72,55 +72,83 @@ const CONCERNS_OPEN_QUERY = `*[_type == "ritaConcern" && status == "open"] | ord
   "place": relatedPlace->{name, unitCode}
 }`
 
-// Aggregated booking stats — не передаём 641 строку, только цифры
 async function getBookingStats(today) {
   const allBookings = await client.fetch(
     `*[_type == "lcbrBooking"]{
       checkIn, checkOut, guestCount, isGroup, source, totalAmount
     }`
   )
-
   const total = allBookings.length
   const past = allBookings.filter(b => b.checkOut < today).length
   const future = allBookings.filter(b => b.checkIn >= today).length
   const current = allBookings.filter(b => b.checkIn <= today && b.checkOut >= today).length
-
   const futureBookings = allBookings.filter(b => b.checkIn >= today)
   const futureGroups = futureBookings.filter(b => b.isGroup).length
   const futureIndividual = futureBookings.filter(b => !b.isGroup).length
   const futureGuests = futureBookings.reduce((s, b) => s + (b.guestCount || 0), 0)
-
-  // By source
   const bySource = {}
   for (const b of allBookings) {
     const src = b.source || 'Unknown'
     bySource[src] = (bySource[src] || 0) + 1
   }
-
-  // Next 90 days
   const in90 = new Date(today)
   in90.setDate(in90.getDate() + 90)
   const in90Iso = in90.toISOString().slice(0, 10)
   const next90 = allBookings.filter(b => b.checkIn >= today && b.checkIn <= in90Iso)
-  const next90Groups = next90.filter(b => b.isGroup).length
-  const next90Individual = next90.filter(b => !b.isGroup).length
-  const next90Guests = next90.reduce((s, b) => s + (b.guestCount || 0), 0)
-
   return {
-    total,
-    past,
-    current,
-    future,
-    futureGroups,
-    futureIndividual,
-    futureGuests,
+    total, past, current, future,
+    futureGroups, futureIndividual, futureGuests,
     bySource,
     next90: {
       bookings: next90.length,
-      groups: next90Groups,
-      individual: next90Individual,
-      guests: next90Guests
+      groups: next90.filter(b => b.isGroup).length,
+      individual: next90.filter(b => !b.isGroup).length,
+      guests: next90.reduce((s, b) => s + (b.guestCount || 0), 0)
     }
+  }
+}
+
+// Poster POS — складские остатки
+async function getPosterInventory() {
+  try {
+    const token = process.env.POSTER_API_TOKEN
+    if (!token) return null
+
+    const base = `https://joinposter.com/api`
+
+    // Получаем склады
+    const storagesRes = await fetch(`${base}/storage.getStorages?token=${token}`)
+    const storagesData = await storagesRes.json()
+    const storages = storagesData.response || []
+
+    // Получаем остатки по каждому складу
+    const storageItems = await Promise.all(
+      storages.map(s =>
+        fetch(`${base}/storage.getStorageLeftovers&storage_id=${s.storage_id}?token=${token}`)
+          .then(r => r.json())
+          .then(d => ({
+            storageId: String(s.storage_id),
+            name: s.storage_name,
+            items: (d.response || []).map(i => ({
+              id: String(i.ingredient_id),
+              name: i.ingredient_name,
+              unit: i.ingredient_unit,
+              inStock: parseFloat(i.ingredient_left || 0),
+              minStock: parseFloat(i.limit_value || 0),
+              needsReorder: parseFloat(i.ingredient_left || 0) <= parseFloat(i.limit_value || 0) && parseFloat(i.limit_value || 0) > 0
+            }))
+          }))
+          .catch(() => ({storageId: String(s.storage_id), name: s.storage_name, items: []}))
+      )
+    )
+
+    const needsReorder = storageItems
+      .flatMap(s => s.items.filter(i => i.needsReorder))
+
+    return { storages: storageItems, needsReorder, syncedAt: new Date().toISOString() }
+  } catch (err) {
+    console.error('[poster] error:', err.message)
+    return null
   }
 }
 
@@ -172,15 +200,13 @@ function findGroupTurnovers(portals) {
 }
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return {statusCode: 204, headers: cors}
-  }
+  if (event.httpMethod === 'OPTIONS') return {statusCode: 204, headers: cors}
   if (event.httpMethod !== 'GET') {
     return {statusCode: 405, headers: cors, body: JSON.stringify({error: 'Method not allowed'})}
   }
 
   try {
-    const body = event.httpMethod === 'GET' ? null : JSON.parse(event.body || '{}')
+    const body = null
     if (!staffAuthorized(event, body, context)) {
       return {statusCode: 401, headers: cors, body: JSON.stringify({error: 'Staff auth required'})}
     }
@@ -188,16 +214,9 @@ exports.handler = async (event, context) => {
     const today = new Date().toISOString().slice(0, 10)
 
     const [
-      pulse,
-      places,
-      concernsRaw,
-      people,
-      responsibilities,
-      portals,
-      roomingLists,
-      openQuestions,
-      openConcerns,
-      bookingStats
+      pulse, places, concernsRaw, people, responsibilities,
+      portals, roomingLists, openQuestions, openConcerns,
+      bookingStats, posterInventory
     ] = await Promise.all([
       client.fetch(PULSE_QUERY),
       client.fetch(PLACES_QUERY),
@@ -208,12 +227,12 @@ exports.handler = async (event, context) => {
       client.fetch(ROOMING_QUERY),
       client.fetch(RITA_QUESTIONS_QUERY),
       client.fetch(CONCERNS_OPEN_QUERY),
-      getBookingStats(today)
+      getBookingStats(today),
+      getPosterInventory()
     ])
 
-    const concerns = (concernsRaw || []).map((c) => ({
-      ...c,
-      deptDetails: deptDetailsFromTasks(c.openTasks)
+    const concerns = (concernsRaw || []).map(c => ({
+      ...c, deptDetails: deptDetailsFromTasks(c.openTasks)
     }))
 
     const field = buildFieldPulse(places || [], concernsRaw || [])
@@ -224,8 +243,7 @@ exports.handler = async (event, context) => {
       headers: cors,
       body: JSON.stringify({
         pulse: pulse || {},
-        field,
-        concerns,
+        field, concerns,
         places: places || [],
         people: people || [],
         responsibilities: responsibilities || [],
@@ -234,7 +252,8 @@ exports.handler = async (event, context) => {
         openQuestions: openQuestions || [],
         openConcerns: openConcerns || [],
         groupTurnovers,
-        bookingStats
+        bookingStats,
+        posterInventory
       })
     }
   } catch (err) {
