@@ -124,7 +124,7 @@ async function getPosterInventory() {
     // Получаем остатки по каждому складу
     const storageItems = await Promise.all(
       storages.map(s =>
-        fetch(`${base}/storage.getStorageLeftovers&storage_id=${s.storage_id}?token=${token}`)
+        fetch(`${base}/storage.getStorageLeftovers?token=${token}&storage_id=${s.storage_id}`)
           .then(r => r.json())
           .then(d => ({
             storageId: String(s.storage_id),
