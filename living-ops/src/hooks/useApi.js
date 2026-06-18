@@ -1,4 +1,4 @@
-import { apiGet, tag, fmtDate, formatBalance, todayIso } from '../utils/api.js'
+import { apiGet, fmtDate, todayIso } from '../utils/api.js'
 import { actions, useStore } from './useStore.js'
 
 function buildLiveContext(pulseCache, portalsCache) {
@@ -69,8 +69,8 @@ function buildLiveContext(pulseCache, portalsCache) {
       ).join(' | ')
     })),
     openQuestions: (p.openQuestions || []).map(q => q.question),
-    // Booking stats from lcbrBooking
-    bookingStats: p.bookingStats || null
+    bookingStats: p.bookingStats || null,
+    posterInventory: p.posterInventory || null
   }
 }
 
