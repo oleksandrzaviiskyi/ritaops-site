@@ -9,7 +9,8 @@ const STAGE_LABELS = {
   'concern-new': 'Новая задача',
   question: 'Рита наблюдает',
   event: 'Заезд',
-  turnover: 'Смена групп'
+  turnover: 'Смена групп',
+  shortage: 'Дефицит склада'
 }
 
 const STAGE_TT_COLORS = {
@@ -17,7 +18,8 @@ const STAGE_TT_COLORS = {
   'concern-new': '#a06b0a',
   question: '#d98a2b',
   event: '#3a7a55',
-  turnover: '#6b3fa0'
+  turnover: '#6b3fa0',
+  shortage: '#8a5a2b'
 }
 
 const STAGE_COLORS = [
@@ -129,6 +131,25 @@ function buildBubbleDataFromLive(cache) {
       status: 'open',
       openedAt: null,
       stage: 0,
+      ax: pos.ax,
+      ay: pos.ay
+    })
+  })
+
+  ;(cache.posterInventory?.needsReorder || []).slice(0, 8).forEach(item => {
+    const pos = nextBubblePos(idx++)
+    const outOfStock = item.inStock <= 0
+    items.push({
+      id: 'shortage-' + item.id,
+      type: 'shortage',
+      size: outOfStock ? 56 : 48,
+      text: item.name + ': ' + item.inStock + ' ' + item.unit +
+        (item.minStock > 0 ? ' (мин: ' + item.minStock + ')' : ''),
+      dept: outOfStock ? 'Склад · нет в наличии' : 'Склад · нужен заказ',
+      cardKey: 'purchase',
+      status: 'open',
+      openedAt: null,
+      stage: outOfStock ? 0 : 1,
       ax: pos.ax,
       ay: pos.ay
     })
