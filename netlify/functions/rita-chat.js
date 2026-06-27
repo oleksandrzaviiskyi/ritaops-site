@@ -69,8 +69,23 @@ function needsPropertyContext(text) {
   return OPERATIONAL_KEYWORDS.some((kw) => q.includes(kw))
 }
 
+function getSantoDomingoNow() {
+  const now = new Date()
+  const formatted = now.toLocaleString('ru-RU', {
+    timeZone: 'America/Santo_Domingo',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  return formatted
+}
+
 function buildSystemPrompt() {
-  return BASE_SYSTEM_PROMPT
+  const dateLine = `\n\nТЕКУЩАЯ ДАТА И ВРЕМЯ (Las Canas Beach Retreat, America/Santo_Domingo, UTC-4): ${getSantoDomingoNow()}\nИспользуй эту дату как точку отсчёта для "сегодня", "завтра", "на этой неделе", "ближайшие заезды" и любых других относительных временных выражений.`
+  return BASE_SYSTEM_PROMPT + dateLine
 }
 
 function anthropicErrorReply(error) {
