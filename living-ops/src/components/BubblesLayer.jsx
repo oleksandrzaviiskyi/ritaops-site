@@ -90,7 +90,7 @@ function buildBubbleDataFromLive(cache) {
 
   ;(cache.openConcerns || []).slice(0, 6).forEach(c => {
     const hours = c.openedAt ? (Date.now() - new Date(c.openedAt).getTime()) / 3600000 : 0
-    const isGroupInfo = /EF|368297|371|grup|group|pax|habitaci/i.test(c.summary || '')
+    const isGroupInfo = /\bEF\s?\d{3,}\b|\b368297\b|\b371\b|\bgrupo?s?\b|\bgroups?\b|\bpax\b|habitaci/i.test(c.summary || '')
     if (isGroupInfo) return
     const place = c.place?.name || c.place?.unitCode || 'Place'
     const pos = nextBubblePos(idx++)
