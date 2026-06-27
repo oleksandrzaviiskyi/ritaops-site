@@ -8,6 +8,7 @@ let state = {
   trayChips: [],         // minimized cards: [{key, title}]
   pulseCache: null,
   portalsCache: null,
+  bubbles: [],           // bubble definitions for BubblesLayer (replaces window.lf* globals)
   chatHistory: (() => {
     try {
       const saved = localStorage.getItem('rita_chat_history_v2')
@@ -104,6 +105,44 @@ export const actions = {
       try { localStorage.setItem('rita_chat_history_v2', JSON.stringify(updated.slice(-30))) } catch {}
       return { chatHistory: updated }
     })
+  },
+
+  // --- Bubble actions (replace former window.lfRestoreBubble / window.lfSetBubbleResolved) ---
+
+  setBubbles(list) {
+    setState({ bubbles: Array.isArray(list) ? list : [] })
+  },
+
+  removeBubble(id) {
+    setState(s => ({ bubbles: s.bubbles.filter(b => b.id !== id) }))
+  },
+
+  openBubble(bubbleId, cardKey) {
+    setState(s => ({
+      bubbles: s.bubbles.map(b =>
+        b.id === bubbleId ? { ...b, open: true, openedCardKey: cardKey } : b
+      )
+    }))
+  },
+
+  // Card was closed/minimized by the user — send its bubble back into the flow.
+  restoreBubbleByCardKey(cardKey) {
+    setState(s => ({
+      bubbles: s.bubbles.map(b =>
+        b.open && b.openedCardKey === cardKey ? { ...b, open: false, openedCardKey: null } : b
+      )
+    }))
+  },
+
+  // Concern/task was resolved — advance the bubble to stage 2 (flower of life) and let it fade.
+  resolveBubbleByCardKey(cardKey) {
+    setState(s => ({
+      bubbles: s.bubbles.map(b =>
+        (b.openedCardKey === cardKey || b.cardKey === cardKey)
+          ? { ...b, stage: 2, stageProgress: 0 }
+          : b
+      )
+    }))
   },
 
   getState: () => state

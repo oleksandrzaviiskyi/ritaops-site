@@ -16,9 +16,6 @@ export default function App() {
       data-panel={panelOpen ? 'open' : 'closed'}
       style={{ height: '100%' }}
     >
-      {/* Tooltip element for bubbles — kept outside React render tree */}
-      <div className="lf-tt" id="lf-tt" />
-
       <Tray />
 
       <CornerLogo />
@@ -30,7 +27,7 @@ export default function App() {
 
       <SummonButton />
 
-      {/* BubblesLayer mounts canvas bubbles as vanilla JS into document.body */}
+      {/* BubblesLayer renders its own bubbles + tooltip as real React elements */}
       <BubblesLayer />
     </div>
   )

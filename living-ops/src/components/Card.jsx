@@ -212,7 +212,7 @@ export default function Card({ cardKey, hidden }) {
 
   function handleResolve() {
     setResolved(true)
-    if (typeof window.lfSetBubbleResolved === 'function') window.lfSetBubbleResolved(cardKey)
+    actions.resolveBubbleByCardKey(cardKey)
     apiPost('/api/rita-chat', {
       message: 'Задача закрыта: ' + cardData.title,
       history: [],
@@ -263,7 +263,7 @@ export default function Card({ cardKey, hidden }) {
             title="Закрыть"
             onClick={() => {
               actions.removeCard(cardKey)
-              if (typeof window.lfRestoreBubble === 'function') window.lfRestoreBubble(cardKey)
+              actions.restoreBubbleByCardKey(cardKey)
             }}
           >×</button>
         </div>
