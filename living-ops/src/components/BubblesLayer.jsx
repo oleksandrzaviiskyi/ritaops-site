@@ -358,7 +358,16 @@ export default function BubblesLayer() {
     const ids = new Set(bubbles.map(b => b.id))
     bubbles.forEach(b => {
       if (!sims.has(b.id)) sims.set(b.id, createSim(b, vw, vh))
-      sims.get(b.id).stage = Math.max(sims.get(b.id).stage, b.stage || 0)
+      const sim = sims.get(b.id)
+      const incomingStage = b.stage || 0
+      // Freshly resolved (stage just became 2, e.g. via "Задача закрыта"):
+      // replay the bloom-into-flower animation from the start instead of
+      // snapping straight to the end state.
+      if (incomingStage === 2 && sim.stage !== 2) {
+        sim.stageProgress = 0
+        sim.resolveProgress = 0
+      }
+      sim.stage = Math.max(sim.stage, incomingStage)
     })
     // Drop sim state for bubbles that no longer exist.
     for (const id of Array.from(sims.keys())) {
