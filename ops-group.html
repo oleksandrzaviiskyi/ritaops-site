@@ -889,6 +889,21 @@
         return n > 0 ? n : null
       }
 
+      /** YYYY-MM-DD in Las Canas local time, comparable lexicographically with Sanity `date` fields. */
+      function santoDomingoDateStr() {
+        try {
+          return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Santo_Domingo'})
+        } catch {
+          return new Date().toISOString().slice(0, 10)
+        }
+      }
+
+      /** A group whose guests have already left has nothing left to cancel — it gets auto-archived instead. */
+      function isPastGroup(p) {
+        if (!p.checkOut) return false
+        return p.checkOut < santoDomingoDateStr()
+      }
+
       function ringStyle(pct) {
         const p = Math.min(100, Math.max(0, pct))
         return `background: conic-gradient(var(--accent) ${p * 3.6}deg, var(--border) 0)`
@@ -1521,7 +1536,7 @@
           ${renderGuestSubmissions(guests)}
 
           ${
-            hasStaffKeyInUrl() && p.status !== 'cancelled'
+            hasStaffKeyInUrl() && p.status !== 'cancelled' && p.status !== 'archived' && !isPastGroup(p)
               ? `<div class="ops-cancel-footer">
             <button type="button" class="ops-btn ops-btn-danger" id="btnCancelGroup">Cancel group</button>
           </div>`
