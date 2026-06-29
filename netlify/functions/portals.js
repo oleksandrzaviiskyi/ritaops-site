@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
 
     const portals = raw
       .filter(isValidPortal)
-      .filter((doc) => doc.status !== 'cancelled')
+      .filter((doc) => doc.status !== 'cancelled' && doc.status !== 'archived')
       .map((doc) => {
         const enriched = enrichPortal(doc)
         const base = {
