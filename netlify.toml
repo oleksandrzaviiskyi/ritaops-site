@@ -6,6 +6,9 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[functions."archive-departed-groups"]
+  schedule = "0 12 * * *"
+
 # Dashboard (React app)
 [[redirects]]
   from = "/living-ops"
