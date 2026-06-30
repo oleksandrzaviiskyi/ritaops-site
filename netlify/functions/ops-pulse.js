@@ -48,6 +48,7 @@ const RESPONSIBILITY_QUERY = `*[_type == "responsibilityDomain"]{
 
 const PORTALS_QUERY = `*[_type == "groupPortal" && status != "cancelled"] | order(checkIn asc) {
   _id,
+  ritaRef,
   "title": groupName,
   groupName,
   checkIn,
