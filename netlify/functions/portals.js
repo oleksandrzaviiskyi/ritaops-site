@@ -11,7 +11,7 @@ const client = createClient({
 })
 
 const LIST_QUERY = `*[_type == "groupPortal"] | order(checkIn asc) {
-  _id, groupName, checkIn, checkOut, totalGuests, adults, children, eventType,
+  _id, ritaRef, groupName, checkIn, checkOut, totalGuests, adults, children, eventType,
   status, progressPercent, lastPortalSaveAt,
   "slug": portalSlug.current,
   portalAccessToken,
@@ -36,6 +36,7 @@ exports.handler = async (event, context) => {
         const enriched = enrichPortal(doc)
         const base = {
           _id: enriched._id,
+          ritaRef: doc.ritaRef || null,
           groupName: enriched.groupName,
           checkIn: enriched.checkIn,
           checkOut: enriched.checkOut,
