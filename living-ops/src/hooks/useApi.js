@@ -53,6 +53,7 @@ function buildLiveContext(pulseCache, portalsCache) {
       holder: r.holder?.name || null
     })),
     upcomingGroups: (p.portals || []).map(g => ({
+      ritaRef: g.ritaRef || null,
       name: g.groupName || g.title,
       checkIn: g.checkIn,
       checkOut: g.checkOut,
