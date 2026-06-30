@@ -34,6 +34,8 @@ Respond only to the questions asked. Be direct and natural.
 
 КРИТИЧЕСКИ ВАЖНО — НЕ СМЕШИВАЙ ТЕМЫ: Если новый вопрос менеджера не связан с темой, которая обсуждалась в предыдущих сообщениях (даже если та тема была не закрыта, была критичной, или ты сама недавно извинялась/комментировала её), отвечай ТОЛЬКО на новый вопрос. Не добавляй "кстати, насчёт предыдущей проблемы...", не извиняйся за прошлые темы, не упоминай прошлый контекст, если тебя не спросили напрямую. Каждый новый вопрос обрабатывай так, будто это начало нового разговора, если он явно про другое.
 
+КРИТИЧЕСКИ ВАЖНО — НЕ ПУТАЙ "НЕТ ДАННЫХ" С "НЕ СУЩЕСТВУЕТ": Если в LIVE DATA не оказалось какой-то информации (меню, склад, бронирования), никогда не говори "это не задокументировано в системе" или похожие фразы, утверждающие, что данных нет в принципе. Ты не знаешь, существуют ли эти данные на самом деле — ты знаешь только то, что они не попали в твой текущий контекст. Говори честно: "у меня сейчас нет доступа к этим данным" или "в переданном мне срезе данных этого нет — уточни у [ответственного]". Не делай выводов о реальности на основе пробелов в собственном доступе.
+
 When someone says "thank you" or similar — respond with one short natural phrase or nothing. Never say "You're welcome" or "Добро пожаловать" formally.
 
 When asked "who are you" or "tell me about yourself" — respond naturally and briefly, in 2-3 sentences maximum.
@@ -301,7 +303,7 @@ exports.handler = async (event, context) => {
         }
       }
       if (d.posterInventory?.storages?.length) {
-        ctx += 'POSTER POS INVENTORY:\n'
+        ctx += 'POSTER POS INVENTORY (сырьё/ингредиенты на складе):\n'
         d.posterInventory.storages.forEach(s => {
           if (s.items?.length) {
             ctx += '  ' + s.name + ':\n'
@@ -315,6 +317,21 @@ exports.handler = async (event, context) => {
         if (d.posterInventory.needsReorder?.length) {
           ctx += '  NEEDS REORDER: ' + d.posterInventory.needsReorder.map(i => i.name).join(', ') + '\n'
         }
+      }
+      if (d.posterMenu?.items?.length) {
+        ctx += 'POSTER POS MENU (готовые блюда и напитки, которые подаются гостям):\n'
+        const byCategory = {}
+        d.posterMenu.items.forEach(item => {
+          const cat = item.category || 'Без категории'
+          if (!byCategory[cat]) byCategory[cat] = []
+          byCategory[cat].push(item)
+        })
+        Object.entries(byCategory).forEach(([cat, items]) => {
+          ctx += '  ' + cat + ':\n'
+          items.forEach(i => {
+            ctx += '    - ' + i.name + (i.price != null ? ' — $' + i.price.toFixed(2) : '') + '\n'
+          })
+        })
       }
       ctx += '--- END LIVE DATA ---\n'
       ctx += 'IMPORTANT: This IS the real database. Answer ONLY from this data. If a person or item is not listed here, say so directly — do not invent or guess.\n'

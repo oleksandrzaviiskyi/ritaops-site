@@ -108,7 +108,7 @@ async function getBookingStats(today) {
   }
 }
 
-// Poster POS — складские остатки
+// Poster POS — складские остатки (сырьё/ингредиенты, не готовые блюда)
 async function getPosterInventory() {
   try {
     const token = process.env.POSTER_API_TOKEN
@@ -152,6 +152,55 @@ async function getPosterInventory() {
     return { storages: storageItems, needsReorder, syncedAt: new Date().toISOString() }
   } catch (err) {
     console.error('[poster] error:', err.message)
+    return null
+  }
+}
+
+// Poster POS — меню (готовые блюда и напитки, видимые в /manage/dishes).
+// Отдельно от getPosterInventory(): инвентарь — это сырьё на складе (ингредиенты),
+// а меню — это то, что реально подаётся гостям (название, категория, цена).
+// Без этого Rita физически не видит список коктейлей/блюд и ошибочно говорит
+// "не задокументировано", хотя данные есть в Poster — просто не были подключены.
+async function getPosterMenu() {
+  try {
+    const token = process.env.POSTER_API_TOKEN
+    if (!token) return null
+
+    const base = `https://joinposter.com/api`
+
+    const [categoriesRes, productsRes] = await Promise.all([
+      fetch(`${base}/menu.getCategories?token=${token}`).then(r => r.json()),
+      fetch(`${base}/menu.getProducts?token=${token}`).then(r => r.json())
+    ])
+
+    const categories = categoriesRes.response || []
+    const products = productsRes.response || []
+
+    const categoryNameById = new Map(
+      categories.map(c => [String(c.category_id), c.category_name])
+    )
+
+    const items = products
+      .filter(p => p.hidden !== '1')
+      .map(p => {
+        // price comes per spot (point of sale); take the first available price
+        const priceObj = Array.isArray(p.price) ? p.price[0] : p.price
+        const priceRaw = priceObj && typeof priceObj === 'object'
+          ? Object.values(priceObj)[0]
+          : priceObj
+        const price = priceRaw != null ? parseFloat(priceRaw) / 100 : null
+        return {
+          id: String(p.product_id),
+          name: p.product_name,
+          categoryId: String(p.menu_category_id || ''),
+          category: categoryNameById.get(String(p.menu_category_id)) || 'Без категории',
+          price
+        }
+      })
+
+    return { items, syncedAt: new Date().toISOString() }
+  } catch (err) {
+    console.error('[poster] menu error:', err.message)
     return null
   }
 }
@@ -220,7 +269,7 @@ exports.handler = async (event, context) => {
     const [
       pulse, places, concernsRaw, people, responsibilities,
       portals, roomingLists, openQuestions, openConcerns,
-      bookingStats, posterInventory
+      bookingStats, posterInventory, posterMenu
     ] = await Promise.all([
       client.fetch(PULSE_QUERY),
       client.fetch(PLACES_QUERY),
@@ -232,7 +281,8 @@ exports.handler = async (event, context) => {
       client.fetch(RITA_QUESTIONS_QUERY),
       client.fetch(CONCERNS_OPEN_QUERY),
       getBookingStats(today),
-      getPosterInventory()
+      getPosterInventory(),
+      getPosterMenu()
     ])
 
     const concerns = (concernsRaw || []).map(c => ({
@@ -257,7 +307,8 @@ exports.handler = async (event, context) => {
         openConcerns: openConcerns || [],
         groupTurnovers,
         bookingStats,
-        posterInventory
+        posterInventory,
+        posterMenu
       })
     }
   } catch (err) {

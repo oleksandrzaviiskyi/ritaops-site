@@ -70,7 +70,8 @@ function buildLiveContext(pulseCache, portalsCache) {
     })),
     openQuestions: (p.openQuestions || []).map(q => q.question),
     bookingStats: p.bookingStats || null,
-    posterInventory: p.posterInventory || null
+    posterInventory: p.posterInventory || null,
+    posterMenu: p.posterMenu || null
   }
 }
 
@@ -83,9 +84,6 @@ export function useApi() {
   async function loadPulseData() {
     const data = await apiGet('/api/ops-pulse')
     actions.setPulseCache(data)
-    if (typeof window.lfRefreshBubblesFromLive === 'function') {
-      window.lfRefreshBubblesFromLive()
-    }
     return data
   }
 
