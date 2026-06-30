@@ -10,6 +10,9 @@ const {generateRitaRef} = require('./lib/ritaRef')
 // explicit propertyCode in the request body) instead of a constant.
 const DEFAULT_PROPERTY_CODE = 'LCBR'
 
+// NOTE: token re-read forces a fresh Lambda cold start on deploy, ensuring
+// warm containers don't keep serving a since-rotated/deleted Sanity token
+// (root cause of an "Unauthorized - Session not found" incident on 2026-06-30).
 const client = createClient({
   projectId: '0po0panc',
   dataset: 'production',
