@@ -139,6 +139,10 @@
         <div id="modalSuccessView" hidden>
           <p class="ops-modal-success">✅ Group created!</p>
           <div class="ops-modal-link-row">
+            <strong>RitaRef</strong>
+            <p id="successRitaRef"></p>
+          </div>
+          <div class="ops-modal-link-row">
             <strong>Organizer link</strong>
             <p id="successOrganizerLink"></p>
             <button type="button" class="ops-btn" id="copySuccessOrganizer">Copy</button>
@@ -157,6 +161,7 @@
 
     <script>
       const STATUS = {
+        draft: 'Draft',
         new: 'New',
         in_progress: 'In progress',
         menu_done: 'Menu',
@@ -333,6 +338,7 @@
             return `
           <a class="ops-group-card${isNew ? ' new-group' : ''}" href="${groupHref}" data-slug="${escapeHtml(p.slug)}">
             ${isNew ? '<span class="ops-badge">New group</span>' : `<span class="ops-badge">${escapeHtml(STATUS[p.status] || p.status)}</span>`}
+            ${p.ritaRef ? `<p style="margin:0 0 0.25rem;font-size:0.78rem;font-weight:600;color:var(--muted);letter-spacing:0.02em">${escapeHtml(p.ritaRef)}</p>` : ''}
             <h3 style="margin:0 0 0.5rem;color:var(--ocean)">${escapeHtml(p.groupName)}</h3>
             <p style="margin:0 0 0.35rem;font-size:0.88rem;color:var(--muted)">${escapeHtml(formatDates(p.checkIn, p.checkOut))}${nights ? ` · ${nights} nights` : ''}</p>
             ${categoryLabel ? `<p style="margin:0 0 0.35rem;font-size:0.82rem;color:var(--accent)">${escapeHtml(categoryLabel)}</p>` : ''}
@@ -405,6 +411,7 @@
 
           successOrganizerLink = json.organizerLink
           successGuestLink = json.guestLink
+          document.getElementById('successRitaRef').textContent = json.ritaRef || '—'
           document.getElementById('successOrganizerLink').textContent = successOrganizerLink
           document.getElementById('successGuestLink').textContent = successGuestLink
           modalFormView.hidden = true
