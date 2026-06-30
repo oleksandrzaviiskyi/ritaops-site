@@ -4,6 +4,7 @@ const {portalJoinCode} = require('./lib/joinCode')
 const {uniqueSlug} = require('./lib/slugFromGroup')
 const {staffAuthorized} = require('./lib/staffAuth')
 const {generateRitaRef} = require('./lib/ritaRef')
+const {sendEmail, organizerWelcomeHtml} = require('./lib/sendEmail')
 
 // Single property today (Las Canas Beach Retreat). When RitaOps serves
 // more than one hotel, this becomes a lookup (e.g. by subdomain or an
@@ -95,6 +96,31 @@ exports.handler = async (event, context) => {
     const proto = event.headers['x-forwarded-proto'] || 'https'
     const base = `${proto}://${host}`
     const code = portalJoinCode(slug, portalAccessToken)
+    const organizerLink = `${base}/join/${encodeURIComponent(code)}`
+    const guestLink = `${base}/guest/${encodeURIComponent(slug)}`
+
+    // Письмо организатору — best-effort: ошибка отправки не должна
+    // ломать создание группы (организатор всё равно увидит ссылку
+    // на экране сразу после Create Group, письмо — дополнительный канал).
+    let emailResult = null
+    if (doc.organizerEmail) {
+      emailResult = await sendEmail({
+        to: doc.organizerEmail,
+        subject: `Your group ${groupName} — booking reference ${ritaRef}`,
+        html: organizerWelcomeHtml({
+          groupName,
+          ritaRef,
+          checkIn: doc.checkIn,
+          checkOut: doc.checkOut,
+          organizerLink,
+          guestLink,
+          organizerName: body.organizerName
+        })
+      })
+      if (!emailResult.ok) {
+        console.warn('[create-group] organizer email failed:', emailResult.error)
+      }
+    }
 
     return {
       statusCode: 200,
@@ -102,8 +128,9 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         ritaRef,
         slug,
-        organizerLink: `${base}/join/${encodeURIComponent(code)}`,
-        guestLink: `${base}/guest/${encodeURIComponent(slug)}`
+        organizerLink,
+        guestLink,
+        emailSent: emailResult ? emailResult.ok : false
       })
     }
   } catch (err) {
