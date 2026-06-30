@@ -3,12 +3,18 @@ const {createClient} = require('@sanity/client')
 const {portalJoinCode} = require('./lib/joinCode')
 const {uniqueSlug} = require('./lib/slugFromGroup')
 const {staffAuthorized} = require('./lib/staffAuth')
+const {generateRitaRef} = require('./lib/ritaRef')
+
+// Single property today (Las Canas Beach Retreat). When RitaOps serves
+// more than one hotel, this becomes a lookup (e.g. by subdomain or an
+// explicit propertyCode in the request body) instead of a constant.
+const DEFAULT_PROPERTY_CODE = 'LCBR'
 
 const client = createClient({
   projectId: '0po0panc',
   dataset: 'production',
   apiVersion: '2025-05-20',
-  token: process.env.SANITY_API_READ_TOKEN,
+  token: process.env.SANITY_TOKEN || process.env.SANITY_API_READ_TOKEN,
   useCdn: false
 })
 
@@ -43,6 +49,9 @@ exports.handler = async (event, context) => {
     const portalAccessToken = crypto.randomBytes(32).toString('hex')
     const portalId = `groupPortal.${slug.replace(/[^a-z0-9-]/g, '-')}`
 
+    const propertyCode = String(body.propertyCode || DEFAULT_PROPERTY_CODE).trim().toUpperCase()
+    const ritaRef = await generateRitaRef(client, propertyCode)
+
     const internalNotes = []
     if (body.organizerName) {
       internalNotes.push(`Organizer: ${String(body.organizerName).trim()}`)
@@ -51,6 +60,10 @@ exports.handler = async (event, context) => {
     const doc = {
       _id: portalId,
       _type: 'groupPortal',
+      ritaRef,
+      propertyCode,
+      source: body.source === 'website-host-calculator' ? 'website-host-calculator' : 'manual',
+      bookingChannel: 'manual',
       groupName,
       portalSlug: {_type: 'slug', current: slug},
       portalAccessToken,
@@ -84,6 +97,7 @@ exports.handler = async (event, context) => {
       statusCode: 200,
       headers: cors,
       body: JSON.stringify({
+        ritaRef,
         slug,
         organizerLink: `${base}/join/${encodeURIComponent(code)}`,
         guestLink: `${base}/guest/${encodeURIComponent(slug)}`
