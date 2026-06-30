@@ -9,11 +9,17 @@ const {createClient} = require('@sanity/client')
 const XLSX = require('xlsx')
 const path = require('path')
 
+const token = process.env.SANITY_TOKEN
+if (!token) {
+  console.error('SANITY_TOKEN environment variable is required. Run as: SANITY_TOKEN=... node scripts/seed-bookings.js')
+  process.exit(1)
+}
+
 const client = createClient({
   projectId: '0po0panc',
   dataset: 'production',
   apiVersion: '2025-05-20',
-  token: 'skSdMdvZxq4KcYcGIBhuApKQLAKVytxA8uZ0pkhoWWHiuJQp6CN46wKpNcXbPhNR8dqrs7FtbqNAl4XBNiCzDN4fUBDrBtIx6oikqduJH01oVFkCoxYaLhuA5Lpz5HEJU8Up30mcKjJK7AS6V74j7dBbNq6rMtFgJ5ela20CgTHWqZ9JiD5L',
+  token,
   useCdn: false
 })
 
